@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <script>
+      window.addEventListener("MultifoxContentEvent_CookieGetter_Response", function(evt){alert("1.ERROR " + evt.data)}, false);
+      document.addEventListener("MultifoxContentEvent_CookieGetter_Response", function(evt){alert("2.ERROR " + evt.data)}, false);
+      //var b=document.cookie;
+
+	  document.cookie="cookies-iframes.html_head=ok";
+	</script>
+  </head>
+  <body>
+    <iframe src="cookies-iframes-1.html"></iframe>
+    <script>
+      document.cookie="cookies-iframes.html_body=ok";
+    </script>
+    <iframe src="cookies-iframes-2.html"></iframe>
+  </body>
+</html>

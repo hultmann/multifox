@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+  <RDF:Description about="urn:mozilla:install-manifest">
+
+    <em:type>2</em:type>
+    <em:id>${EXT_ID}</em:id>
+    <em:version>${EXT_VERSION}</em:version>
+    <em:homepageURL>${EXT_SITE}</em:homepageURL>
+    <em:iconURL>${URI_PACKAGENAME}/content/logo-icon.png</em:iconURL>
+    <em:name>${EXT_NAME}</em:name>
+    <em:creator>Jeferson Hultmann</em:creator>
+
+    <!-- Firefox -->
+    <em:targetApplication>
+      <RDF:Description>
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+        <em:minVersion>${APP_MIN_VERSION}</em:minVersion>
+        <em:maxVersion>${APP_MAX_VERSION}</em:maxVersion>
+      </RDF:Description>
+    </em:targetApplication>
+
+
+    <!-- Update -->
+    <em:updateURL><![CDATA[${EXT_SITE}update.html?reqVersion=%REQ_VERSION%&extId=%ITEM_ID%&extVersion=%ITEM_VERSION%&extMaxappversion=%ITEM_MAXAPPVERSION%&extStatus=%ITEM_STATUS%&appId=%APP_ID%&appVersion=%APP_VERSION%&appOs=%APP_OS%&appAbi=%APP_ABI%&appLocale=%APP_LOCALE%]]></em:updateURL>
+    <em:updateKey>
+      MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDeQmBgnA27cxcxXMlSA4QGaY41UKOXi8Ps
+      J6IitDvvXsp9ZTzjdwDIdvJ7oB9dyycXlHZL9tKcatOwhXbUN0jt28hv8sYGxlj2oxIt5sOQ
+      C0q/P2KHU5OAHMl/eRJIe8QINCBGI5CEr84ArnhJ7g+DYOFQfVtop3sNBYI78nEQ2wIDAQAB
+    </em:updateKey>
+
+  </RDF:Description>
+</RDF:RDF>

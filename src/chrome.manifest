@@ -1,0 +1,13 @@
+overlay  chrome://browser/content/browser.xul                   ${URI_PACKAGENAME}/content/browser.xul
+overlay  chrome://browser/content/places/places.xul             ${URI_PACKAGENAME}/content/places.xul
+overlay  chrome://browser/content/history/history-panel.xul     ${URI_PACKAGENAME}/content/places.xul
+overlay  chrome://browser/content/bookmarks/bookmarksPanel.xul  ${URI_PACKAGENAME}/content/places.xul
+overlay  chrome://mozapps/content/extensions/about.xul          ${URI_PACKAGENAME}/content/about.xul
+
+resource  ${JS_MODULE}  modules/
+
+content   ${PACKAGENAME} content/
+
+locale  ${PACKAGENAME}  en-US  locale/en-US/
+locale  ${PACKAGENAME}  pt-BR  locale/pt-BR/
+locale  ${PACKAGENAME}  es-ES  locale/es-ES/
