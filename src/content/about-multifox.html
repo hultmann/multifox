@@ -99,9 +99,8 @@
         var rdf = Cc["@mozilla.org/rdf/rdf-service;1"].getService(Ci.nsIRDFService);
         var ext = rdf.GetResource("urn:mozilla:item:${EXT_ID}");
         var arc = rdf.GetResource("http://www.mozilla.org/2004/em-rdf#description");
-        var desc =  Cc["@mozilla.org/extensions/manager;1"]
-                      .getService(Ci.nsIExtensionManager)
-                      .datasource
+        var em =  Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
+        var desc =  em.datasource
                       .GetTarget(ext, arc, true)
                       .QueryInterface(Ci.nsIRDFLiteral)
                       .Value;
