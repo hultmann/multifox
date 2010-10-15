@@ -139,6 +139,7 @@ const DocStartScriptInjection = {
 const BootSource = {
   init: function(pathSrc) {
     this._path = pathSrc;
+    this._src = null;
     this._load(true);
   },
 
