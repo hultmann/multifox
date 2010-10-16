@@ -36,18 +36,14 @@
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-function NSGetModule(compMgr, fileSpec) {
-  return XPCOMUtils.generateModule([AboutMultifox]);
-}
-
 
 function AboutMultifox() {}
 
 AboutMultifox.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Components.interfaces.nsIAboutModule]),
   classDescription: "about multifox",
-  contractID: "@mozilla.org/network/protocol/about;1?what=multifox",
-  classID: Components.ID("{347c41b6-1417-411c-b87a-422bcfc1899a}"),
+  contractID: "${XPCOM_ABOUT_CONTRACT}",
+  classID: Components.ID("${XPCOM_ABOUT_CLASS}"),
   getURIFlags: function(aURI) {
     return Components.interfaces.nsIAboutModule.ALLOW_SCRIPT;
   },
@@ -59,3 +55,10 @@ AboutMultifox.prototype = {
     return channel;
   }
 };
+
+
+if (XPCOMUtils.generateNSGetFactory) {
+  var NSGetFactory = XPCOMUtils.generateNSGetFactory([AboutMultifox]); // Gecko 2
+} else {
+  var NSGetModule = XPCOMUtils.generateNSGetModule([AboutMultifox]);   // Gecko 1.9.2
+}

@@ -107,7 +107,8 @@ function initIconCore(iconContainer, profileId) {
   styleIcon.padding = "0px";
   styleIcon.margin = "0px";
   styleIcon.background = "transparent repeat-x";
-  styleIcon.MozBorderRadius = "2px";
+  styleIcon.MozBorderRadius = "2px"; // Gecko 1.9.2
+  styleIcon.borderRadius = "2px";
   styleIcon.minHeight = "16px";
 
 

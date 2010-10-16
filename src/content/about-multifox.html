@@ -95,15 +95,24 @@
         txt = txt.replace("%3$S", "mailto:hultmann@gmail.com", "g");
 
         var Cc = Components.classes;
-        var Ci = Components.interfaces;
-        var rdf = Cc["@mozilla.org/rdf/rdf-service;1"].getService(Ci.nsIRDFService);
-        var ext = rdf.GetResource("urn:mozilla:item:${EXT_ID}");
-        var arc = rdf.GetResource("http://www.mozilla.org/2004/em-rdf#description");
-        var em =  Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
-        var desc =  em.datasource
-                      .GetTarget(ext, arc, true)
-                      .QueryInterface(Ci.nsIRDFLiteral)
-                      .Value;
+        if (Cc["@mozilla.org/extensions/manager;1"]) { // Gecko 1.9.2
+          var Ci = Components.interfaces;
+          var rdf = Cc["@mozilla.org/rdf/rdf-service;1"].getService(Ci.nsIRDFService);
+          var ext = rdf.GetResource("urn:mozilla:item:${EXT_ID}");
+          var arc = rdf.GetResource("http://www.mozilla.org/2004/em-rdf#description");
+          var em =  Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
+          var desc =  em.datasource
+                        .GetTarget(ext, arc, true)
+                        .QueryInterface(Ci.nsIRDFLiteral)
+                        .Value;
+          document.getElementById("desc").innerHTML = desc;
+        } else {
+          var jsm = {};
+          Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+          jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
+            document.getElementById("desc").innerHTML = addon.description;
+          });
+        }
 
         Components.utils.import("${URI_JS_MODULE}/main.js");
         var imgTitle = "[" + (new WindowProperties(window).identity) + "]";
@@ -111,7 +120,6 @@
 
         document.getElementById("logo").title = imgTitle;
         document.getElementById("name").innerHTML = "${EXT_NAME} ${EXT_VERSION}";
-        document.getElementById("desc").innerHTML = desc;
         document.getElementById("from-locale").innerHTML = txt;
       }
     </script>

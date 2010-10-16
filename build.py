@@ -177,7 +177,7 @@ def getHash(path):
 unpackedDir = 'build/unpacked'
 packageName = 'multifox'
 jsModule = 'multifox-modules'
-version = '1.2.0'
+version = '1.3b1pre'
 
 srcVars = {
             'PACKAGENAME':      packageName,
@@ -185,9 +185,12 @@ srcVars = {
             'JS_MODULE':        jsModule,
             'URI_JS_MODULE':    'resource://' + jsModule,
             'BASE_DOM_ID':      'multifox-dom',
+            'XPCOM_ABOUT_CLASS':    '{347c41b6-1417-411c-b87a-422bcfc1899a}',
+            'XPCOM_ABOUT_CONTRACT': '@mozilla.org/network/protocol/about;1?what=multifox',
 
-            'APP_MIN_VERSION':  '3.6.3',
-            'APP_MAX_VERSION':  '3.6.*',
+
+            'APP_MIN_VERSION':  '3.6.11',
+            'APP_MAX_VERSION':  '4.0.*',
 
             'EXT_ID':           'multifox@hultmann',
             'EXT_NAME':         'Multifox',
