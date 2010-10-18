@@ -42,8 +42,16 @@
   <script type="application/x-javascript">
     <![CDATA[
 (function() {
-  if (window.arguments[0] !== "urn:mozilla:item:${EXT_ID}") {
-    return;
+  if (window.arguments[0].id) {
+    // Firefox 4
+    if (window.arguments[0].id !== "${EXT_ID}") {
+      return;
+    }
+  } else {
+    // Firefox 3.6
+    if (window.arguments[0] !== "urn:mozilla:item:${EXT_ID}") {
+      return;
+    }
   }
   window.close();
 

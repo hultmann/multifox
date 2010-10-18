@@ -159,22 +159,28 @@ function onTabRestored(evt) {
 
 function addMenuListeners(doc) {
   var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
-  for (var idx = 0, len = ids.length; idx < len; idx++) {
+  for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).addEventListener("popupshowing", onMenuPopupShowing, false);
   }
   var tabbrowser = doc.getElementById("content");
   var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
+  if (!menupopup) {
+    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
+  }
   menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
 }
 
 
 function removeMenuListeners(doc) {
   var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
-  for (var idx = 0, len = ids.length; idx < len; idx++) {
+  for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).removeEventListener("popupshowing", onMenuPopupShowing, false);
   }
   var tabbrowser = doc.getElementById("content");
   var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
+  if (!menupopup) {
+    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
+  }
   menupopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
   //doc.getAnonymousElementByAttribute(doc.getElementById("content"), "anonid", "tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
 }
