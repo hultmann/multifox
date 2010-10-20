@@ -57,7 +57,10 @@ function menuShowing(evt) {
 }
 
 function onPopupHidden(evt) {
-  var menu = evt.originalTarget; //<popup>
+  var menu = evt.currentTarget; // <popup> <menupopup>
+  if (menu !== evt.target) {
+    return;
+  }
   menu.removeEventListener("popuphidden", onPopupHidden, false);
 
   var doc = menu.ownerDocument;
