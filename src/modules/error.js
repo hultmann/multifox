@@ -40,7 +40,7 @@ Components.utils.import("${URI_JS_MODULE}/new-window.js");
 Components.utils.import("${URI_JS_MODULE}/main.js");
 
 function showError(contentWin, notSupportedFeature) {
-  var browser = new WindowProperties(contentWin).browser;
+  var browser = ContentWindow.getContainerElement(contentWin);
   var contentDoc = contentWin.document;
 
   if (browser === null) {
@@ -51,8 +51,6 @@ function showError(contentWin, notSupportedFeature) {
   msg.push("ERROR " + notSupportedFeature);
   msg.push(contentDoc ? contentDoc.location : "?");
   msg.push("title [" + contentDoc.title + "]");
-  msg.push(contentDoc.__defineSetter__);
-  msg.push(contentDoc.wrappedJSObject.__defineSetter__);
   msg.push(browser);
   util.log(msg.join("\n"));
 

@@ -51,7 +51,6 @@ const BrowserWindow = {
       multifoxStartup();
     }
 
-    DocStartScriptInjection.register(win.getBrowser());
 
     win.addEventListener("MultifoxContentEvent_FromContent", onContentEvent, false, true);
 
@@ -78,7 +77,6 @@ const BrowserWindow = {
     }
 
 
-    DocStartScriptInjection.unregister(win.getBrowser());
     win.removeEventListener("MultifoxContentEvent_FromContent", onContentEvent, false);
 
     var sessions = Profile.activeIdentities(win);
@@ -143,12 +141,14 @@ function onContentEvent(evt) {
 }
 
 
+var m_inject = null;
+
 function multifoxStartup() {
   util.log("multifoxStartup");
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
-  DocStartScriptInjection.init("${URI_PACKAGENAME}/content/content-injection.js");
-  WatchObjectsStatus.start();
+  // console.assert(m_inject === null, "");
+  m_inject = new DocStartScriptInjection();
   //toggleDefaultWindowUI(true);
   util.log("/multifoxStartup");
 }
@@ -156,43 +156,8 @@ function multifoxStartup() {
 function multifoxShutdown() {
   util.log("multifoxShutdown");
   util.networkListeners.disable();
-  DocStartScriptInjection.shutdown();
+  m_inject.stop();
+  m_inject = null;
   Cookies.stop();
-  WatchObjectsStatus.stop();
   //toggleDefaultWindowUI(false);
 }
-
-
-const WatchObjectsStatus = {
-  _timer: null,
-
-  start: function() {
-    this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-    this._schedule();
-  },
-
-  stop: function() {
-    this._timer.cancel();
-    this._timer = null;
-  },
-
-  _schedule: function() {
-    this._timer.init(this, 90000, Ci.nsITimer.TYPE_ONE_SHOT);
-  },
-
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver, Ci.nsISupportsWeakReference]),
-
-  observe: function(aSubject, aTopic, aData) {
-    var buf = "watchObjectsStatus\n";
-
-    buf += "_pendingFrames.length="+ PendingFrames._pendingFrames.length + " jsd=" + (Jsd._service ? Jsd._service.isOn : "null");
-
-    var qty = PendingFrames._pendingFrames.length;
-    for (var idx = qty - 1; idx >= 0; idx--) {
-      buf += "\n" + idx + " " + PendingFrames._pendingFrames[idx].src;
-    }
-
-    util.log(buf);
-    this._schedule();
-  }
-};

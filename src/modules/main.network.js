@@ -41,8 +41,9 @@ const httpListeners = {
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var info = new WindowProperties(getChannelWindow(httpChannel));
-      switch (info.identity) {
+      var winChannel = getChannelWindow(httpChannel);
+      var profileId = Profile.findIdentity(winChannel);
+      switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity: // favicon, updates
           return;
@@ -51,11 +52,11 @@ const httpListeners = {
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
         Components.utils.import("${URI_JS_MODULE}/error.js");
-        showError(info.contentWindow, "authorization");
+        showError(winChannel, "authorization");
         return;
       }
 
-      var cook = Cookies.getCookie(false, httpChannel.URI, info.identity);
+      var cook = Cookies.getCookie(false, httpChannel.URI, profileId);
       httpChannel.setRequestHeader("Cookie", cook, false);
     }
   },
@@ -66,10 +67,18 @@ const httpListeners = {
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var info = new WindowProperties(getChannelWindow(httpChannel));
-      switch (info.identity) {
+      var winChannel = getChannelWindow(httpChannel);
+      var profileId = Profile.findIdentity(winChannel);
+      switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity:
+          /*
+          var myHeaders = HttpHeaders.fromResponse(httpChannel);
+          var setCookies = myHeaders["set-cookie"];
+          if (setCookies !== null) {
+            util.log("req "+profileId+"--"+httpChannel.URI.spec+"\n"+setCookies);
+          }
+          */
           return;
       }
 
@@ -77,7 +86,7 @@ const httpListeners = {
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
       if (myHeaders["www-authenticate"] !== null) {
         Components.utils.import("${URI_JS_MODULE}/error.js");
-        showError(info.contentWindow, "www-authenticate");
+        showError(winChannel, "www-authenticate");
         return;
       }
 
@@ -88,7 +97,7 @@ const httpListeners = {
 
       // server sent "Set-Cookie"
       httpChannel.setResponseHeader("Set-Cookie", null, false);
-      Cookies.setCookie(info.identity, httpChannel.URI, setCookies, false);
+      Cookies.setCookie(profileId, httpChannel.URI, setCookies, false);
     }
   }
 };

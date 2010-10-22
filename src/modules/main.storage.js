@@ -36,7 +36,7 @@
 
 
 function windowLocalStorage(obj, contentDoc) {
-  var profileId = new WindowProperties(contentDoc.defaultView).identity;
+  var profileId = Profile.findIdentity(contentDoc.defaultView);
 
   switch (profileId) {
     case Profile.UnknownIdentity:
@@ -49,25 +49,25 @@ function windowLocalStorage(obj, contentDoc) {
 
   var originalUri = util2.stringToUri(contentDoc.location.href);
   var uri = toInternalUri(originalUri, profileId);
-
   var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
                   .getService(Ci.nsIScriptSecurityManager)
                   .getCodebasePrincipal(uri);
 
   var storage = Cc["@mozilla.org/dom/storagemanager;1"]
                 .getService(Ci.nsIDOMStorageManager)
-                .getLocalStorageForPrincipal(principal);
+                .getLocalStorageForPrincipal(principal, "");
 
+  var rv = undefined;
   switch (obj.cmd) {
     case "clear":
       storage.clear();
-      return;
+      break;
     case "removeItem":
       storage.removeItem(obj.key);
-      return;
+      break;
     case "setItem":
-      storage.setItem(obj.key, obj.val);
-      return;
+      storage.setItem(obj.key, obj.val); // BUG it's ignoring https
+      break;
     case "getItem":
       rv = storage.getItem(obj.key);
       break;
@@ -78,8 +78,9 @@ function windowLocalStorage(obj, contentDoc) {
       rv = storage.length;
       break;
     default:
-      throw obj.cmd;
+      throw "localStorage interface unknown: " + obj.cmd;
   }
 
+  util.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);
   return rv;
 }

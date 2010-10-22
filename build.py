@@ -82,6 +82,7 @@ def copyTextFiles(sourceDir, unpackedDir, dic):
     '/chrome.manifest',
 
     '/content/content-injection.js',
+    '/content/content-injection-192.js',
     '/content/browser.xul',
     '/content/places.xul',
     '/content/about.xul',
@@ -116,7 +117,6 @@ def buildModule(sourceDir, unpackedDir, dic):
     '/modules/main.icon.js',
     '/modules/main.script-injection.js',
     '/modules/main.network.js',
-    '/modules/main.windowproperties.js',
     '/modules/main.cookies.js',
     '/modules/main.storage.js',
     '/modules/main.util.js'

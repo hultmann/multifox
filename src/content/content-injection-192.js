@@ -34,8 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-(function(win) {
-  var doc = win.document;
+(function(win, doc) {
 
   function sendCmd(obj) {
     var evt = doc.createEvent("MessageEvent");
@@ -99,4 +98,4 @@
     return null;
   });
 
-})(window.wrappedJSObject);
+})(window, document);

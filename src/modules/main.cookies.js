@@ -49,7 +49,7 @@ function documentCookie(obj, contentDoc) {
 
 
 function documentCookieGetter(obj, contentDoc) {
-  var profileId = new WindowProperties(contentDoc.defaultView).identity;
+  var profileId = Profile.findIdentity(contentDoc.defaultView);
 
   switch (profileId) {
     case Profile.UnknownIdentity:
@@ -68,7 +68,7 @@ function documentCookieGetter(obj, contentDoc) {
 
 
 function documentCookieSetter(obj, contentDoc) {
-  var profileId = new WindowProperties(contentDoc.defaultView).identity;
+  var profileId = Profile.findIdentity(contentDoc.defaultView);
 
   switch (profileId) {
     case Profile.UnknownIdentity:

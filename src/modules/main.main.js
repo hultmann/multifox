@@ -35,8 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 const EXPORTED_SYMBOLS = ["NewWindow",
-                          "Profile",         // error.js
-                          "WindowProperties" // about:multifox
+                          "Profile",      // error.js about:multifox
+                          "ContentWindow" // error.js (getContainerElement)
                          ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -130,6 +130,9 @@ const Profile = {
     return id;
   },
 
+  findIdentity: function(contentWin) {
+    return FindIdentity.fromContentWindow(contentWin);
+  },
 
   getIdentity: function(chromeWin) {
     var tabbrowser = chromeWin.getBrowser();
@@ -225,4 +228,106 @@ SaveToSessionStore.prototype = {
 
     util.log("_syncToSessionStore OK=" + Profile.getIdentity(doc.defaultView));
   }
+};
+
+
+const FindIdentity = {
+
+  fromContentWindow: function(contentWin) {
+    if (contentWin === null) {
+      return Profile.UnknownIdentity;
+    }
+
+    var browser = ContentWindow.getContainerElement(contentWin);
+    if (browser === null) {
+      // source-view?
+      return this._getIdentityFromOpenerChrome(contentWin);
+    }
+
+    var chromeWin = browser.ownerDocument.defaultView;
+    var profileId = Profile.getIdentity(chromeWin);
+    if (profileId !== Profile.UnknownIdentity) {
+      return profileId;
+    }
+
+    // popup via js/window.open
+    return this._getIdentityFromOpenerContent(contentWin, chromeWin);
+  },
+
+  _getIdentityFromOpenerChrome: function(contentWin) {
+    var chromeWin = ContentWindow.getChromeWindow(contentWin);
+    if (chromeWin === null) {
+      return Profile.UnknownIdentity;
+    }
+    var tabbrowser = null;
+    var type = chromeWin.document.documentElement.getAttribute("windowtype");
+    if (type === "navigator:view-source") {
+      var winOpener = chromeWin.opener;
+      if (winOpener) {
+        var type2 = winOpener.document.documentElement.getAttribute("windowtype");
+        if (type2 === "navigator:browser") {
+          tabbrowser = winOpener.getBrowser();
+        }
+      }
+    }
+
+    return tabbrowser !== null ? Profile.getIdentity(tabbrowser.ownerDocument.defaultView)
+                               : Profile.UnknownIdentity; // favicon, ...
+  },
+
+  _getIdentityFromOpenerContent: function(contentWin, chromeWin) {
+    if (contentWin.opener) {
+      var browserOpener = ContentWindow.getContainerElement(contentWin.opener);
+      if (browserOpener) {
+        var chromeOpener = browserOpener.ownerDocument.defaultView;
+        var profileId = Profile.getIdentity(chromeOpener);
+        if (profileId > Profile.UnknownIdentity) {
+          return Profile.defineIdentity(chromeWin, profileId);
+        }
+      }
+    }
+
+    util.log("request [" + profileId + "] id.opener="+ profileId);
+    return Profile.UnknownIdentity;
+  }
+};
+
+
+const ContentWindow = {
+  getContainerElement: function(contentWin) {
+    var chromeWindow = this.getChromeWindow(contentWin);
+    if ((chromeWindow !== null) && ("getBrowser" in chromeWindow)) {
+      var tabbrowser = chromeWindow.getBrowser();
+      var topDoc = contentWin.top.document;
+      var idx = tabbrowser.getBrowserIndexForDocument(topDoc);
+      if (idx > -1) {
+        return tabbrowser.browsers[idx];
+      }
+    }
+    return null;
+  },
+
+  getChromeWindow: function(contentWin) {
+    var qi = contentWin.QueryInterface;
+    if (!qi) {
+      return null;
+    }
+
+    if (contentWin instanceof Ci.nsIDOMChromeWindow) {
+      // extensions.xul, updates.xul ...
+      return contentWin;
+    }
+
+    var win = qi(Ci.nsIInterfaceRequestor)
+                .getInterface(Ci.nsIWebNavigation)
+                .QueryInterface(Ci.nsIDocShell)
+                .chromeEventHandler
+                .ownerDocument
+                .defaultView;
+    // wrappedJSObject allows access to gBrowser etc
+    // wrappedJSObject=undefined sometimes. e.g. contentWin=about:multifox
+    var unwrapped = win.wrappedJSObject;
+    return unwrapped ? unwrapped : win;
+  }
+
 };
