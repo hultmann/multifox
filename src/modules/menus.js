@@ -144,7 +144,7 @@ function tabMenu(menu) {
   var doc = menu.ownerDocument;
   var item = doc.getAnonymousElementByAttribute(doc.getElementById("content"), "id", "context_openTabInWindow");
   if (item === null) {
-    item = doc.getElementById("context_openTabInWindow"); // Firefox 4
+    item = doc.getElementById("context_tabViewMenu"); // Firefox 4
   }
   if (item === null || item.hidden) {
     return;
