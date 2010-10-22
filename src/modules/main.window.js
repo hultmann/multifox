@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+var m_runner = null;
+
 const BrowserWindow = {
 
   register: function(win) {
@@ -46,13 +48,13 @@ const BrowserWindow = {
 
     util.log("BrowserWindow.register " + profileId);
 
-    if (util.networkListeners.active === false) {
+    if (m_runner === null) {
       // first multifox window!
-      multifoxStartup();
+      m_runner = new MultifoxRunner();
     }
 
 
-    win.addEventListener("MultifoxContentEvent_FromContent", onContentEvent, false, true);
+    win.addEventListener(m_runner.eventSentByContent, onContentEvent, false, true);
 
     // some MultifoxContentEvent_* listeners are not called when
     // there are "unload" listeners with useCapture=true. o_O
@@ -77,7 +79,7 @@ const BrowserWindow = {
     }
 
 
-    win.removeEventListener("MultifoxContentEvent_FromContent", onContentEvent, false);
+    win.removeEventListener(m_runner.eventSentByContent, onContentEvent, false);
 
     var sessions = Profile.activeIdentities(win);
     var toolbox = win.document.getElementById("navigator-toolbox");
@@ -86,7 +88,8 @@ const BrowserWindow = {
     var onlyDefault = (sessions.length === 1) && (sessions[0] === Profile.DefaultIdentity);
     if (onlyDefault) {
       // no more multifox windows
-      multifoxShutdown();
+      m_runner.shutdown();
+      m_runner = null;
     }
     win.removeEventListener("unload", onUnloadChromeWindow, false);
   }
@@ -136,28 +139,36 @@ function onContentEvent(evt) {
 
   // send data to content
   var evt2 = contentDoc.createEvent("MessageEvent");
-  evt2.initMessageEvent("MultifoxContentEvent_FromContent_Response", false, false, rv, null, null, null);
+  evt2.initMessageEvent(m_runner.eventSentByChrome, false, false, rv, null, null, null);
   var success = contentDoc.dispatchEvent(evt2);
 }
 
 
-var m_inject = null;
-
-function multifoxStartup() {
-  util.log("multifoxStartup");
+function MultifoxRunner() {
+  util.log("MultifoxRunner");
+  this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
+  this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
+  this._inject = new DocStartScriptInjection();
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
   // console.assert(m_inject === null, "");
-  m_inject = new DocStartScriptInjection();
   //toggleDefaultWindowUI(true);
-  util.log("/multifoxStartup");
 }
 
-function multifoxShutdown() {
-  util.log("multifoxShutdown");
-  util.networkListeners.disable();
-  m_inject.stop();
-  m_inject = null;
-  Cookies.stop();
-  //toggleDefaultWindowUI(false);
-}
+MultifoxRunner.prototype = {
+  get eventSentByChrome() {
+    return this._sentByChrome;
+  },
+
+  get eventSentByContent() {
+    return this._sentByContent;
+  },
+
+  shutdown: function() {
+    util.log("MultifoxRunner.shutdown");
+    util.networkListeners.disable();
+    this._inject.stop();
+    Cookies.stop();
+    //toggleDefaultWindowUI(false);
+  }
+};

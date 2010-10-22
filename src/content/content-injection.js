@@ -34,10 +34,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-(function(win, doc) {
+function initContext(win, doc, sentByChrome, sentByContent) {
   function sendCmd(obj) {
     var evt = doc.createEvent("MessageEvent");
-    evt.initMessageEvent("MultifoxContentEvent_FromContent", true, true, JSON.stringify(obj), null, null, null);
+    evt.initMessageEvent(sentByContent, true, true, JSON.stringify(obj), null, null, null);
     doc.dispatchEvent(evt);
   }
 
@@ -49,9 +49,9 @@
       rv = evt.data;
       evt.stopPropagation();
     };
-    win.addEventListener("MultifoxContentEvent_FromContent_Response", chromeListener, true);
+    win.addEventListener(sentByChrome, chromeListener, true);
     sendCmd(obj); // set rv
-    win.removeEventListener("MultifoxContentEvent_FromContent_Response", chromeListener, true);
+    win.removeEventListener(sentByChrome, chromeListener, true);
     if (hasReply) {
       return rv;
     } else {
@@ -149,4 +149,4 @@
       return proxy;
     }
   });
-})(window, document);
+}

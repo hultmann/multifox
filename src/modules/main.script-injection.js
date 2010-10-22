@@ -52,7 +52,6 @@ DocStartScriptInjection.prototype = {
     Cc["@mozilla.org/observer-service;1"]
       .getService(Ci.nsIObserverService)
       .removeObserver(this, "content-document-global-created");
-    this._loader.shutdown();
     delete this._loader;
   },
 
@@ -96,7 +95,6 @@ DocStartScriptInjection.prototype = {
 
 
 function ScriptSourceLoader(is192) {
-  this._src = null;
   if (is192) {
     // Gecko 1.9.2
     this._path = "${URI_PACKAGENAME}/content/content-injection-192.js";
@@ -104,15 +102,12 @@ function ScriptSourceLoader(is192) {
     // Gecko 2.0
     this._path = "${URI_PACKAGENAME}/content/content-injection.js";
   }
+  this._src = null;
   this._load(true);
 }
 
 
 ScriptSourceLoader.prototype = {
-  shutdown: function() {
-    delete this._path;
-    delete this._src;
-  },
 
   getScript: function() {
     if (this._src === null) {
@@ -125,8 +120,9 @@ ScriptSourceLoader.prototype = {
     var me = this;
     var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
     xhr.onload = function() {
-      me._src = xhr.responseText;
-      me._path = null;
+      delete me._path;
+      me._src = xhr.responseText + "initContext(window, document, '"
+                                 + m_runner.eventSentByChrome + "','" + m_runner.eventSentByContent + "');";
     };
     xhr.open("GET", this._path, async);
     xhr.overrideMimeType("text/plain");
