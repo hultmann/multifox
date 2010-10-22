@@ -147,11 +147,12 @@ function tabMenu(menu) {
     item = doc.getElementById("context_tabViewMenu"); // Firefox 4
   }
   if (item === null || item.hidden) {
-    return;
+    item = doc.getElementById("tm-copyTabUrl"); // TMP?
   }
+  var refElem = item === null ? null : item.nextSibling;
 
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), item.nextSibling);
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), item.nextSibling);
+  var cmd = menu.insertBefore(doc.createElement("menuitem"), refElem);
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), refElem);
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
   cmd.setAttribute("label", util.getText("context.tab.label"));
