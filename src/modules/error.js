@@ -34,49 +34,59 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const EXPORTED_SYMBOLS = ["showError"];
+const EXPORTED_SYMBOLS = ["appendErrorToPanel"];
 
 Components.utils.import("${URI_JS_MODULE}/new-window.js");
 Components.utils.import("${URI_JS_MODULE}/main.js");
 
-function showError(contentWin, notSupportedFeature) {
-  var browser = ContentWindow.getContainerElement(contentWin);
-  var contentDoc = contentWin.document;
+// <vbox>  <== box
+//   <hbox>  <== box2
+//     <image/>
+//     <vbox>  <== box3
+//       <description/>
+//       <hbox>  <== box4
+//         <button/>
+//   <separator/>
 
-  if (browser === null) {
-    browser = util.mostRecentWindow().getBrowser().selectedBrowser;
-  }
+function appendErrorToPanel(box, panel, error) {
+  var doc = box.ownerDocument;
 
-  var msg = [];
-  msg.push("ERROR " + notSupportedFeature);
-  msg.push(contentDoc ? contentDoc.location : "?");
-  msg.push("title [" + contentDoc.title + "]");
-  msg.push(browser);
-  util.log(msg.join("\n"));
+  var box2 = box.appendChild(doc.createElement("hbox"));
+  box2.setAttribute("align", "center");
 
-  var name = "multifox-not-supported";
-  var infobarSet = browser.getTabBrowser().getNotificationBox(browser);
-  if (infobarSet.getNotificationWithValue(name)) {
-    return;
-  }
+  var img = box2.appendChild(doc.createElement("image"));
+  img.setAttribute("src", "chrome://global/skin/icons/warning-large.png");
+  img.setAttribute("width", "48");
+  img.setAttribute("height", "48");
+  img.style.marginRight = "1em";
 
-  var buttonConfig = [{
-    _browser: browser,
-    callback: onInfobarCommand,
-    label: util.getText("infobar.unsupported.button.label"),
-    accessKey: util.getText("infobar.unsupported.button.accesskey")
-  }];
+  var box3 = box2.appendChild(doc.createElement("vbox"));
+  box3.setAttribute("flex", "1");
 
-  infobarSet.appendNotification(
-    util.getText("infobar.unsupported.content", "Multifox"),
-    name,
-    "chrome://global/skin/icons/warning-16.png",
-    infobarSet.PRIORITY_INFO_MEDIUM,
-    buttonConfig);
+  var txt = util.getText("infobar.unsupported.content", "Multifox");
+  var desc = box3.appendChild(doc.createElement("description"));
+  desc.appendChild(doc.createTextNode(txt));
+
+
+  var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
+  but.setAttribute("label", util.getText("infobar.unsupported.button.label"));
+  but.setAttribute("accesskey", util.getText("infobar.unsupported.button.accesskey"));
+  but.addEventListener("command", function(evt) {
+    panel.hidePopup();
+    moveTabToDefault(but);
+  }, false);
+
+
+  var sep = box.appendChild(doc.createElement("separator"));
+  sep.setAttribute("class", "groove");
+  sep.style.margin = "1.2em 0";
 }
 
 
-function onInfobarCommand(infobar, buttonConfig) {
+function moveTabToDefault(button) {
+  var sourceWin = button.ownerDocument.defaultView;
+  var sourceTab = sourceWin.getBrowser().selectedTab;
+
   var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"]
                   .getService(Ci.nsIWindowMediator)
                   .getEnumerator("navigator:browser");
@@ -90,22 +100,17 @@ function onInfobarCommand(infobar, buttonConfig) {
     }
   }
 
-
-  var sourceWin = buttonConfig._browser.ownerDocument.defaultView;
-  var sourceTab = sourceWin.getBrowser().selectedTab;
-
-  if (targetWin === null) {
-    // there is no default window => next identity will be default
-    newPendingWindow();
-    targetWin = sourceWin.OpenBrowserWindow();
-    targetWin.addEventListener("load", function(evt) {
-      moveTab(targetWin, sourceTab, true);
-    }, false);
-  } else {
+  if (targetWin !== null) {
     moveTab(targetWin, sourceTab, false);
+    return;
   }
 
-  return true; // don't close infobar (open new window faster)
+  // there is no default window => next identity will be default
+  newPendingWindow();
+  targetWin = sourceWin.OpenBrowserWindow();
+  targetWin.addEventListener("load", function(evt) {
+    moveTab(targetWin, sourceTab, true);
+  }, false);
 }
 
 

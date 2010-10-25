@@ -51,6 +51,48 @@ function removeUI(doc) {
 }
 
 
+function getTabStatus(browser) {
+  return browser.hasAttribute("multifox-tab-status")
+          ? browser.getAttribute("multifox-tab-status") : "";
+}
+
+
+function tabSelected(evt) {
+  var tab = evt.originalTarget;
+  var doc = tab.ownerDocument;
+  var currentStat = getIconNode(doc).getAttribute("tab-status");
+  var newStat = getTabStatus(tab.linkedBrowser);
+  if (currentStat !== newStat) {
+    updateStatus(doc);
+  }
+}
+
+
+function updateStatus(doc) {
+  var browser = doc.defaultView.getBrowser().selectedBrowser;
+  var tabStat = getTabStatus(browser);
+  getIconNode(doc).setAttribute("tab-status", tabStat);
+
+  var stat = doc.getElementById("multifox-icon-stat-icon");
+  while (stat.firstChild) {
+    stat.removeChild(stat.firstChild);
+  }
+
+  var show = tabStat.length > 0;
+  if (show) {
+    var img = stat.appendChild(doc.createElement("image"));
+    img.setAttribute("src", "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
+    img.setAttribute("width", "23"); // 16+7
+    img.setAttribute("height", "16");
+    img.style.marginRight = "-4px";
+    img.style.paddingLeft = "7px";
+    stat.removeAttribute("hidden");
+  } else {
+    stat.setAttribute("hidden", "true");
+  }
+}
+
+
 function updateUI(win) {
   var profileId = Profile.getIdentity(win);
   util.log("updateUI " + profileId);
@@ -72,6 +114,9 @@ function updateUI(win) {
   // <hbox align="center" id="multifox-icon">
   //   <box>
   //     <hbox align="center">
+  //       <hbox id="multifox-icon-stat-icon">
+  //         <image src="warning.png"/>
+  //       </hbox>
   //       <label value="100"/>
 
 
@@ -84,7 +129,6 @@ function updateUI(win) {
   if (profileId !== Profile.UnknownIdentity) {
     win.setTimeout(initIconCore, 250, iconContainer, profileId);
   }
-
 }
 
 
@@ -134,6 +178,11 @@ function initIconCore(iconContainer, profileId) {
   labelContainer.setAttribute("align", "center");
 
 
+  var stat = labelContainer.appendChild(doc.createElement("hbox"));
+  stat.setAttribute("hidden", "true");
+  stat.setAttribute("id", "multifox-icon-stat-icon");
+
+
   var lb = labelContainer.appendChild(doc.createElement("label"));
   lb.setAttribute("value", Profile.toString(profileId));
   var styleLabel = lb.style;
@@ -174,7 +223,8 @@ function initIconPressed(icon) { // openpopup
 
 
 function onIconHover(evt) {
-  var icon = getIconNode(evt.target.ownerDocument).firstChild;
+  var doc = evt.target.ownerDocument;
+  var icon = getIconNode(doc).firstChild;
 
   switch (evt.type) {
     case "mouseover":

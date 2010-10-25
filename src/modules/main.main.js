@@ -35,8 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 const EXPORTED_SYMBOLS = ["NewWindow",
-                          "Profile",      // error.js about:multifox
-                          "ContentWindow" // error.js (getContainerElement)
+                          "Profile",     // error.js
+                          "FindIdentity" // about:multifox
                          ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -128,10 +128,6 @@ const Profile = {
     BrowserWindow.register(win);
     updateUI(win);
     return id;
-  },
-
-  findIdentity: function(contentWin) {
-    return FindIdentity.fromContentWindow(contentWin);
   },
 
   getIdentity: function(chromeWin) {
@@ -233,25 +229,28 @@ SaveToSessionStore.prototype = {
 
 const FindIdentity = {
 
-  fromContentWindow: function(contentWin) {
+  fromContent: function(contentWin) {
     if (contentWin === null) {
-      return Profile.UnknownIdentity;
+      return { profileNumber: Profile.UnknownIdentity };
     }
 
+    var profileId;
     var browser = ContentWindow.getContainerElement(contentWin);
     if (browser === null) {
       // source-view?
-      return this._getIdentityFromOpenerChrome(contentWin);
+      profileId = this._getIdentityFromOpenerChrome(contentWin);
+      return { profileNumber: profileId };
     }
 
     var chromeWin = browser.ownerDocument.defaultView;
-    var profileId = Profile.getIdentity(chromeWin);
+    profileId = Profile.getIdentity(chromeWin);
     if (profileId !== Profile.UnknownIdentity) {
-      return profileId;
+      return { profileNumber: profileId, browserElement: browser };
     }
 
     // popup via js/window.open
-    return this._getIdentityFromOpenerContent(contentWin, chromeWin);
+    profileId = this._getIdentityFromOpenerContent(contentWin, chromeWin);
+    return { profileNumber: profileId, browserElement: browser };
   },
 
   _getIdentityFromOpenerChrome: function(contentWin) {

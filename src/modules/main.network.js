@@ -42,7 +42,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var winChannel = getChannelWindow(httpChannel);
-      var profileId = Profile.findIdentity(winChannel);
+      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity: // favicon, updates
@@ -51,8 +51,7 @@ const httpListeners = {
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
-        Components.utils.import("${URI_JS_MODULE}/error.js");
-        showError(winChannel, "authorization");
+        showError(winChannel, "authorization", "-");
         return;
       }
 
@@ -68,7 +67,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var winChannel = getChannelWindow(httpChannel);
-      var profileId = Profile.findIdentity(winChannel);
+      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity:
@@ -85,8 +84,7 @@ const httpListeners = {
 
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
       if (myHeaders["www-authenticate"] !== null) {
-        Components.utils.import("${URI_JS_MODULE}/error.js");
-        showError(winChannel, "www-authenticate");
+        showError(winChannel, "www-authenticate", "-");
         return;
       }
 

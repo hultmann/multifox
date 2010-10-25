@@ -61,6 +61,8 @@ const BrowserWindow = {
     // But they are called if event listener is an anonymous function.
     win.addEventListener("unload", onUnloadChromeWindow, false);
 
+    // update icon status
+    win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
 
     // restore icon after toolbar customization
     var toolbox = win.document.getElementById("navigator-toolbox");
@@ -78,12 +80,13 @@ const BrowserWindow = {
       return;
     }
 
-
     win.removeEventListener(m_runner.eventSentByContent, onContentEvent, false);
 
     var sessions = Profile.activeIdentities(win);
     var toolbox = win.document.getElementById("navigator-toolbox");
     toolbox.removeEventListener("DOMNodeInserted", customizeToolbar, false);
+
+    win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
     var onlyDefault = (sessions.length === 1) && (sessions[0] === Profile.DefaultIdentity);
     if (onlyDefault) {
@@ -125,8 +128,7 @@ function onContentEvent(evt) {
       rv = windowLocalStorage(obj, contentDoc);
       break;
     case "error":
-      Components.utils.import("${URI_JS_MODULE}/error.js");
-      showError(contentDoc.defaultView, obj.cmd);
+      showError(contentDoc.defaultView, obj.cmd, "-");
       break;
     default:
       throw obj.from;
@@ -172,3 +174,27 @@ MultifoxRunner.prototype = {
     //toggleDefaultWindowUI(false);
   }
 };
+
+
+function showError(contentWin, notSupportedFeature, details) {
+  var msg = [];
+  msg.push("ERROR=" + notSupportedFeature);
+  msg.push(details);
+  if (contentWin.document) {
+    msg.push("location=" + contentWin.document.location);
+    if (contentWin.document.documentURIObject) {
+      msg.push("uri=     " + contentWin.document.documentURIObject.spec);
+    }
+  }
+  msg.push("title=[" + contentWin.document.title + "]");
+  util.log(msg.join("\n"));
+
+  var browser = ContentWindow.getContainerElement(contentWin);
+  browser.setAttribute("multifox-tab-status", notSupportedFeature);
+
+  var doc = browser.ownerDocument;
+  var selBrowser = doc.defaultView.getBrowser().selectedTab.linkedBrowser;
+  if (selBrowser === browser) {
+    updateStatus(doc);
+  }
+}

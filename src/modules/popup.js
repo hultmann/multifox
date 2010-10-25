@@ -41,7 +41,6 @@ Components.utils.import("${URI_JS_MODULE}/new-window.js");
 function createMultifoxPopup(icon, Profile) {
   var doc = icon.ownerDocument;
   var win = doc.defaultView;
-  var profileId = Profile.getIdentity(win);
 
   var panel = doc.getElementById("multifox-popup");
   if (panel) {
@@ -51,119 +50,16 @@ function createMultifoxPopup(icon, Profile) {
     return panel;
   }
 
-
-  var p1 = util.getText("icon.panel.p1.label", "[(${URI_PACKAGENAME})]").split("[(${URI_PACKAGENAME})]");
-  var p2 = util.getText("icon.panel.p2.label");
-
-
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
   panel.setAttribute("id", "multifox-popup");
 
   var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = "0em 1em 0.7em 1.3em";
+  container.style.margin = "1.2em";
 
-  var hx = container.appendChild(doc.createElement("hbox"));
-
-  var img = hx.appendChild(doc.createElement("image"));
-  var desc1 = container.appendChild(doc.createElement("box"));
-  desc1.setAttribute("align", "center");
-  var desc2 = container.appendChild(doc.createElement("description"));
-
-  img.setAttribute("src", "${URI_PACKAGENAME}/content/logo-popup.png");
-  img.style.marginLeft = "-10px";
-
-  //desc1.setAttribute("control", "profileIdList");
-  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[0]);
-
-  /*
-  var listProfile = desc1.appendChild(doc.createElement("menulist"));
-  listProfile.setAttribute("id", "profileIdList");
-
-  var menuProfile = listProfile.appendChild(doc.createElement("menupopup"));
-  for (var idx = 2; idx < 7; idx++) {
-    var itemProfile = menuProfile.appendChild(doc.createElement("menuitem"));
-    itemProfile.setAttribute("label", idx);
-  }
-  */
-  var editProfileId = desc1.appendChild(doc.createElement("textbox"));
-  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[1]);
-  desc2.appendChild(doc.createTextNode(p2));
-  //desc1.style.fontWeight = "bold";
-
-
-  if (profileId === Profile.UnknownIdentity) {
-    desc2.hidden = true;
-  }
-
-  editProfileId.setAttribute("type", "number");
-  editProfileId.setAttribute("size", "1");
-  editProfileId.setAttribute("min", "2");
-  editProfileId.setAttribute("max", Profile.MaxIdentity);
-  editProfileId.setAttribute("value", profileId);
-
-  editProfileId.addEventListener("change", function(evt) {
-    var icon = evt.target;
-    var win = icon.ownerDocument.defaultView;
-    var id = icon.valueNumber;
-    icon.valueNumber = Profile.defineIdentity(win, id);
-  }, false);
-
-
-  // options
-
-/*
-  var gbox = panel.appendChild(doc.createElement("groupbox"));
-  var caption = gbox.appendChild(doc.createElement("caption"));
-  var vboxOptions = gbox.appendChild(doc.createElement("vbox"));
-
-  caption.setAttribute("label", "Opções do perfil de identidade");
-
-
-  var hboxProfile = vboxOptions.appendChild(doc.createElement("hbox"));
-  hboxProfile.setAttribute("align", "center");
-  var labelProfile = hboxProfile.appendChild(doc.createElement("label"));
-  labelProfile.setAttribute("control", "profileList");
-  labelProfile.appendChild(doc.createTextNode("Perfil de identidade desta janela:"));
-
-
-  var listProfile = hboxProfile.appendChild(doc.createElement("menulist"));
-  listProfile.setAttribute("id", "profileList");
-
-  var menuProfile = listProfile.appendChild(doc.createElement("menupopup"));
-  for (var idx = 2; idx < 7; idx++) {
-    var itemProfile = menuProfile.appendChild(doc.createElement("menuitem"));
-    itemProfile.setAttribute("label", idx);
-  }
-
-
-  var cboxCookies = vboxOptions.appendChild(doc.createElement("checkbox"));
-  cboxCookies.setAttribute("label", "Desativar cookies");
-
-  var vboxButton = vboxOptions.appendChild(doc.createElement("hbox"));
-  var butClear = vboxButton.appendChild(doc.createElement("button"));
-  butClear.setAttribute("label", "Limpar dados do perfil");
-*/
-
-
-
-  // about button
-
-  var h = container.appendChild(doc.createElement("hbox"));
-  var spc = h.appendChild(doc.createElement("spacer"));
-  spc.flex = 1;
-  var but = h.appendChild(doc.createElement("button"));
-
-
-  but.setAttribute("label", util.getText("icon.panel.button.label", "${EXT_NAME}"));
-  but.addEventListener("command", function(evt) {
-    var w = evt.target.ownerDocument.defaultView;
-    w.openUILinkIn("about:multifox", "tab", false, null, null);
-    panel.hidePopup();
-  }, true);
-
-  if (win.getBrowser().selectedBrowser.currentURI.spec === "about:multifox") {
-    but.hidden = true;
-  }
+  appendError(container, panel);
+  appendLogo(container);
+  appendProfileId(container, icon, Profile.getIdentity(win), Profile);
+  var but = appendAbout(container, panel);
 
   panel.addEventListener("popupshowing", function(evt) {
     copyTheme(doc, panel, but);
@@ -179,6 +75,85 @@ function createMultifoxPopup(icon, Profile) {
   }, false);
 
   return panel;
+}
+
+
+function appendError(container, panel) {
+  var browser = container.ownerDocument.defaultView.getBrowser().selectedBrowser;
+  var error = browser.hasAttribute("multifox-tab-status")
+                ? browser.getAttribute("multifox-tab-status") : "";
+  if (error.length > 0) {
+    Components.utils.import("${URI_JS_MODULE}/error.js");
+    appendErrorToPanel(container, panel, error);
+  }
+}
+
+
+function appendAbout(container, panel) {
+  var doc = container.ownerDocument;
+  var box = container.appendChild(doc.createElement("hbox"));
+  var spc = box.appendChild(doc.createElement("spacer"));
+  spc.flex = 1;
+
+  var but = box.appendChild(doc.createElement("button"));
+  but.setAttribute("label", util.getText("icon.panel.button.label", "${EXT_NAME}"));
+  but.addEventListener("command", function(evt) {
+    var w = evt.target.ownerDocument.defaultView;
+    w.openUILinkIn("about:multifox", "tab", false, null, null);
+    panel.hidePopup();
+  }, true);
+
+  if (doc.defaultView.getBrowser().selectedBrowser.currentURI.spec === "about:multifox") {
+    but.setAttribute("hidden", "true");
+  }
+  return but;
+}
+
+
+function appendLogo(container) {
+  var doc = container.ownerDocument;
+  var box = container.appendChild(doc.createElement("hbox"));
+  var img = box.appendChild(doc.createElement("image"));
+  img.setAttribute("src", "${URI_PACKAGENAME}/content/logo-popup.png");
+  img.setAttribute("width", "175");
+  img.setAttribute("height", "97");
+  img.style.marginLeft = "-10px";
+}
+
+
+function appendProfileId(container, icon, profileId, Profile) {
+  var doc = container.ownerDocument;
+
+  var desc1 = container.appendChild(doc.createElement("box"));
+  desc1.setAttribute("align", "center");
+  var desc2 = container.appendChild(doc.createElement("description"));
+
+  var p1 = util.getText("icon.panel.p1.label", "[(${URI_PACKAGENAME})]").split("[(${URI_PACKAGENAME})]");
+  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[0]);
+
+  var editProfileId = desc1.appendChild(doc.createElement("textbox"));
+  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[1]);
+
+  editProfileId.setAttribute("type", "number");
+  editProfileId.setAttribute("size", "1");
+  editProfileId.setAttribute("min", "2");
+  editProfileId.setAttribute("max", Profile.MaxIdentity);
+  editProfileId.setAttribute("value", profileId);
+
+  editProfileId.addEventListener("change", function(evt) {
+    var icon = evt.target;
+    var win = icon.ownerDocument.defaultView;
+    var id = icon.valueNumber;
+    icon.valueNumber = Profile.defineIdentity(win, id);
+  }, false);
+
+  var p2 = util.getText("icon.panel.p2.label");
+  desc2.appendChild(doc.createTextNode(p2));
+
+
+  if (profileId === Profile.UnknownIdentity) {
+    desc2.hidden = true;
+  }
 }
 
 

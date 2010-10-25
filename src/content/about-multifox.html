@@ -115,7 +115,7 @@
         }
 
         Components.utils.import("${URI_JS_MODULE}/main.js");
-        var imgTitle = "[" + (Profile.findIdentity(window)) + "]";
+        var imgTitle = "[" + (FindIdentity.fromContent(window).profileNumber) + "]";
 
 
         document.getElementById("logo").title = imgTitle;
