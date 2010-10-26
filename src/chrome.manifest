@@ -12,7 +12,5 @@ resource  ${JS_MODULE}  modules/
 content   ${PACKAGENAME} content/
 
 locale  ${PACKAGENAME}  en-US  locale/en-US/
-locale  ${PACKAGENAME}  pt-BR  locale/pt-BR/
-locale  ${PACKAGENAME}  es-ES  locale/es-ES/
-
-
+#locale  ${PACKAGENAME}  pt-BR  locale/pt-BR/
+#locale  ${PACKAGENAME}  es-ES  locale/es-ES/

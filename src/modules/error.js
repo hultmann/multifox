@@ -58,19 +58,27 @@ function appendErrorToPanel(box, panel, error) {
   img.setAttribute("src", "chrome://global/skin/icons/warning-large.png");
   img.setAttribute("width", "48");
   img.setAttribute("height", "48");
-  img.style.marginRight = "1em";
+  img.style.marginRight = "8px";
 
   var box3 = box2.appendChild(doc.createElement("vbox"));
   box3.setAttribute("flex", "1");
 
-  var txt = util.getText("infobar.unsupported.content", "Multifox");
-  var desc = box3.appendChild(doc.createElement("description"));
-  desc.appendChild(doc.createTextNode(txt));
+  var txt;
+  switch (error) {
+    case "localStorage":
+      txt = util.getText("icon.panel.unsupported-moz19.label", "Multifox");
+      break;
+    default:
+      txt = util.getText("icon.panel.unsupported-general.label", "Multifox");
+      break;
+  }
 
+  box3.appendChild(doc.createElement("description"))
+      .appendChild(doc.createTextNode(txt));
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
-  but.setAttribute("label", util.getText("infobar.unsupported.button.label"));
-  but.setAttribute("accesskey", util.getText("infobar.unsupported.button.accesskey"));
+  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label"));
+  but.setAttribute("accesskey", util.getText("icon.panel.make-tab-default.button.accesskey"));
   but.addEventListener("command", function(evt) {
     panel.hidePopup();
     moveTabToDefault(but);
