@@ -82,10 +82,9 @@ function updateStatus(doc) {
   if (show) {
     var img = stat.appendChild(doc.createElement("image"));
     img.setAttribute("src", "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
-    img.setAttribute("width", "23"); // 16+7
+    img.setAttribute("width", "16");
     img.setAttribute("height", "16");
-    img.style.marginRight = "-4px";
-    img.style.paddingLeft = "7px";
+    img.style.margin = "0 -4px 0 7px";
     stat.removeAttribute("hidden");
   } else {
     stat.setAttribute("hidden", "true");
