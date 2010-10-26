@@ -61,10 +61,6 @@ DocStartScriptInjection.prototype = {
       return;
     }
 
-    if (prePath === "null") {
-      return;
-    }
-
     var idData = FindIdentity.fromContent(win);
     clearStatusIcon(idData, win);
 
@@ -74,6 +70,9 @@ DocStartScriptInjection.prototype = {
         return;
     }
 
+    if (prePath === "null") {
+      return;
+    }
     if (prePath.indexOf("http:") !== 0) {
       if (prePath.indexOf("https:") !== 0) {
         return;
