@@ -177,7 +177,7 @@ def getHash(path):
 unpackedDir = 'build/unpacked'
 packageName = 'multifox'
 jsModule = 'multifox-modules'
-version = '1.3b1pre'
+version = '1.3b1'
 
 srcVars = {
             'PACKAGENAME':      packageName,
@@ -193,7 +193,7 @@ srcVars = {
             'APP_MAX_VERSION':  '4.0.*',
 
             'EXT_ID':           'multifox@hultmann',
-            'EXT_NAME':         'Multifox',
+            'EXT_NAME':         'Multifox (BETA)',
             'EXT_VERSION':      version,
             'EXT_SITE':         'http://br.mozdev.org/multifox/',
 
