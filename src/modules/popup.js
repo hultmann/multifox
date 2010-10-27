@@ -54,20 +54,23 @@ function createMultifoxPopup(icon, Profile) {
   panel.setAttribute("id", "multifox-popup");
 
   var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = "1.2em";
+  container.style.margin = "1.2em 1.4em";
 
-  appendError(container, panel);
+  var but = appendError(container, panel);
   appendLogo(container);
   appendProfileId(container, icon, Profile.getIdentity(win), Profile);
-  var but = appendAbout(container, panel);
+  var link = appendAbout(container, panel);
 
   panel.addEventListener("popupshowing", function(evt) {
-    copyTheme(doc, panel, but);
+    copyCss(doc.getElementById("editBookmarkPanel"), panel);
+    if (but) {
+      copyButtonCss(doc, but);
+    }
     panel.style.width = "30em";
   }, false);
 
   panel.addEventListener("popupshown", function(evt) {
-    but.focus();
+    link.focus();
   }, false);
 
   panel.addEventListener("popuphidden", function(evt) {
@@ -82,10 +85,11 @@ function appendError(container, panel) {
   var browser = container.ownerDocument.defaultView.getBrowser().selectedBrowser;
   var error = browser.hasAttribute("multifox-tab-status")
                 ? browser.getAttribute("multifox-tab-status") : "";
-  if (error.length > 0) {
-    Components.utils.import("${URI_JS_MODULE}/error.js");
-    appendErrorToPanel(container, panel, error);
+  if (error.length === 0) {
+    return null;
   }
+  Components.utils.import("${URI_JS_MODULE}/error.js");
+  return appendErrorToPanel(container, panel, error);
 }
 
 
@@ -95,18 +99,24 @@ function appendAbout(container, panel) {
   var spc = box.appendChild(doc.createElement("spacer"));
   spc.flex = 1;
 
-  var but = box.appendChild(doc.createElement("button"));
-  but.setAttribute("label", util.getText("icon.panel.button.label", "${EXT_NAME}"));
-  but.addEventListener("command", function(evt) {
-    var w = evt.target.ownerDocument.defaultView;
-    w.openUILinkIn("about:multifox", "tab", false, null, null);
+  var link = box.appendChild(doc.createElement("label"));
+  link.setAttribute("value", util.getText("icon.panel.button.label", "${EXT_NAME}"));
+  link.setAttribute("class", "text-link");
+  link.addEventListener("click", function(evt) {
+    if (evt.button !== 0) {
+      return;
+    }
+    var win = evt.target.ownerDocument.defaultView;
+    win.openUILinkIn("about:multifox", "tab", false, null, null);
     panel.hidePopup();
   }, true);
 
-  if (doc.defaultView.getBrowser().selectedBrowser.currentURI.spec === "about:multifox") {
-    but.setAttribute("hidden", "true");
+  var selectedUri = doc.defaultView.getBrowser().selectedBrowser.currentURI;
+  if (selectedUri.spec === "about:multifox") {
+    link.setAttribute("hidden", "true");
   }
-  return but;
+
+  return link;
 }
 
 
@@ -150,33 +160,29 @@ function appendProfileId(container, icon, profileId, Profile) {
   var p2 = util.getText("icon.panel.p2.label");
   desc2.appendChild(doc.createTextNode(p2));
 
-
   if (profileId === Profile.UnknownIdentity) {
     desc2.hidden = true;
   }
 }
 
 
-function copyTheme(doc, panel, toBut) {
-  var win = doc.defaultView;
-  var fromBut = doc.getElementById("editBookmarkPanelDoneButton");
-
-  copyCss(win, fromBut, toBut);
-  copyCss(win, doc.getElementById("editBookmarkPanel"), panel);
-
-  win.setTimeout(function() {
+function copyButtonCss(doc, toBut) {
+  var srcBut = doc.getElementById("editBookmarkPanelDoneButton");
+  copyCss(srcBut, toBut);
+  doc.defaultView.setTimeout(function() {
     // wait xbl
-    var from  = doc.getAnonymousElementByAttribute(fromBut, "class", "box-inherit button-box");
-    var to = doc.getAnonymousElementByAttribute(toBut, "class", "box-inherit button-box");
-    to.setAttribute("style","");
-    copyCss(win, from, to);
+    var source = doc.getAnonymousElementByAttribute(srcBut, "class", "box-inherit button-box");
+    var target = doc.getAnonymousElementByAttribute(toBut,  "class", "box-inherit button-box");
+    target.setAttribute("style","");
+    copyCss(source, target);
   }, 0);
 }
 
 
-function copyCss(win, from, to) {
-  var style1 = win.getComputedStyle(from, "");
-  var style2 = to.style;
+function copyCss(source, target) {
+  var win = source.ownerDocument.defaultView;
+  var style1 = win.getComputedStyle(source, "");
+  var style2 = target.style;
 
   for (var name in style1) {
     if (style1[name]) {
@@ -192,5 +198,4 @@ function copyCss(win, from, to) {
       style2[name] = style1[name];
     }
   }
-
 }

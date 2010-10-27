@@ -88,6 +88,8 @@ function appendErrorToPanel(box, panel, error) {
   var sep = box.appendChild(doc.createElement("separator"));
   sep.setAttribute("class", "groove");
   sep.style.margin = "1.2em 0";
+
+  return but;
 }
 
 
