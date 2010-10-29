@@ -177,7 +177,7 @@ def getHash(path):
 unpackedDir = 'build/unpacked'
 packageName = 'multifox'
 jsModule = 'multifox-modules'
-version = '1.3b1'
+version = '1.3b2pre'
 
 srcVars = {
             'PACKAGENAME':      packageName,
