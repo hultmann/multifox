@@ -202,12 +202,6 @@ const util = {
       .logStringMessage(p + msg);
   },
 
-  mostRecentWindow: function() {
-    return Cc["@mozilla.org/appshell/window-mediator;1"]
-            .getService(Ci.nsIWindowMediator)
-            .getMostRecentWindow("navigator:browser");
-  },
-
   getText: function(msg) {
     var len = arguments.length - 1;
     var args = new Array(len);

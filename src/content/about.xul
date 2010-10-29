@@ -55,9 +55,11 @@
   }
   window.close();
 
-  var jsm = {};
-  Components.utils.import("${URI_JS_MODULE}/new-window.js", jsm);
-  var browserWin = jsm.util.mostRecentWindow();
+  var Cc = Components.classes;
+  var Ci = Components.interfaces;
+  var browserWin = Cc["@mozilla.org/appshell/window-mediator;1"]
+                    .getService(Ci.nsIWindowMediator)
+                    .getMostRecentWindow("navigator:browser");
   if (browserWin) {
     browserWin.openUILinkIn("about:multifox", "tab", false, null, null);
     window.onunload = function() {
