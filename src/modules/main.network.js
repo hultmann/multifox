@@ -75,7 +75,7 @@ const httpListeners = {
           var myHeaders = HttpHeaders.fromResponse(httpChannel);
           var setCookies = myHeaders["set-cookie"];
           if (setCookies !== null) {
-            util.log("req "+profileId+"--"+httpChannel.URI.spec+"\n"+setCookies);
+            console.log("req "+profileId+"--"+httpChannel.URI.spec+"\n"+setCookies);
           }
           */
           return;
@@ -160,6 +160,6 @@ function getChannelWindow(channel) {
 
   //var isChrome = context.associatedWindow instanceof Ci.nsIDOMChromeWindow;
   //return context.isContent ? context.associatedWindow : null;
-  //util.log("LOAD CONTEXT FAIL " + channel.URI.spec);
+  //console.log("LOAD CONTEXT FAIL " + channel.URI.spec);
   return null; // e.g. <link rel=prefetch> <link rel=next> ...
 }

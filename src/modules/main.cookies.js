@@ -112,7 +112,7 @@ const Cookies = {
       this.behavior = aSubject
                       .QueryInterface(Ci.nsIPrefBranch)
                       .getIntPref(PREF_COOKIE_BEHAVIOR);
-      util.log("pref! " + aSubject + aTopic + aData + this.behavior);
+      console.log("pref! " + aSubject + aTopic + aData + this.behavior);
     }
 
   },

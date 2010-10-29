@@ -164,7 +164,7 @@ function tabMenu(menu) {
 
 
 function newIdentityCommand(evt, cmd) {
-  util.log("newIdentityCommand " + cmd);
+  console.log("newIdentityCommand " + cmd);
   newPendingWindow();
 
   var win = evt.currentTarget.ownerDocument.defaultView.top; // defaultView=history-panel.xul/browser.xul

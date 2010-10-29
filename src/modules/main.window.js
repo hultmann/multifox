@@ -42,11 +42,11 @@ const BrowserWindow = {
     var profileId = Profile.getIdentity(win);
 
     if (profileId === Profile.DefaultIdentity) {
-      util.log("BrowserWindow.register NOP");
+      console.log("BrowserWindow.register NOP");
       return;
     }
 
-    util.log("BrowserWindow.register " + profileId);
+    console.log("BrowserWindow.register " + profileId);
 
     if (m_runner === null) {
       // first multifox window!
@@ -73,7 +73,7 @@ const BrowserWindow = {
   // should keep id for session restore?
   unregister: function(win) {
     var idw = Profile.getIdentity(win);
-    util.log("BrowserWindow.unregister " + idw);
+    console.log("BrowserWindow.unregister " + idw);
 
     if (idw === Profile.DefaultIdentity) {
       // nothing to unregister
@@ -147,13 +147,13 @@ function onContentEvent(evt) {
 
 
 function MultifoxRunner() {
-  util.log("MultifoxRunner");
+  console.log("MultifoxRunner");
   this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
   this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
+  //console.assert(this._inject === null, "_inject should be null");
   this._inject = new DocStartScriptInjection();
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
-  // console.assert(m_inject === null, "");
   //toggleDefaultWindowUI(true);
 }
 
@@ -167,7 +167,7 @@ MultifoxRunner.prototype = {
   },
 
   shutdown: function() {
-    util.log("MultifoxRunner.shutdown");
+    console.log("MultifoxRunner.shutdown");
     util.networkListeners.disable();
     this._inject.stop();
     Cookies.stop();
@@ -187,7 +187,7 @@ function showError(contentWin, notSupportedFeature, details) {
     }
   }
   msg.push("title=[" + contentWin.document.title + "]");
-  util.log(msg.join("\n"));
+  console.log(msg.join("\n"));
 
   var browser = ContentWindow.getContainerElement(contentWin);
   browser.setAttribute("multifox-tab-status", notSupportedFeature);

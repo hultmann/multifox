@@ -43,7 +43,7 @@ function getIconNode(doc) {
 
 
 function removeUI(doc) {
-  util.log("removeUI");
+  console.log("removeUI");
   var icon = getIconNode(doc);
   if (icon) {
     icon.parentNode.removeChild(icon);
@@ -94,7 +94,7 @@ function updateStatus(doc) {
 
 function updateUI(win) {
   var profileId = Profile.getIdentity(win);
-  util.log("updateUI " + profileId);
+  console.log("updateUI " + profileId);
 
   var doc = win.document;
   if (profileId <= Profile.DefaultIdentity) {
@@ -104,7 +104,7 @@ function updateUI(win) {
 
   var icon = getIconNode(doc);
   if (icon) {
-    util.log("updateUI=" + profileId + " current=" + Profile.getIdentity(win));
+    console.log("updateUI=" + profileId + " current=" + Profile.getIdentity(win));
     icon.querySelector("label").setAttribute("value", Profile.toString(profileId));
     return;
   }
@@ -134,7 +134,7 @@ function updateUI(win) {
 function initIconCore(iconContainer, profileId) {
   var doc = iconContainer.ownerDocument;
   if (iconContainer !== getIconNode(doc)) {
-    util.log("initIconCore != " + profileId + iconContainer + getIconNode(doc));
+    console.log("initIconCore != " + profileId + iconContainer + getIconNode(doc));
     return;
   }
 

@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "onOverlay", "newPendingWindow"];
+const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "onOverlay", "newPendingWindow"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -46,12 +46,12 @@ function newPendingWindow() {
 }
 
 function onOverlay(win) {
-  util.log("browser.xul - overlay");
+  console.log("browser.xul - overlay");
   win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 }
 
 function onDOMContentLoaded(evt) {
-  util.log("browser.xul - DOMContentLoaded");
+  console.log("browser.xul - DOMContentLoaded");
   var win = evt.currentTarget;
   win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
   win.addEventListener("unload", onUnload, false);
@@ -73,7 +73,7 @@ function onDOMContentLoaded(evt) {
   addMenuListeners(doc);
 
   //
-  util.log("/browser.xul - DOMContentLoaded");
+  console.log("/browser.xul - DOMContentLoaded");
 }
 
 
@@ -100,7 +100,7 @@ function onKey(evt) {
 function setWindowProfile(newWin) {
   if (m_pendingNewWindows > 0) {
     // new identity profile
-    util.log("m_pendingNewWindows=" + m_pendingNewWindows);
+    console.log("m_pendingNewWindows=" + m_pendingNewWindows);
     m_pendingNewWindows--;
     Components.utils.import("${URI_JS_MODULE}/main.js");
     NewWindow.newId(newWin);
@@ -112,7 +112,7 @@ function setWindowProfile(newWin) {
       NewWindow.inheritId(newWin);
     } else {
       // no Multifox window
-      util.log("setWindowProfile NOP => util.networkListeners.active=false");
+      console.log("setWindowProfile NOP => util.networkListeners.active=false");
     }
   }
 }
@@ -128,11 +128,11 @@ function onTabRestoring(evt) {
 
   if (util.networkListeners.active === false && stringId.length === 0) {
     // default scenario
-    util.log("first tab restoring NOP");
+    console.log("first tab restoring NOP");
     return;
   }
 
-  util.log("first tab restoring " + stringId);
+  console.log("first tab restoring " + stringId);
 
   // add icon; sync id — override any previous profile id
   Components.utils.import("${URI_JS_MODULE}/main.js");
@@ -144,13 +144,13 @@ function onTabRestored(evt) {
   var doc = evt.currentTarget;
   var win = doc.defaultView;
   var tab = evt.originalTarget;
-  util.log("SSTabRestored " + tab.linkedBrowser.currentURI.spec.substr(0, 80));
+  console.log("SSTabRestored " + tab.linkedBrowser.currentURI.spec.substr(0, 80));
 
 
   // we need to [re]configure identity window id,
   // only the first restored tab is necessary.
   if (tab.linkedBrowser.currentURI.spec !== "about:sessionrestore") {
-    util.log("removeEventListener SSTabRestored+SSTabRestoring");
+    console.log("removeEventListener SSTabRestored+SSTabRestoring");
     doc.removeEventListener("SSTabRestoring", onTabRestoring, false);
     doc.removeEventListener("SSTabRestored", onTabRestored, false);
   }
@@ -192,6 +192,24 @@ function onMenuPopupShowing(evt) {
 }
 
 
+const console = {
+  log: function(msg) {
+    var now = new Date();
+    var ms = now.getMilliseconds();
+    var ms2;
+    if (ms < 100) {
+      ms2 = ms < 10 ? "00" + ms : "0" + ms;
+    } else {
+      ms2 = ms.toString();
+    }
+    var p = "${PACKAGENAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
+    Cc["@mozilla.org/consoleservice;1"]
+      .getService(Ci.nsIConsoleService)
+      .logStringMessage(p + msg);
+  }
+};
+
+
 const util = {
   log: function(msg) {//status stat
     var now = new Date();
@@ -224,12 +242,12 @@ const util = {
     _cookieRejectedListener: {
       observe: function(aSubject, aTopic, aData) {
         Components.utils.import("${URI_JS_MODULE}/main.js");
-        util.log("cookie-rejected\n" + aSubject + "\n" + aTopic + "\n" + aData + "\n" + aSubject.QueryInterface(Ci.nsIURI).spec);
+        console.log("cookie-rejected\n" + aSubject + "\n" + aTopic + "\n" + aData + "\n" + aSubject.QueryInterface(Ci.nsIURI).spec);
       }
     },
 
     enable: function(onRequest, onResponse) {
-      util.log("networkListeners enable");
+      console.log("networkListeners enable");
       if (this._observers !== null) {
         throw "networkListeners.enable ==> this._observers=true";
       }
@@ -244,7 +262,7 @@ const util = {
     },
 
     disable: function() {
-      util.log("networkListeners disable");
+      console.log("networkListeners disable");
       var obs = Cc["@mozilla.org/observer-service;1"]
                   .getService(Ci.nsIObserverService);
 

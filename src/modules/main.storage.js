@@ -81,6 +81,6 @@ function windowLocalStorage(obj, contentDoc) {
       throw "localStorage interface unknown: " + obj.cmd;
   }
 
-  util.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);
+  console.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);
   return rv;
 }

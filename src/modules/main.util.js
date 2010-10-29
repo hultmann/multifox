@@ -59,13 +59,13 @@ const util2 = {
     }
 
     buf += "\n====\n" + util2.throwStack._toString(false, Components.stack);
-    util.log(buf);
+    console.log(buf);
   },
 
   throwStack: {
 
     go: function(txt) {
-      util.log("Stack: " + txt + "\n" + this._toString(false, Components.stack));
+      console.log("Stack: " + txt + "\n" + this._toString(false, Components.stack));
       throw txt;
     },
 

@@ -42,7 +42,7 @@ const EXPORTED_SYMBOLS = ["NewWindow",
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("${URI_JS_MODULE}/new-window.js");
 
-util.log("===>LOADING main.js");
+console.log("===>LOADING main.js");
 
 
 const NewWindow = {
@@ -53,12 +53,12 @@ const NewWindow = {
     } else {
       id = Profile.lowerAvailableId(win);
     }
-    util.log("newIdentity " + id);
+    console.log("newIdentity " + id);
     Profile.defineIdentity(win, id);
   },
 
   inheritId: function(newWin) {
-    util.log("inheritId");
+    console.log("inheritId");
     var id;
     if (this._shouldBeDefault(newWin)) {
       id = Profile.DefaultIdentity;
@@ -68,17 +68,17 @@ const NewWindow = {
       if (prevWin) {
         id = Profile.getIdentity(prevWin);
       } else {
-        util.log("inheritId prevWin=" + prevWin);
+        console.log("inheritId prevWin=" + prevWin);
         id = Profile.UnknownIdentity;
       }
     }
     Profile.defineIdentity(newWin, id);
-    util.log("/inheritId " + id);
+    console.log("/inheritId " + id);
   },
 
   applyRestore: function(win) {
     // restore: window is first configured by NewWindow.inheritId
-    util.log("applyRestore");
+    console.log("applyRestore");
 
     var stringId = Cc["@mozilla.org/browser/sessionstore;1"]
                     .getService(Ci.nsISessionStore)
@@ -106,18 +106,18 @@ const Profile = {
   MaxIdentity:     999999999999999,
 
   defineIdentity: function(win, id) {
-    util.log("defineIdentity " + id);
+    console.log("defineIdentity " + id);
     if (id > Profile.MaxIdentity) {
-      util.log("id > max " + id);
+      console.log("id > max " + id);
       id = Profile.MaxIdentity;
     }
     if (id < Profile.UnknownIdentity) {
-      util.log("id < UnknownIdentity " + id);
+      console.log("id < UnknownIdentity " + id);
       id = Profile.UnknownIdentity;
     }
     var current = Profile.getIdentity(win);
     if (current === id) {
-      util.log("defineIdentity NOP");
+      console.log("defineIdentity NOP");
       return id;
     }
     if (current !== Profile.DefaultIdentity) {
@@ -133,7 +133,7 @@ const Profile = {
   getIdentity: function(chromeWin) {
     var tabbrowser = chromeWin.getBrowser();
     if (tabbrowser === null) {
-      util.log("getIdentity=DefaultIdentity, tabbrowser=null");
+      console.log("getIdentity=DefaultIdentity, tabbrowser=null");
       return Profile.DefaultIdentity;
     }
     var id = tabbrowser.getUserData("${BASE_DOM_ID}-identity-id");
@@ -141,7 +141,7 @@ const Profile = {
   },
 
   _save: function(win, id) {
-    util.log("save " + id);
+    console.log("save " + id);
     win.getBrowser().setUserData("${BASE_DOM_ID}-identity-id", id === Profile.DefaultIdentity ? null : id, null);
     new SaveToSessionStore(win.document);
   },
@@ -198,10 +198,10 @@ SaveToSessionStore.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver, Ci.nsISupportsWeakReference]),
 
   observe: function(aSubject, aTopic, aData) {
-    util.log("SaveToSessionStore timer!");
+    console.log("SaveToSessionStore timer!");
     var doc = this._doc;
     if (doc.defaultView === null) {
-      util.log("_syncToSessionStore window closed");
+      console.log("_syncToSessionStore window closed");
       return;
     }
 
@@ -222,7 +222,7 @@ SaveToSessionStore.prototype = {
       ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
     }
 
-    util.log("_syncToSessionStore OK=" + Profile.getIdentity(doc.defaultView));
+    console.log("_syncToSessionStore OK=" + Profile.getIdentity(doc.defaultView));
   }
 };
 
@@ -286,7 +286,7 @@ const FindIdentity = {
       }
     }
 
-    util.log("request [" + profileId + "] id.opener="+ profileId);
+    console.log("request [" + profileId + "] id.opener="+ profileId);
     return Profile.UnknownIdentity;
   }
 };
