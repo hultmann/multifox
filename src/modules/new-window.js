@@ -206,6 +206,14 @@ const console = {
     Cc["@mozilla.org/consoleservice;1"]
       .getService(Ci.nsIConsoleService)
       .logStringMessage(p + msg);
+  },
+
+  assert: function(test, msg) {
+    if (test !== true) {
+      var ex =  new Error("console.assert - " + msg + " - " + test);
+      Components.utils.reportError(ex) // sometimes exception doesn't show up in console
+      throw ex;
+    }
   }
 };
 

@@ -150,7 +150,6 @@ function MultifoxRunner() {
   console.log("MultifoxRunner");
   this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
   this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
-  //console.assert(this._inject === null, "_inject should be null");
   this._inject = new DocStartScriptInjection();
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
