@@ -37,28 +37,52 @@
 // Add hooks to documents (cookie, localStorage, ...)
 
 function DocStartScriptInjection() {
-  var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
-  var is192 = info.platformVersion.indexOf("1.9") === 0; // Gecko 1.9.2
-
+  var is192 = this._is192();
   this._loader = new ScriptSourceLoader(is192);
   Cc["@mozilla.org/observer-service;1"]
     .getService(Ci.nsIObserverService)
-    .addObserver(this, "content-document-global-created", false);
-    // TODO (Gecko 2) "document-element-inserted"
+    .addObserver(this, this._getTopic(is192), false);
 }
 
 DocStartScriptInjection.prototype = {
   stop: function() {
     Cc["@mozilla.org/observer-service;1"]
       .getService(Ci.nsIObserverService)
-      .removeObserver(this, "content-document-global-created");
+      .removeObserver(this, this._getTopic(this._is192()));
     delete this._loader;
   },
 
+  _is192: function() {
+    var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
+    return info.platformVersion.indexOf("1.9") === 0; // Gecko 1.9.2
+  },
+
+  _getTopic: function(is192) {
+    return is192 ? "content-document-global-created" : "document-element-inserted";
+  },
+
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-  observe: function(win, topic, prePath) {
-    if (win === null) {
-      return;
+  observe: function(subject, topic, data) {
+    var win;
+    var prePath;
+
+    switch (topic) {
+      case "content-document-global-created":
+        win = subject;
+        if (win === null) {
+          return;
+        }
+        prePath = data;
+        break;
+      case "document-element-inserted":
+        win = subject.defaultView;
+        if (win === null) {
+          return; // xsl/xbl
+        }
+        prePath = subject.documentURIObject.spec;
+        break;
+      default:
+        throw new Error(topic);
     }
 
     var idData = FindIdentity.fromContent(win);
