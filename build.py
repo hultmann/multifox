@@ -64,9 +64,10 @@ def createDirStructure(unpackedDir):
 
 def copyBinaryFiles(sourceDir, unpackedDir):
   files = [
+    '/icon.png',
+    '/content/favicon.ico',
     '/content/logo-about.png',
     '/content/logo-popup.png',
-    '/content/logo-icon.png',
     '/content/icon.png',
     '/content/icon-linux.png',
     '/content/icon-osx.png'

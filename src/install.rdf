@@ -6,7 +6,6 @@
     <em:id>${EXT_ID}</em:id>
     <em:version>${EXT_VERSION}</em:version>
     <em:homepageURL>${EXT_SITE}</em:homepageURL>
-    <em:iconURL>${URI_PACKAGENAME}/content/logo-icon.png</em:iconURL>
     <em:name>${EXT_NAME}</em:name>
     <em:creator>Jeferson Hultmann</em:creator>
 
