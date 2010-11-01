@@ -283,15 +283,6 @@ const console = {
 
 
 const util = {
-  log: function(msg) {//status stat
-    var now = new Date();
-    var p = "${PACKAGENAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + now.getMilliseconds() + "] ";
-    //dump("\n------------------------------------------------------------------\n" + p + msg);
-    Cc["@mozilla.org/consoleservice;1"]
-      .getService(Ci.nsIConsoleService)
-      .logStringMessage(p + msg);
-  },
-
   getText: function(msg) {
     var len = arguments.length - 1;
     var args = new Array(len);
