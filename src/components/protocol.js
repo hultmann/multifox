@@ -40,10 +40,11 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 function AboutMultifox() {}
 
 AboutMultifox.prototype = {
-  QueryInterface: XPCOMUtils.generateQI([Components.interfaces.nsIAboutModule]),
   classDescription: "about multifox",
   contractID: "${XPCOM_ABOUT_CONTRACT}",
   classID: Components.ID("${XPCOM_ABOUT_CLASS}"),
+
+  QueryInterface: XPCOMUtils.generateQI([Components.interfaces.nsIAboutModule]),
   getURIFlags: function(aURI) {
     return Components.interfaces.nsIAboutModule.ALLOW_SCRIPT;
   },
@@ -57,8 +58,29 @@ AboutMultifox.prototype = {
 };
 
 
+
+function Startup() {}
+
+Startup.prototype = {
+  classDescription: "multifox bg",
+  contractID: "${XPCOM_STARTUP_CONTRACT}",
+  classID: Components.ID("${XPCOM_STARTUP_CLASS}"),
+  _xpcom_categories: [{category: "profile-after-change"}],
+
+  QueryInterface: XPCOMUtils.generateQI([Components.interfaces.nsIObserver]),
+  observe: function(subject, topic, data) {
+    if (topic === "profile-after-change") {
+      var ns = {};
+      Components.utils.import("${URI_JS_MODULE}/new-window.js", ns);
+      ns.init();
+    }
+  }
+};
+
+
+
 if (XPCOMUtils.generateNSGetFactory) {
-  var NSGetFactory = XPCOMUtils.generateNSGetFactory([AboutMultifox]); // Gecko 2
+  var NSGetFactory = XPCOMUtils.generateNSGetFactory([AboutMultifox, Startup]); // Gecko 2
 } else {
-  var NSGetModule = XPCOMUtils.generateNSGetModule([AboutMultifox]);   // Gecko 1.9.2
+  var NSGetModule = XPCOMUtils.generateNSGetModule([AboutMultifox, Startup]);   // Gecko 1.9.2
 }

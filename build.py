@@ -84,9 +84,7 @@ def copyTextFiles(sourceDir, unpackedDir, dic):
 
     '/content/content-injection.js',
     '/content/content-injection-192.js',
-    '/content/browser.xul',
-    '/content/places.xul',
-    '/content/about.xul',
+    '/content/overlays.js',
     '/content/about-multifox.html',
 
     '/components/protocol.js',
@@ -188,6 +186,8 @@ srcVars = {
             'BASE_DOM_ID':      'multifox-dom',
             'XPCOM_ABOUT_CLASS':    '{347c41b6-1417-411c-b87a-422bcfc1899a}',
             'XPCOM_ABOUT_CONTRACT': '@mozilla.org/network/protocol/about;1?what=multifox',
+            'XPCOM_STARTUP_CLASS':    '{56c5d3a5-e39c-4131-af85-ebee4fceb792}',
+            'XPCOM_STARTUP_CONTRACT': '@hultmann/multifox/bg;1',
 
 
             'APP_MIN_VERSION':  '3.6.11',

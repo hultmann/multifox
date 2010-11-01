@@ -1,5 +1,3 @@
-<?xml version="1.0"?>
-<!--
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -17,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Jeferson Hultmann <hultmann@gmail.com>
- * Portions created by the Initial Developer are Copyright (C) 2009
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,22 +33,44 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
--->
 
-<!DOCTYPE overlay>
-<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-  <script type="application/x-javascript">
-    <![CDATA[
-(function() {
-  var jsm = {};
-  Cu.import("${URI_JS_MODULE}/new-window.js", jsm);
-  jsm.onOverlay(window);
-})();
-    ]]>
-  </script>
+const PlacesOverlay = {
+  add: function(win) {
+    var popup = win.document.getElementById("placesContext");
+    popup.addEventListener("popupshowing", function(evt) {
+      var ns = {};
+      Components.utils.import("${URI_JS_MODULE}/menus.js", ns);
+      ns.menuShowing(evt);
+    }, false);
+  }
+};
 
-  <keyset id="mainKeyset">
-    <key id="key_${BASE_DOM_ID}-new-identity" modifiers="accel,shift" key="M" oncommand="(function dummy(){})()"/>
-  </keyset>
 
-</overlay>
+const AboutOverlay = {
+  add: function(win) {
+    if (win.arguments[0].id) {
+      // Firefox 4
+      if (win.arguments[0].id !== "${EXT_ID}") {
+        return;
+      }
+    } else {
+      // Firefox 3.6
+      if (win.arguments[0] !== "urn:mozilla:item:${EXT_ID}") {
+        return;
+      }
+    }
+    win.setTimeout(win.close, 0); // setTimeout => workaround to avoid crash
+
+    var Cc = Components.classes;
+    var Ci = Components.interfaces;
+    var browserWin = Cc["@mozilla.org/appshell/window-mediator;1"]
+                      .getService(Ci.nsIWindowMediator)
+                      .getMostRecentWindow("navigator:browser");
+    if (browserWin) {
+      browserWin.openUILinkIn("about:multifox", "tab", false, null, null);
+      win.onunload = function() {
+        browserWin.getBrowser().contentWindow.focus();
+      };
+    }
+  }
+};

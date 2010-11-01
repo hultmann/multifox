@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "onOverlay", "newPendingWindow"];
+const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -45,48 +45,112 @@ function newPendingWindow() {
   m_pendingNewWindows++;
 }
 
-function onOverlay(win) {
-  console.log("browser.xul - overlay");
-  win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+var m_docObserver = null;
+
+function init() {
+  console.assert(m_docObserver === null, "m_docObserver should be null");
+  m_docObserver = new DocObserver();
 }
+
+
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+
+function DocObserver() {
+  Cc["@mozilla.org/observer-service;1"]
+    .getService(Ci.nsIObserverService)
+    .addObserver(this, "chrome-document-global-created", false);
+}
+
+DocObserver.prototype = {
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+  observe: function(win, topic, data) {
+    console.log(topic + "@" + win.document.location.href);
+    switch (win.document.location.href) {
+      case "chrome://mozapps/content/extensions/about.xul":
+        var ns = {};
+        Cc["@mozilla.org/moz/jssubscript-loader;1"]
+          .getService(Ci.mozIJSSubScriptLoader)
+          .loadSubScript("${URI_PACKAGENAME}/content/overlays.js", ns);
+        ns.AboutOverlay.add(win);
+        break;
+
+      default:
+        win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+        break;
+    }
+  }
+};
+
 
 function onDOMContentLoaded(evt) {
-  console.log("browser.xul - DOMContentLoaded");
-  var win = evt.currentTarget;
-  win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-  win.addEventListener("unload", onUnload, false);
+  var chromeWin = evt.currentTarget;
+  var doc = chromeWin.document;
+  if (doc !== evt.target) {
+    return; // avoid bubbled DOMContentLoaded events
+  }
 
-  setWindowProfile(win)
+  chromeWin.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 
-  var doc = win.document;
-  //if ((doc instanceof Ci.nsIDOMDocument) === false) {
-
-  // detect session restore
-  doc.addEventListener("SSTabRestoring", onTabRestoring, false);
-  doc.addEventListener("SSTabRestored", onTabRestored, false);
-
-  // key
-  var key = doc.getElementById("key_${BASE_DOM_ID}-new-identity");
-  key.addEventListener("command", onKey, false);
-
-  // menus
-  addMenuListeners(doc);
-
-  //
-  console.log("/browser.xul - DOMContentLoaded");
+  switch (doc.location.href) {
+    case "chrome://browser/content/browser.xul":
+      console.log("browser.xul - DOMContentLoaded");
+      BrowserOverlay.add(chromeWin);
+      console.log("/browser.xul - DOMContentLoaded");
+      break;
+    case "chrome://browser/content/history/history-panel.xul":
+    case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
+    case "chrome://browser/content/places/places.xul":
+      var ns = {};
+      Cc["@mozilla.org/moz/jssubscript-loader;1"]
+        .getService(Ci.mozIJSSubScriptLoader)
+        .loadSubScript("${URI_PACKAGENAME}/content/overlays.js", ns);
+      ns.PlacesOverlay.add(chromeWin);
+      break;
+  }
 }
 
 
-function onUnload(evt) {
-  var win = evt.currentTarget;
-  win.removeEventListener("unload", onUnload, false);
-  removeMenuListeners(win.document);
 
-  // key
-  var key = win.document.getElementById("key_${BASE_DOM_ID}-new-identity");
-  key.removeEventListener("command", onKey, false);
-  //key.parentNode.removeChild(key);
-}
+const BrowserOverlay = {
+  add: function(win) {
+    win.addEventListener("unload", BrowserOverlay._unload, false);
+
+    setWindowProfile(win)
+
+    var doc = win.document;
+    //if ((doc instanceof Ci.nsIDOMDocument) === false) {
+
+    // detect session restore
+    doc.addEventListener("SSTabRestoring", onTabRestoring, false);
+    doc.addEventListener("SSTabRestored", onTabRestored, false);
+
+    // key
+    var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
+    key.setAttribute("id", "key_${BASE_DOM_ID}-new-identity");
+    key.setAttribute("modifiers", "accel,shift");
+    key.setAttribute("key", "M");
+    key.setAttribute("oncommand", "(function dummy(){})()"); // workaround
+    key.addEventListener("command", onKey, false);
+
+    // menus
+    addMenuListeners(doc);
+  },
+
+  _unload: function(evt) {
+    var win = evt.currentTarget;
+    win.removeEventListener("unload", BrowserOverlay._unload, false);
+    BrowserOverlay.remove(win);
+  },
+
+  remove: function(win) {
+    removeMenuListeners(win.document);
+
+    // key
+    var key = win.document.getElementById("key_${BASE_DOM_ID}-new-identity");
+    key.removeEventListener("command", onKey, false);
+    key.parentNode.removeChild(key);
+  }
+};
 
 
 function onKey(evt) {
@@ -212,7 +276,7 @@ const console = {
     if (test !== true) {
       var ex =  new Error("console.assert - " + msg + " - " + test);
       Components.utils.reportError(ex) // sometimes exception doesn't show up in console
-      throw ex;
+      throw "";
     }
   }
 };
