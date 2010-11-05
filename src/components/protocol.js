@@ -51,7 +51,7 @@ AboutMultifox.prototype = {
   newChannel: function(aURI) {
     var channel = Components.classes["@mozilla.org/network/io-service;1"]
                     .getService(Components.interfaces.nsIIOService)
-                    .newChannel("${URI_PACKAGENAME}/content/about-multifox.html", null, null);
+                    .newChannel("${PATH_CONTENT}/about-multifox.html", null, null);
     channel.originalURI = aURI;
     return channel;
   }
@@ -71,7 +71,7 @@ Startup.prototype = {
   observe: function(subject, topic, data) {
     if (topic === "profile-after-change") {
       var ns = {};
-      Components.utils.import("${URI_JS_MODULE}/new-window.js", ns);
+      Components.utils.import("${PATH_MODULE}/new-window.js", ns);
       ns.init();
     }
   }

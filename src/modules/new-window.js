@@ -70,7 +70,7 @@ DocObserver.prototype = {
         var ns = {};
         Cc["@mozilla.org/moz/jssubscript-loader;1"]
           .getService(Ci.mozIJSSubScriptLoader)
-          .loadSubScript("${URI_PACKAGENAME}/content/overlays.js", ns);
+          .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
         ns.AboutOverlay.add(win);
         break;
 
@@ -103,7 +103,7 @@ function onDOMContentLoaded(evt) {
       var ns = {};
       Cc["@mozilla.org/moz/jssubscript-loader;1"]
         .getService(Ci.mozIJSSubScriptLoader)
-        .loadSubScript("${URI_PACKAGENAME}/content/overlays.js", ns);
+        .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
       ns.PlacesOverlay.add(chromeWin);
       break;
   }
@@ -166,13 +166,13 @@ function setWindowProfile(newWin) {
     // new identity profile
     console.log("m_pendingNewWindows=" + m_pendingNewWindows);
     m_pendingNewWindows--;
-    Components.utils.import("${URI_JS_MODULE}/main.js");
+    Components.utils.import("${PATH_MODULE}/main.js");
     NewWindow.newId(newWin);
 
   } else {
     // inherit identity profile
     if (util.networkListeners.active) {
-      Components.utils.import("${URI_JS_MODULE}/main.js");
+      Components.utils.import("${PATH_MODULE}/main.js");
       NewWindow.inheritId(newWin);
     } else {
       // no Multifox window
@@ -199,7 +199,7 @@ function onTabRestoring(evt) {
   console.log("first tab restoring " + stringId);
 
   // add icon; sync id — override any previous profile id
-  Components.utils.import("${URI_JS_MODULE}/main.js");
+  Components.utils.import("${PATH_MODULE}/main.js");
   NewWindow.applyRestore(win);
 }
 
@@ -251,7 +251,7 @@ function removeMenuListeners(doc) {
 
 
 function onMenuPopupShowing(evt) {
-  Components.utils.import("${URI_JS_MODULE}/menus.js");
+  Components.utils.import("${PATH_MODULE}/menus.js");
   menuShowing(evt);
 }
 
@@ -266,7 +266,7 @@ const console = {
     } else {
       ms2 = ms.toString();
     }
-    var p = "${PACKAGENAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
+    var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
     Cc["@mozilla.org/consoleservice;1"]
       .getService(Ci.nsIConsoleService)
       .logStringMessage(p + msg);
@@ -291,7 +291,7 @@ const util = {
     }
     return Cc["@mozilla.org/intl/stringbundle;1"]
             .getService(Ci.nsIStringBundleService)
-            .createBundle("${URI_PACKAGENAME}/locale/general.properties")
+            .createBundle("${PATH_LOCALE}/general.properties")
             .formatStringFromName(msg, args, args.length);
   },
 
@@ -304,7 +304,7 @@ const util = {
 
     _cookieRejectedListener: {
       observe: function(aSubject, aTopic, aData) {
-        Components.utils.import("${URI_JS_MODULE}/main.js");
+        Components.utils.import("${PATH_MODULE}/main.js");
         console.log("cookie-rejected\n" + aSubject + "\n" + aTopic + "\n" + aData + "\n" + aSubject.QueryInterface(Ci.nsIURI).spec);
       }
     },

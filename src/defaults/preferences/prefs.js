@@ -34,4 +34,4 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-pref("extensions.${EXT_ID}.description", "${URI_PACKAGENAME}/locale/general.properties");
+pref("extensions.${EXT_ID}.description", "${PATH_LOCALE}/general.properties");

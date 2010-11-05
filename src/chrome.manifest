@@ -5,10 +5,10 @@ component ${XPCOM_STARTUP_CLASS}    components/protocol.js
 contract  ${XPCOM_STARTUP_CONTRACT} ${XPCOM_STARTUP_CLASS}
 category  profile-after-change      ${XPCOM_STARTUP_CONTRACT} ${XPCOM_STARTUP_CONTRACT}
 
-resource  ${JS_MODULE}  modules/
+resource  ${RESOURCE_NAME}  modules/
 
-content   ${PACKAGENAME} content/
+content   ${CHROME_NAME} content/
 
-locale  ${PACKAGENAME}  en-US  locale/en-US/
-#locale  ${PACKAGENAME}  pt-BR  locale/pt-BR/
-#locale  ${PACKAGENAME}  es-ES  locale/es-ES/
+locale  ${CHROME_NAME}  en-US  locale/en-US/
+#locale  ${CHROME_NAME}  pt-BR  locale/pt-BR/
+#locale  ${CHROME_NAME}  es-ES  locale/es-ES/

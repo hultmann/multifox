@@ -36,7 +36,7 @@
 
 const EXPORTED_SYMBOLS = ["createMultifoxPopup"];
 
-Components.utils.import("${URI_JS_MODULE}/new-window.js");
+Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function createMultifoxPopup(icon, Profile) {
   var doc = icon.ownerDocument;
@@ -88,7 +88,7 @@ function appendError(container, panel) {
   if (error.length === 0) {
     return null;
   }
-  Components.utils.import("${URI_JS_MODULE}/error.js");
+  Components.utils.import("${PATH_MODULE}/error.js");
   return appendErrorToPanel(container, panel, error);
 }
 
@@ -124,7 +124,7 @@ function appendLogo(container) {
   var doc = container.ownerDocument;
   var box = container.appendChild(doc.createElement("hbox"));
   var img = box.appendChild(doc.createElement("image"));
-  img.setAttribute("src", "${URI_PACKAGENAME}/content/logo-popup.png");
+  img.setAttribute("src", "${PATH_CONTENT}/logo-popup.png");
   img.setAttribute("width", "175");
   img.setAttribute("height", "97");
   img.style.marginLeft = "-10px";
@@ -138,7 +138,7 @@ function appendProfileId(container, icon, profileId, Profile) {
   desc1.setAttribute("align", "center");
   var desc2 = container.appendChild(doc.createElement("description"));
 
-  var p1 = util.getText("icon.panel.p1.label", "[(${URI_PACKAGENAME})]").split("[(${URI_PACKAGENAME})]");
+  var p1 = util.getText("icon.panel.p1.label", "[${PATH_CONTENT}]").split("[${PATH_CONTENT}]");
   desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[0]);
 
   var editProfileId = desc1.appendChild(doc.createElement("textbox"));

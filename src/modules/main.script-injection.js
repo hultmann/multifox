@@ -147,10 +147,10 @@ function clearStatusIcon(idData, win) {
 function ScriptSourceLoader(is192) {
   if (is192) {
     // Gecko 1.9.2
-    this._path = "${URI_PACKAGENAME}/content/content-injection-192.js";
+    this._path = "${PATH_CONTENT}/content-injection-192.js";
   } else {
     // Gecko 2.0
-    this._path = "${URI_PACKAGENAME}/content/content-injection.js";
+    this._path = "${PATH_CONTENT}/content-injection.js";
   }
   this._src = null;
   this._load(true);

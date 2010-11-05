@@ -158,15 +158,15 @@ function initIconCore(iconContainer, profileId) {
   var os = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS;
   switch (os) {
     case "Darwin":
-      styleIcon.backgroundImage = "url(${URI_PACKAGENAME}/content/icon-osx.png)";
+      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon-osx.png)";
       styleIcon.backgroundColor = "#416ea5";
       break;
     case "WINNT":
-      styleIcon.backgroundImage = "url(${URI_PACKAGENAME}/content/icon.png)";
+      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon.png)";
       styleIcon.backgroundColor = "#4ab0f6";
       break;
     default:
-      styleIcon.backgroundImage = "url(${URI_PACKAGENAME}/content/icon-linux.png)";
+      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon-linux.png)";
       styleIcon.backgroundColor = "#6184c3";
       break;
   }
@@ -257,7 +257,7 @@ function toggleDefaultWindowUI(show) {
 
 
 function openMultifoxPopup(evt) {
-  Components.utils.import("${URI_JS_MODULE}/popup.js");
+  Components.utils.import("${PATH_MODULE}/popup.js");
   var icon = evt.currentTarget; //or this
 
   var panel = createMultifoxPopup(icon, Profile);

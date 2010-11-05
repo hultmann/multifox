@@ -36,7 +36,7 @@
 
 EXPORTED_SYMBOLS = ["menuShowing"];
 
-Components.utils.import("${URI_JS_MODULE}/new-window.js");
+Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function menuShowing(evt) {
   var menu = evt.target;

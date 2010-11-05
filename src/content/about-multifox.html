@@ -39,7 +39,7 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <link rel="shortcut icon" type="image/png" href="${URI_PACKAGENAME}/content/favicon.ico">
+    <link rel="shortcut icon" type="image/png" href="${PATH_CONTENT}/favicon.ico">
     <title>${EXT_NAME}</title>
     <style type="text/css">
       body {
@@ -73,7 +73,7 @@
 
       (function() {
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "${URI_PACKAGENAME}/locale/about.html", true);
+        xhr.open("GET", "${PATH_LOCALE}/about.html", true);
         xhr.overrideMimeType("text/plain");
         xhr.onload = function() {
           m_locale = this.responseText;
@@ -114,7 +114,7 @@
           });
         }
 
-        Components.utils.import("${URI_JS_MODULE}/main.js");
+        Components.utils.import("${PATH_MODULE}/main.js");
         var imgTitle = "[" + (FindIdentity.fromContent(window).profileNumber) + "]";
 
 
@@ -125,7 +125,7 @@
     </script>
   </head>
   <body>
-    <h1><a href="${EXT_SITE}"><img id="logo" style="display:block; margin-left:auto; margin-right:auto;" src="${URI_PACKAGENAME}/content/logo-about.png" alt="${EXT_NAME}"></a></h1>
+    <h1><a href="${EXT_SITE}"><img id="logo" style="display:block; margin-left:auto; margin-right:auto;" src="${PATH_CONTENT}/logo-about.png" alt="${EXT_NAME}"></a></h1>
     <h2><a href="${EXT_SITE}" id="name"></a></h2>
     <p id="desc"></p>
     <div id="from-locale"></div>

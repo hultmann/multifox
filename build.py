@@ -37,176 +37,63 @@
 #
 # ***** END LICENSE BLOCK *****
 
-import os
-from os.path import join
-import string
-import datetime
-import shutil
-from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
-import hashlib
+import build_tools
+
+b = build_tools.BuildExtension()
+
+b.add_binary("icon.png")
+b.add_binary("content/favicon.ico")
+b.add_binary("content/logo-about.png")
+b.add_binary("content/logo-popup.png")
+b.add_binary("content/icon.png")
+b.add_binary("content/icon-linux.png")
+b.add_binary("content/icon-osx.png")
 
 
-def createDirStructure(unpackedDir):
-  os.mkdir(unpackedDir)
-  for myDir in ['modules',
-                'content',
-                'components',
-                'defaults',
-                'defaults/preferences',
-                'locale',
-                'locale/en-US',
-                'locale/es-ES',
-                'locale/pt-BR']:
+b.add_text("install.rdf")
+b.add_text("chrome.manifest")
+b.add_text("components/protocol.js")
+b.add_text("defaults/preferences/prefs.js")
 
-    os.mkdir(unpackedDir + '/' + myDir)
-    #os.makedirs
+b.add_text("content/content-injection.js")
+b.add_text("content/content-injection-192.js")
+b.add_text("content/overlays.js")
+b.add_text("content/about-multifox.html")
 
-
-def copyBinaryFiles(sourceDir, unpackedDir):
-  files = [
-    '/icon.png',
-    '/content/favicon.ico',
-    '/content/logo-about.png',
-    '/content/logo-popup.png',
-    '/content/icon.png',
-    '/content/icon-linux.png',
-    '/content/icon-osx.png'
-  ];
-
-  for myFile in files:
-    shutil.copy(sourceDir + myFile, unpackedDir + myFile)
+b.add_text("modules/new-window.js")
+b.add_text("modules/main.js")
+b.add_text("modules/menus.js")
+b.add_text("modules/error.js")
+b.add_text("modules/popup.js")
 
 
-def copyTextFiles(sourceDir, unpackedDir, dic):
-  files = [
-    '/install.rdf',
-    '/chrome.manifest',
+b.add_locale("en-US")
+b.add_locale("pt-BR")
+b.add_locale("es-ES")
 
-    '/content/content-injection.js',
-    '/content/content-injection-192.js',
-    '/content/overlays.js',
-    '/content/about-multifox.html',
-
-    '/components/protocol.js',
-
-    '/modules/new-window.js',
-    '/modules/menus.js',
-    '/modules/error.js',
-    '/modules/popup.js',
-
-    '/defaults/preferences/prefs.js',
-
-    '/locale/en-US/about.html',
-    '/locale/es-ES/about.html',
-    '/locale/pt-BR/about.html',
-    '/locale/en-US/general.properties',
-    '/locale/es-ES/general.properties',
-    '/locale/pt-BR/general.properties'
-  ]
-
-  for myFile in files:
-    parseTextFile(sourceDir + myFile, unpackedDir + myFile, dic);
+b.add_text("locale/${locale}/about.html")
+b.add_text("locale/${locale}/general.properties")
 
 
-def buildModule(sourceDir, unpackedDir, dic):
-  buf = ''
-  files = [
-    '/modules/main.main.js',
-    '/modules/main.window.js',
-    '/modules/main.icon.js',
-    '/modules/main.script-injection.js',
-    '/modules/main.network.js',
-    '/modules/main.cookies.js',
-    '/modules/main.storage.js',
-    '/modules/main.util.js'
-  ]
+b.set_var("EXT_VERSION",     "1.3b2pre")
+b.set_var("EXT_ID",          "multifox@hultmann")
+b.set_var("EXT_NAME",        "Multifox (BETA)")
+b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
+b.set_var("APP_MIN_VERSION", "3.6.12")
+b.set_var("APP_MAX_VERSION", "4.0.*")
+b.set_var("CHROME_NAME",     "multifox")
+b.set_var("RESOURCE_NAME",   "multifox-modules")
+b.set_var("PATH_CONTENT",    "chrome://multifox/content")
+b.set_var("PATH_LOCALE",     "chrome://multifox/locale")
+b.set_var("PATH_MODULE",     "resource://multifox-modules")
 
-  for myFile in files:
-    f = open(sourceDir + myFile, 'r')
-    buf += string.Template(f.read()).safe_substitute(dic)
-    f.close()
+b.set_var("BASE_DOM_ID",            "multifox-dom")
 
-  m = open(unpackedDir + '/modules/main.js', 'w')
-  m.write(buf)
-  m.close()
+b.set_var("XPCOM_ABOUT_CLASS",      "{347c41b6-1417-411c-b87a-422bcfc1899a}")
+b.set_var("XPCOM_ABOUT_CONTRACT",   "@mozilla.org/network/protocol/about;1?what=multifox")
 
+b.set_var("XPCOM_STARTUP_CLASS",    "{56c5d3a5-e39c-4131-af85-ebee4fceb792}")
+b.set_var("XPCOM_STARTUP_CONTRACT", "@hultmann/multifox/bg;1")
 
-def parseTextFile(inputPath, outputPath, dic):
-  f = open(inputPath, 'r')
-  buf = string.Template(f.read()).safe_substitute(dic)
-  f.close()
-
-  f = open(outputPath, 'w')
-  f.write(buf)
-  f.close()
-
-
-def createUnpacked(sourceDir, unpackedDir, dic):
-  if os.path.exists(unpackedDir):
-    shutil.rmtree(unpackedDir)
-  createDirStructure(unpackedDir)
-  copyBinaryFiles(sourceDir, unpackedDir)
-  copyTextFiles(sourceDir, unpackedDir, dic)
-  buildModule(sourceDir, unpackedDir, dic)   #main.js
-
-
-def createXpi(unpackedDir, xpi_file):
-  zip = ZipFile('build/xpi/' + xpi_file, 'w', ZIP_DEFLATED)
-  for root, dirs, files in os.walk(unpackedDir):
-    for name in files:
-      t = join(root, name)
-      zip.write(t, t.replace(unpackedDir + '\\', ''))
-  zip.close()
-
-
-def getHash(path):
-  f = open(path, 'rb')
-  h = hashlib.sha512()
-  while True:
-    data = f.read(8192)
-    if data:
-      h.update(data)
-    else:
-      break
-  f.close()
-  return 'sha512:' + h.hexdigest()
-
-
-
-unpackedDir = 'build/unpacked'
-packageName = 'multifox'
-jsModule = 'multifox-modules'
-version = '1.3b2pre'
-
-srcVars = {
-            'PACKAGENAME':      packageName,
-            'URI_PACKAGENAME':  'chrome://' + packageName,
-            'JS_MODULE':        jsModule,
-            'URI_JS_MODULE':    'resource://' + jsModule,
-            'BASE_DOM_ID':      'multifox-dom',
-            'XPCOM_ABOUT_CLASS':    '{347c41b6-1417-411c-b87a-422bcfc1899a}',
-            'XPCOM_ABOUT_CONTRACT': '@mozilla.org/network/protocol/about;1?what=multifox',
-            'XPCOM_STARTUP_CLASS':    '{56c5d3a5-e39c-4131-af85-ebee4fceb792}',
-            'XPCOM_STARTUP_CONTRACT': '@hultmann/multifox/bg;1',
-
-
-            'APP_MIN_VERSION':  '3.6.11',
-            'APP_MAX_VERSION':  '4.0.*',
-
-            'EXT_ID':           'multifox@hultmann',
-            'EXT_NAME':         'Multifox (BETA)',
-            'EXT_VERSION':      version,
-            'EXT_SITE':         'http://br.mozdev.org/multifox/',
-
-            'XPI_HASH':         '[TBD]',
-            'XPI_NAME':         'multifox-' + version + '.xpi'
-          }
-
-
-createUnpacked('src', unpackedDir, srcVars)
-
-createXpi(unpackedDir, srcVars['XPI_NAME'])
-
-srcVars['XPI_HASH'] = getHash('build/xpi/' + srcVars['XPI_NAME'])
-
-parseTextFile('src/update.rdf', 'build/update.rdf', srcVars)
+xpi = b.get_var("CHROME_NAME") + "-" + b.get_var("EXT_VERSION") + ".xpi"
+b.build("src", "build", xpi)

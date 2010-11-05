@@ -40,9 +40,18 @@ const EXPORTED_SYMBOLS = ["NewWindow",
                          ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-Components.utils.import("${URI_JS_MODULE}/new-window.js");
+Components.utils.import("${PATH_MODULE}/new-window.js");
 
 console.log("===>LOADING main.js");
+
+
+#include "main.window.js"
+#include "main.icon.js"
+#include "main.script-injection.js"
+#include "main.network.js"
+#include "main.cookies.js"
+#include "main.storage.js"
+#include "main.util.js"
 
 
 const NewWindow = {

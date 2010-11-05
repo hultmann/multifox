@@ -39,7 +39,7 @@ const PlacesOverlay = {
     var popup = win.document.getElementById("placesContext");
     popup.addEventListener("popupshowing", function(evt) {
       var ns = {};
-      Components.utils.import("${URI_JS_MODULE}/menus.js", ns);
+      Components.utils.import("${PATH_MODULE}/menus.js", ns);
       ns.menuShowing(evt);
     }, false);
   }

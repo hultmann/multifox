@@ -36,8 +36,8 @@
 
 const EXPORTED_SYMBOLS = ["appendErrorToPanel"];
 
-Components.utils.import("${URI_JS_MODULE}/new-window.js");
-Components.utils.import("${URI_JS_MODULE}/main.js");
+Components.utils.import("${PATH_MODULE}/new-window.js");
+Components.utils.import("${PATH_MODULE}/main.js");
 
 // <vbox>  <== box
 //   <hbox>  <== box2
