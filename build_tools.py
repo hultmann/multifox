@@ -118,8 +118,9 @@ class BuildExtension:
         zip = zipfile.ZipFile(xpi_path + self.get_var("XPI_NAME"), "w", zipfile.ZIP_DEFLATED)
         for root, dirs, files in os.walk(self.__dst):
             for name in files:
-                t = os.path.join(root, name)
-                zip.write(t, t.replace(self.__dst + "\\", ""))
+                fs_path = os.path.join(root, name)
+                zip_path = fs_path.replace(self.__dst, "", 1)
+                zip.write(fs_path, zip_path)
         zip.close()
 
 
