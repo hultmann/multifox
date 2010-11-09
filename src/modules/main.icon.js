@@ -268,4 +268,10 @@ function openMultifoxPopup(evt) {
   }, false);
 
   panel.openPopup(icon, "after_end", 0, 1);
+
+  // remove error icon
+  var doc = icon.ownerDocument;
+  var browser = doc.defaultView.getBrowser().selectedBrowser;
+  browser.removeAttribute("multifox-tab-status");
+  updateStatus(doc);
 }
