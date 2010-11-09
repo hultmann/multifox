@@ -309,16 +309,26 @@ const console = {
 
 
 const util = {
-  getText: function(msg) {
-    var len = arguments.length - 1;
-    var args = new Array(len);
-    for (var idx = 0; idx < len; idx++) {
-      args[idx] = arguments[idx + 1];
+  getText: function(name) {
+    return this._getTextCore(name, "general", arguments, 1);
+  },
+
+  getTextFrom: function(name, filename) {
+    return this._getTextCore(name, filename, arguments, 2);
+  },
+
+  _getTextCore: function(name, filename, args, startAt) {
+    var bundle = Cc["@mozilla.org/intl/stringbundle;1"]
+                  .getService(Ci.nsIStringBundleService)
+                  .createBundle("${PATH_LOCALE}/" + filename + ".properties");
+
+    if (args.length === startAt) {
+      return bundle.GetStringFromName(name);
+    } else {
+      var args2 = Array.prototype.slice.call(args, startAt, args.length);
+      console.assert(args2.length > 0, "_getTextCore");
+      return bundle.formatStringFromName(name, args2, args2.length)
     }
-    return Cc["@mozilla.org/intl/stringbundle;1"]
-            .getService(Ci.nsIStringBundleService)
-            .createBundle("${PATH_LOCALE}/general.properties")
-            .formatStringFromName(msg, args, args.length);
   },
 
   networkListeners: {
