@@ -59,14 +59,40 @@ function DocObserver() {
   Cc["@mozilla.org/observer-service;1"]
     .getService(Ci.nsIObserverService)
     .addObserver(this, "chrome-document-global-created", false);
+
+  // workaround for top windows until chrome-document-global-created works again in Fx4
+  Cc["@mozilla.org/embedcomp/window-watcher;1"]
+    .getService(Ci.nsIWindowWatcher)
+    .registerNotification(this);
 }
+
 
 DocObserver.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
-    console.log(topic + "@" + win.document.location.href);
+    switch (topic) {
+      case "domwindowclosed":
+        return;
+      case "domwindowopened":
+        break;
+      default:
+        if (win.top === win) {
+          if (win.document.location.href === "chrome://mozapps/content/extensions/about.xul") {
+            console.log("OK overlay via " + topic + " / " + win.document.location.href);
+            var ns = {};
+            Cc["@mozilla.org/moz/jssubscript-loader;1"]
+              .getService(Ci.mozIJSSubScriptLoader)
+              .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+            ns.AboutOverlay.add(win);
+          }
+          return;
+        }
+        break; // chrome-document-global-created works for history-panel.xul etc
+    }
+
     switch (win.document.location.href) {
       case "chrome://mozapps/content/extensions/about.xul":
+        console.log("OK overlay via " + topic + " / " + win.document.location.href);
         var ns = {};
         Cc["@mozilla.org/moz/jssubscript-loader;1"]
           .getService(Ci.mozIJSSubScriptLoader)
@@ -93,13 +119,13 @@ function onDOMContentLoaded(evt) {
 
   switch (doc.location.href) {
     case "chrome://browser/content/browser.xul":
-      console.log("browser.xul - DOMContentLoaded");
+      console.log("OK overlay DOMContentLoaded " + doc.location.href);
       BrowserOverlay.add(chromeWin);
-      console.log("/browser.xul - DOMContentLoaded");
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
     case "chrome://browser/content/places/places.xul":
+      console.log("OK overlay DOMContentLoaded " + doc.location.href);
       var ns = {};
       Cc["@mozilla.org/moz/jssubscript-loader;1"]
         .getService(Ci.mozIJSSubScriptLoader)
