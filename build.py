@@ -59,6 +59,8 @@ b.add_text("content/content-injection.js")
 b.add_text("content/content-injection-192.js")
 b.add_text("content/overlays.js")
 b.add_text("content/about-multifox.html")
+b.add_text("content/about-multifox.js")
+b.add_text("content/about-badges.html")
 
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
@@ -68,11 +70,12 @@ b.add_text("modules/popup.js")
 
 
 b.add_locale("en-US")
-b.add_locale("pt-BR")
-b.add_locale("es-ES")
+#b.add_locale("pt-BR")
+#b.add_locale("es-ES")
 
-b.add_text("locale/${locale}/about.html")
+
 b.add_text("locale/${locale}/general.properties")
+b.add_text("locale/${locale}/about.properties")
 
 
 b.set_var("EXT_VERSION",     "1.3b2pre")

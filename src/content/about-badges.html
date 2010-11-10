@@ -17,7 +17,7 @@
  *
  * The Initial Developer of the Original Code is
  * Jeferson Hultmann <hultmann@gmail.com>
- * Portions created by the Initial Developer are Copyright (C) 2009
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -37,55 +37,24 @@
  * ***** END LICENSE BLOCK ***** */
 -->
 <html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <link rel="shortcut icon" type="image/png" href="${PATH_CONTENT}/favicon.ico">
-    <title>${EXT_NAME}</title>
-    <style type="text/css">
-      body {
-        font-family: sans-serif;
-        margin: 3em 8em;
-      }
-      h2 {
-        font-size: 140%;
-        margin: 2em 0 0 0;
-      }
-      h1 + h2:first-of-type {
-        margin-top: 0em;
-      }
-      p {
-        margin: 4px 0;
-      }
-      img {
-        border-style: none;
-      }
-      #l10n-notfound-p {
-        font-style: italic;
-      }
-    </style>
-    <script type="text/javascript" src="${PATH_CONTENT}/about-multifox.js"></script>
-  </head>
-  <body>
-    <h1><a href="${EXT_SITE}"><img id="logo" width="250" height="155" src="${PATH_CONTENT}/logo-about.png" alt="${EXT_NAME}"></a></h1>
-    <h2><a href="${EXT_SITE}">${EXT_NAME} ${EXT_VERSION}</a></h2>
-    <p id="desc"></p>
-
-    <h2 id="spread-h"></h2>
-    <p id="spread-p"></p>
-
-    <iframe id="badges" frameborder="0" scrolling="no" width="100%" height="80"></iframe>
-
-    <h2 id="author-h"></h2>
-    <p id="author-p"></p>
-
-    <h2 id="l10n-h"></h2>
-    <p id="l10n-p"></p>
-    <p id="l10n-notfound-p"></p>
-
-    <h2 id="source-h"></h2>
-    <p id="source-p"></a></p>
-
-    <h2 id="legal-h"></h2>
-    <p id="legal-p"></p>
+  <head></head>
+  <body style="margin:0">
+    <table cellspacing="0" cellspacing="0" border="0">
+      <tbody>
+        <tr>
+          <td width="70">
+            <div style="padding-top:6px">
+              <iframe src="http://www.facebook.com/plugins/like.php?href=http%3A%2F%2Fbr.mozdev.org%2Fmultifox%2F&amp;layout=box_count&amp;show_faces=true&amp;width=60&amp;action=like&amp;colorscheme=light&amp;height=65" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:60px; height:65px;" allowTransparency="true"></iframe>
+            </div>
+          </td>
+          <td width="70">
+            <div><script src="http://www.stumbleupon.com/hostedbadge.php?s=5&r=http://br.mozdev.org/multifox/"></script></div>
+          </td>
+          <td width="70">
+            <div><a href="http://twitter.com/share" class="twitter-share-button" data-url="http://br.mozdev.org/multifox/" data-count="vertical">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </body>
 </html>
