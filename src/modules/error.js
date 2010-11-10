@@ -66,10 +66,10 @@ function appendErrorToPanel(box, panel, error) {
   var txt;
   switch (error) {
     case "localStorage":
-      txt = util.getText("icon.panel.unsupported-moz19.label", "Multifox");
+      txt = util.getText("icon.panel.unsupported-moz19.label", "${EXT_NAME}");
       break;
     default:
-      txt = util.getText("icon.panel.unsupported-general.label", "Multifox");
+      txt = util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}");
       break;
   }
 
