@@ -148,5 +148,6 @@ function moveTab(targetWin, sourceTab, isNewWin) {
     targetTabBrowser.swapBrowsersAndCloseOther(targetTab, sourceTab);
     targetTabBrowser.selectedTab = targetTab;
     targetTabBrowser.contentWindow.focus();
+    targetTabBrowser.selectedTab.linkedBrowser.reload();
   }, 0);
 }
