@@ -99,6 +99,7 @@ function populatePage() {
     var pHtml;
     switch (id) {
       case "spread":
+        pHtml = ns.util.getTextFrom(pId, "about");
         hHtml = ns.util.getTextFrom(id + ".h", "about", "${EXT_NAME}");
         break;
 
