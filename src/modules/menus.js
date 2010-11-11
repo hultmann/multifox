@@ -40,7 +40,7 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function menuShowing(evt) {
   var menu = evt.target;
-  switch (menu.id || menu.getAttribute("anonid")) {
+  switch (menu.id || menu.getAttribute("anonid") || menu.getAttribute("multifox-id")) {
     case "menu_FilePopup":
       fileMenu(menu);
       break;
@@ -52,6 +52,9 @@ function menuShowing(evt) {
       break;
     case "tabContextMenu":
       tabMenu(menu);
+      break;
+    case "app-menu": // Firefox 4
+      appMenu(menu);
       break;
   }
 }
@@ -73,6 +76,27 @@ function onPopupHidden(evt) {
 
   removeMenuItem("${BASE_DOM_ID}-link-cmd");
   removeMenuItem("${BASE_DOM_ID}-link-sep");
+}
+
+
+function appMenu(menu) {
+  var doc = menu.ownerDocument;
+
+  var position = doc.getElementById("appmenu_openFile");
+  console.log("position "+position);
+  var cmd = menu.insertBefore(doc.createElement("menuitem"), position);
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
+
+  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
+  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
+
+
+  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "appMenu");}, false);
+  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
+  cmd.setAttribute("label", util.getText("appmenu.new.label"));
+  cmd.setAttribute("accesskey", util.getText("appmenu.new.accesskey"));
+
+  menu.addEventListener("popuphidden", onPopupHidden, false);
 }
 
 
@@ -184,6 +208,7 @@ function newIdentityCommand(evt, cmd) {
     case "link":
       win.gContextMenu.openLink();
       break;
+    case "appMenu":
     case "fileMenu":
     default:
       var newWin = win.OpenBrowserWindow();

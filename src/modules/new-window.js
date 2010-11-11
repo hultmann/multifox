@@ -256,6 +256,14 @@ function addMenuListeners(doc) {
   var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
   if (!menupopup) {
     menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
+
+    var newWinItem = doc.getElementById("appmenu_newNavigator");
+    if (newWinItem) {
+      // appmenu
+      var newTabPopup = newWinItem.parentContainer.menupopup;
+      newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
+      newTabPopup.setAttribute("multifox-id", "app-menu");
+    }
   }
   menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
 }
@@ -270,6 +278,14 @@ function removeMenuListeners(doc) {
   var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
   if (!menupopup) {
     menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
+
+    var newWinItem = doc.getElementById("appmenu_newNavigator");
+    if (newWinItem) {
+      // appmenu
+      var newTabPopup = newWinItem.parentContainer.menupopup;
+      newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
+      newTabPopup.removeAttribute("multifox-id");
+    }
   }
   menupopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
   //doc.getAnonymousElementByAttribute(doc.getElementById("content"), "anonid", "tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
