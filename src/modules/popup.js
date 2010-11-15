@@ -100,7 +100,7 @@ function appendAbout(container, panel) {
   spc.flex = 1;
 
   var link = box.appendChild(doc.createElement("label"));
-  link.setAttribute("value", util.getText("icon.panel.button.label", "${EXT_NAME}"));
+  link.setAttribute("value", util.getText("icon.panel.link.label", "${EXT_NAME}"));
   link.setAttribute("class", "text-link");
   link.addEventListener("click", function(evt) {
     if (evt.button !== 0) {

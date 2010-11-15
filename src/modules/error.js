@@ -66,7 +66,8 @@ function appendErrorToPanel(box, panel, error) {
   var txt;
   switch (error) {
     case "localStorage":
-      txt = util.getText("icon.panel.unsupported-moz19.label", "${EXT_NAME}");
+      var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
+      txt = util.getText("icon.panel.unsupported-moz19.label", "${EXT_NAME}", info.name, "4");
       break;
     default:
       txt = util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}");
@@ -77,7 +78,7 @@ function appendErrorToPanel(box, panel, error) {
       .appendChild(doc.createTextNode(txt));
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
-  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label"));
+  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label", "${EXT_NAME}"));
   but.setAttribute("accesskey", util.getText("icon.panel.make-tab-default.button.accesskey"));
   but.addEventListener("command", function(evt) {
     panel.hidePopup();
