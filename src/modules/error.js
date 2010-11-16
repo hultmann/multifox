@@ -63,19 +63,19 @@ function appendErrorToPanel(box, panel, error) {
   var box3 = box2.appendChild(doc.createElement("vbox"));
   box3.setAttribute("flex", "1");
 
-  var txt;
+  var txt = util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}");
+  box3.appendChild(doc.createElement("description"))
+      .appendChild(doc.createTextNode(txt));
+
   switch (error) {
     case "localStorage":
       var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
-      txt = util.getText("icon.panel.unsupported-moz19.label", "${EXT_NAME}", info.name, "4");
-      break;
-    default:
-      txt = util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}");
+      var msg = util.getText("icon.panel.unsupported-moz19.label", info.name, "4");
+      box3.appendChild(doc.createElement("description"))
+          .appendChild(doc.createTextNode(msg));
       break;
   }
 
-  box3.appendChild(doc.createElement("description"))
-      .appendChild(doc.createTextNode(txt));
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
   but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label", "${EXT_NAME}"));
