@@ -34,7 +34,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-EXPORTED_SYMBOLS = ["menuShowing"];
+"use strict";
+
+const EXPORTED_SYMBOLS = ["menuShowing"];
 
 Components.utils.import("${PATH_MODULE}/new-window.js");
 

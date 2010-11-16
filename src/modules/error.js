@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 const EXPORTED_SYMBOLS = ["appendErrorToPanel"];
 
 Components.utils.import("${PATH_MODULE}/new-window.js");

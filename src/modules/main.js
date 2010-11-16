@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 const EXPORTED_SYMBOLS = ["NewWindow",
                           "Profile",     // error.js
                           "FindIdentity" // about:multifox

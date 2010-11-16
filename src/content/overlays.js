@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 const PlacesOverlay = {
   add: function(win) {
     var popup = win.document.getElementById("placesContext");

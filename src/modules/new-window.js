@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow"];
 
 const Cc = Components.classes;

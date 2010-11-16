@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 function initContext(win, doc, sentByChrome, sentByContent) {
   function sendCmd(obj) {
     var evt = doc.createEvent("MessageEvent");
