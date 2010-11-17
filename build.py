@@ -70,7 +70,7 @@ b.add_text("modules/popup.js")
 
 
 b.add_locale("en-US")
-b.add_locale("pt-BR")
+#b.add_locale("pt-BR")
 #b.add_locale("es-ES")
 
 
@@ -78,7 +78,7 @@ b.add_text("locale/${locale}/general.properties")
 b.add_text("locale/${locale}/about.properties")
 
 
-b.set_var("EXT_VERSION",     "1.3b2")
+b.set_var("EXT_VERSION",     "2.0b1pre")
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox (BETA)")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")

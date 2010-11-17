@@ -10,5 +10,5 @@ resource  ${RESOURCE_NAME}  modules/
 content   ${CHROME_NAME} content/
 
 locale  ${CHROME_NAME}  en-US  locale/en-US/
-locale  ${CHROME_NAME}  pt-BR  locale/pt-BR/
+#locale  ${CHROME_NAME}  pt-BR  locale/pt-BR/
 #locale  ${CHROME_NAME}  es-ES  locale/es-ES/
