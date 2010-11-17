@@ -108,7 +108,7 @@ class BuildExtension:
         ensure_path_exists(xpi_path)
         self.__createXpi(xpi_path)
 
-        src_update = dir_src + "update.rdf"
+        src_update = self.__src + "update.rdf"
         if os.path.exists(src_update):
           self.__update(src_update, xpi_path + xpi_name)
 
