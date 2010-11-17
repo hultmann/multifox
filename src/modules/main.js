@@ -305,13 +305,21 @@ const FindIdentity = {
 
 const ContentWindow = {
   getContainerElement: function(contentWin) {
-    var chromeWindow = this.getChromeWindow(contentWin);
-    if ((chromeWindow !== null) && ("getBrowser" in chromeWindow)) {
-      var tabbrowser = chromeWindow.getBrowser();
-      var topDoc = contentWin.top.document;
-      var idx = tabbrowser.getBrowserIndexForDocument(topDoc);
-      if (idx > -1) {
-        return tabbrowser.browsers[idx];
+    var chromeWin = this.getChromeWindow(contentWin);
+    if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
+      var elem = chromeWin.getBrowser();
+      switch (elem.tagName) {
+        case "tabbrowser":
+          var topDoc = contentWin.top.document;
+          var idx = elem.getBrowserIndexForDocument(topDoc);
+          if (idx > -1) {
+            return elem.browsers[idx];
+          }
+          break;
+        default: // view-source => tagName="browser"
+          console.log("getContainerElement=" + elem.tagName + " " +
+                      contentWin.document.location + " " +chromeWin.document.location);
+          break;
       }
     }
     return null;
