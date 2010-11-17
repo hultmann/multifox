@@ -121,7 +121,7 @@ function populatePage() {
 
         hHtml = ns.util.getTextFrom(id + ".h", "about", localeMultifox);
         pHtml = ns.util.getTextFrom(pId, "about");
-        if (localeApp !== localeMultifox) {
+        if (hasLocale(localeApp) === false) {
           pHtml += " ";
           var html2 = ns.util.getTextFrom("l10n.notfound.p", "about",
                                           "${EXT_NAME}", localeApp, "http://www.babelzilla.org/");
@@ -138,6 +138,19 @@ function populatePage() {
       document.getElementById(id + "-p").innerHTML = pHtml;
     }
   }
+}
+
+
+function hasLocale(code) {
+  var locales = Cc["@mozilla.org/chrome/chrome-registry;1"]
+                  .getService(Ci.nsIToolkitChromeRegistry)
+                  .getLocalesForPackage("${CHROME_NAME}");
+  while (locales.hasMore()) {
+    if (locales.getNext() === code) {
+      return true;
+    }
+  }
+  return false;
 }
 
 
