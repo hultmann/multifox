@@ -108,10 +108,17 @@ function appendAbout(container, panel) {
     if (evt.button !== 0) {
       return;
     }
-    var win = evt.target.ownerDocument.defaultView;
-    win.openUILinkIn("about:multifox", "tab", false, null, null);
+
     panel.hidePopup();
-  }, true);
+
+    var uri = Cc["@mozilla.org/network/io-service;1"]
+                .getService(Ci.nsIIOService)
+                .newURI("about:multifox", null, null);
+    var win = evt.target.ownerDocument.defaultView;
+    var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
+    win.browserDOMWindow.openURI(uri, null, where, null);
+
+  }, false);
 
   var selectedUri = doc.defaultView.getBrowser().selectedBrowser.currentURI;
   if (selectedUri.spec === "about:multifox") {
