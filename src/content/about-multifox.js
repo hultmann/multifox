@@ -121,12 +121,14 @@ function populatePage() {
 
         hHtml = ns.util.getTextFrom(id + ".h", "about", localeMultifox);
         pHtml = ns.util.getTextFrom(pId, "about");
+        /*
         if (hasLocale(localeApp) === false) {
           pHtml += " ";
           var html2 = ns.util.getTextFrom("l10n.notfound.p", "about",
                                           "${EXT_NAME}", localeApp, "http://www.babelzilla.org/");
           document.getElementById("l10n-notfound-p").innerHTML = html2;
         }
+        */
         break;
 
       default:
