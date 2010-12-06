@@ -42,7 +42,7 @@ function updateUI(tab) {
 
   var doc = tab.ownerDocument;
   var iconContainer = getIconNode(doc);
-  if (Profile.getIdentity(tab) === Profile.UnknownIdentity) {
+  if (Profile.getIdentity(tab) === Profile.UndefinedIdentity) {
     // remove badge
     if (iconContainer !== null) {
       iconContainer.parentNode.removeChild(iconContainer);

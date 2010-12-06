@@ -52,7 +52,7 @@ function documentCookieGetter(obj, contentDoc) {
   var profileId = Profile.find(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
-    case Profile.UnknownIdentity:
+    case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
       util2.throwStack.go("documentCookieGetter " + profileId);
@@ -71,7 +71,7 @@ function documentCookieSetter(obj, contentDoc) {
   var profileId = Profile.find(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
-    case Profile.UnknownIdentity:
+    case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
       util2.throwStack.go("documentCookieSetter " + profileId);
@@ -208,8 +208,8 @@ function toInternalUri(uri, profileId) {
 
 
 function cookieInternalDomain(domain, profileId) {
-  console.assert(profileId !== Profile.UnknownIdentity, "cookieInternalDomain - UnknownIdentity=" + profileId);
-  console.assert(profileId !== Profile.DefaultIdentity, "cookieInternalDomain - DefaultIdentity=" + profileId);
+  console.assert(profileId !== Profile.UndefinedIdentity, "cookieInternalDomain - UndefinedIdentity=" + profileId);
+  console.assert(profileId !== Profile.DefaultIdentity,   "cookieInternalDomain - DefaultIdentity="   + profileId);
   return domain + ".multifox-profile-" + profileId;
 }
 

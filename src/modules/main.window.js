@@ -62,7 +62,7 @@ const BrowserWindow = {
     // tab identity=undefined ==> flag to Profile.find
     var tabs = getTabs(win.getBrowser());
     for (var idx = tabs.length - 1; idx > -1; idx--) {
-      Profile.defineIdentity(tabs[idx], Profile.UnknownIdentity);
+      Profile.defineIdentity(tabs[idx], Profile.UndefinedIdentity);
     }
 
     // restore icon after toolbar customization
@@ -117,7 +117,7 @@ const TabContainerEvents = {
     var tab = evt.originalTarget;
     if (NewTabId.tabOpenInheritId(tab) === false) {
       // SSTabRestoring may overwrite it
-      Profile.defineIdentity(tab, Profile.UnknownIdentity);
+      Profile.defineIdentity(tab, Profile.UndefinedIdentity);
     }
   },
 

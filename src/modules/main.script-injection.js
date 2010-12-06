@@ -91,7 +91,7 @@ DocStartScriptInjection.prototype = {
     }
     switch (idData.profileNumber) {
       case Profile.DefaultIdentity:
-      case Profile.UnknownIdentity:
+      case Profile.UndefinedIdentity:
         return;
     }
 

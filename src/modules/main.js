@@ -67,20 +67,20 @@ console.log("===>LOADING main.js");
 
 
 const Profile = {
-  UnknownIdentity: "0",
-  DefaultIdentity: "1",
-  MaxIdentity:     "999999999999999",
+  UndefinedIdentity: "0",
+  DefaultIdentity:   "1",
+  MaxIdentity:       "999999999999999",
 
   defineIdentity: function(tab, id) {
     var id2 = parseInt(id, 10);
-    var min = parseInt(Profile.UnknownIdentity, 10);
+    var min = parseInt(Profile.UndefinedIdentity, 10);
     var max = parseInt(Profile.MaxIdentity, 10);
 
     if (id2 > max) {
       id = Profile.MaxIdentity;
     }
     if (id2 < min) {
-      id = Profile.UnknownIdentity;
+      id = Profile.UndefinedIdentity;
     }
 
     tab.setAttribute("multifox-tab-profile", id);
@@ -96,12 +96,12 @@ const Profile = {
 
   find: function(contentWin) {
     if (contentWin === null) {
-      return { profileNumber: Profile.UnknownIdentity };
+      return { profileNumber: Profile.UndefinedIdentity };
     }
 
     var url = contentWin.document.location.href;
     if (url.length === 0) {
-      return { profileNumber: Profile.UnknownIdentity };
+      return { profileNumber: Profile.UndefinedIdentity };
     }
 
     var tab = WindowParents.getContainerElement(contentWin);
@@ -113,13 +113,13 @@ const Profile = {
 
 
     var profileId = Profile.getIdentity(tab);
-    if (profileId !== Profile.UnknownIdentity) {
+    if (profileId !== Profile.UndefinedIdentity) {
       return { profileNumber: profileId, tabElement: tab };
     }
 
     // fx36 only: "about:blank".contentWin.opener=null => wait real url
     if ((url === "about:blank") && (contentWin.opener === null)) {
-      return { profileNumber: Profile.UnknownIdentity, tabElement: tab };
+      return { profileNumber: Profile.UndefinedIdentity, tabElement: tab };
     }
 
     console.log("Profile.find - finding id - contentWin=" + contentWin.document.location);
@@ -171,7 +171,7 @@ const OpenerWindowIdentity = {
 
     // fx starting ==> opener=null
     var profileId = this.findFromOpenerSelectedTab(contentWin); // id from selected tab
-    if (profileId === Profile.UnknownIdentity) {
+    if (profileId === Profile.UndefinedIdentity) {
       console.log("findFromOpenerSelectedTab id=" + profileId);
       profileId = Profile.DefaultIdentity;
     }
@@ -189,7 +189,7 @@ const OpenerWindowIdentity = {
         return Profile.getIdentity(selTab);
       }
     }
-    return Profile.UnknownIdentity;
+    return Profile.UndefinedIdentity;
   }
 
 };
