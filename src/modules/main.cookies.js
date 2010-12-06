@@ -43,7 +43,7 @@ function documentCookie(obj, contentDoc) {
     case "get":
       return documentCookieGetter(obj, contentDoc);
     default:
-      throw obj.cmd;
+      throw new Error("documentCookie " + obj.cmd);
   }
 }
 

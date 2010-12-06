@@ -66,7 +66,7 @@ const util2 = {
 
     go: function(txt) {
       console.log("Stack: " + txt + "\n" + this._toString(false, Components.stack));
-      throw txt;
+      throw new Error(txt);
     },
 
     _toArray: function(webOnly, theStack) {

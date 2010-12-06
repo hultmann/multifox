@@ -78,7 +78,7 @@ function windowLocalStorage(obj, contentDoc) {
       rv = storage.length;
       break;
     default:
-      throw "localStorage interface unknown: " + obj.cmd;
+      throw new Error("localStorage interface unknown: " + obj.cmd);
   }
 
   console.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);

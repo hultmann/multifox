@@ -57,7 +57,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     if (hasReply) {
       return rv;
     } else {
-      throw "Return value not received.";
+      throw new Error("Return value not received.");
     }
   }
 

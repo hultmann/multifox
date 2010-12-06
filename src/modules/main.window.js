@@ -196,7 +196,7 @@ function onContentEvent(evt) {
       showError(contentDoc.defaultView, obj.cmd, "-");
       break;
     default:
-      throw obj.from;
+      throw new Error(obj.from);
   }
 
   if (rv === undefined) {

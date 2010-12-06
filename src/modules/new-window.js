@@ -190,7 +190,7 @@ const console = {
     if (test !== true) {
       var ex =  new Error("console.assert - " + msg + " - " + test);
       Components.utils.reportError(ex); // workaround - sometimes exception doesn't show up in console
-      throw "";
+      throw ex;
     }
   }
 };
@@ -236,7 +236,7 @@ const util = {
     enable: function(onRequest, onResponse) {
       console.log("networkListeners enable");
       if (this._observers !== null) {
-        throw "networkListeners.enable ==> this._observers=true";
+        throw new Error("networkListeners.enable ==> this._observers=true");
       }
       this._observers = [onRequest, onResponse];
 
