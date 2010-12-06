@@ -39,20 +39,12 @@ var m_runner = null;
 const BrowserWindow = {
 
   register: function(win) {
-    var profileId = Profile.getIdentity(win);
-
-    if (profileId === Profile.DefaultIdentity) {
-      console.log("BrowserWindow.register NOP");
-      return;
-    }
-
-    console.log("BrowserWindow.register " + profileId);
+    console.log("BrowserWindow.register");
 
     if (m_runner === null) {
-      // first multifox window!
+      // first multifox tab!
       m_runner = new MultifoxRunner();
     }
-
 
     win.addEventListener(m_runner.eventSentByContent, onContentEvent, false, true);
 
@@ -61,8 +53,17 @@ const BrowserWindow = {
     // But they are called if event listener is an anonymous function.
     win.addEventListener("unload", onUnloadChromeWindow, false);
 
-    // update icon status
-    win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
+    var container = win.getBrowser().tabContainer;
+    container.addEventListener("TabSelect", TabContainerEvents, false);
+    container.addEventListener("TabOpen", TabContainerEvents, false);
+    container.addEventListener("TabClose", TabContainerEvents, false);
+    container.addEventListener("SSTabRestoring", TabContainerEvents, false);
+
+    // tab identity=undefined ==> flag to Profile.find
+    var tabs = getTabs(win.getBrowser());
+    for (var idx = tabs.length - 1; idx > -1; idx--) {
+      Profile.defineIdentity(tabs[idx], Profile.UnknownIdentity);
+    }
 
     // restore icon after toolbar customization
     var toolbox = win.document.getElementById("navigator-toolbox");
@@ -70,27 +71,24 @@ const BrowserWindow = {
   },
 
 
-  // should keep id for session restore?
   unregister: function(win) {
-    var idw = Profile.getIdentity(win);
-    console.log("BrowserWindow.unregister " + idw);
-
-    if (idw === Profile.DefaultIdentity) {
-      // nothing to unregister
-      return;
-    }
+    console.log("BrowserWindow.unregister");
 
     win.removeEventListener(m_runner.eventSentByContent, onContentEvent, false);
 
-    var sessions = Profile.activeIdentities(win);
     var toolbox = win.document.getElementById("navigator-toolbox");
     toolbox.removeEventListener("DOMNodeInserted", customizeToolbar, false);
 
-    win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
+    var container = win.getBrowser().tabContainer;
+    container.removeEventListener("TabSelect", TabContainerEvents, false);
+    container.removeEventListener("TabOpen", TabContainerEvents, false);
+    container.removeEventListener("TabClose", TabContainerEvents, false);
+    container.removeEventListener("SSTabRestoring", TabContainerEvents, false);
 
+    var sessions = Profile.activeIdentities(win);
     var onlyDefault = (sessions.length === 1) && (sessions[0] === Profile.DefaultIdentity);
     if (onlyDefault) {
-      // no more multifox windows
+      // no more multifox tabs
       m_runner.shutdown();
       m_runner = null;
     }
@@ -105,10 +103,77 @@ function onUnloadChromeWindow(evt) {
 }
 
 
+const TabContainerEvents = {
+  handleEvent: function(evt) {
+    try {
+      this[evt.type](evt);
+    } catch (ex) {
+      Components.utils.reportError(ex);
+      throw new Error("TabContainerEvents exception " + ex);
+    }
+  },
+
+  TabOpen: function(evt) {
+    var tab = evt.originalTarget;
+    if (NewTabId.tabOpenInheritId(tab) === false) {
+      // SSTabRestoring may overwrite it
+      Profile.defineIdentity(tab, Profile.UnknownIdentity);
+    }
+  },
+
+  TabClose: function(evt) {
+    MoveTabWindows.tabCloseSaveId(evt.originalTarget);
+  },
+
+  TabSelect: function(evt) {
+    var tab = evt.originalTarget;
+    NewTabId.tabSelectSetAsLastTab(tab);     // new tab (in current window): save id
+    MoveTabWindows.tabSelectDetectMove(tab); // moved tab: set id
+    updateUI(tab);
+  },
+
+  SSTabRestoring: function(evt) {
+    var tab = evt.originalTarget;
+    console.assert(tab.localName === "tab", "SSTabRestoring - tag=" + tab.localName);
+    if (migrating(tab)) {
+      return;
+    }
+    // "multifox-tab-profile" restored ==> show badge (selected tab)
+    updateUI(tab);
+  }
+};
+
+
+// migrating? load profileId from window (Multifox 1.x)
+function migrating(tab) {
+  var win = tab.ownerDocument.defaultView;
+  var tabbrowser = win.getBrowser();
+  var attr = "multifox-tabbrowser-previous-version";
+
+  if (tabbrowser.hasAttribute(attr)) {
+    console.log("SSTabRestoring - previous version!");
+    Profile.defineIdentity(tab, tabbrowser.getAttribute(attr));
+    return true;
+  }
+
+  var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+  var profileId = ss.getWindowValue(win, "${BASE_DOM_ID}-identity-id");
+  if (profileId.length === 0) {
+    return false;
+  }
+
+  console.log("SSTabRestoring - previous version! id=" + profileId);
+  tabbrowser.setAttribute(attr, profileId);
+  ss.deleteWindowValue(win, "${BASE_DOM_ID}-identity-id");
+  Profile.defineIdentity(tab, profileId);
+  return true;
+}
+
+
 function customizeToolbar(evt) {
   var node = evt.target;
   if ((node.id === "urlbar-container") && (node.parentNode.tagName === "toolbar")) {
-    updateUI(node.ownerDocument.defaultView);
+    updateUI(node.ownerDocument.defaultView.getBrowser().selectedTab);
   }
 }
 
@@ -153,7 +218,6 @@ function MultifoxRunner() {
   this._inject = new DocStartScriptInjection();
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
-  //toggleDefaultWindowUI(true);
 }
 
 MultifoxRunner.prototype = {
@@ -170,7 +234,6 @@ MultifoxRunner.prototype = {
     util.networkListeners.disable();
     this._inject.stop();
     Cookies.stop();
-    //toggleDefaultWindowUI(false);
   }
 };
 
@@ -188,12 +251,7 @@ function showError(contentWin, notSupportedFeature, details) {
   msg.push("title=[" + contentWin.document.title + "]");
   console.log(msg.join("\n"));
 
-  var browser = ContentWindow.getContainerElement(contentWin);
-  browser.setAttribute("multifox-tab-status", notSupportedFeature);
-
-  var doc = browser.ownerDocument;
-  var selBrowser = doc.defaultView.getBrowser().selectedTab.linkedBrowser;
-  if (selBrowser === browser) {
-    updateStatus(doc);
-  }
+  var tab = WindowParents.getContainerElement(contentWin);
+  tab.setAttribute("multifox-tab-error", notSupportedFeature);
+  updateUI(tab);
 }

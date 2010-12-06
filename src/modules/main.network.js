@@ -42,7 +42,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var winChannel = getChannelWindow(httpChannel);
-      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
+      var profileId = Profile.find(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity: // favicon, updates
@@ -67,7 +67,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var winChannel = getChannelWindow(httpChannel);
-      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
+      var profileId = Profile.find(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
         case Profile.UnknownIdentity:

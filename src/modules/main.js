@@ -36,9 +36,8 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["NewWindow",
-                          "Profile",     // error.js
-                          "FindIdentity" // about:multifox
+const EXPORTED_SYMBOLS = ["BrowserWindow", // new-window.js
+                          "Profile"        // error.js
                          ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -47,8 +46,19 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 console.log("===>LOADING main.js");
 
 
+// tabbrowser attributes:
+// "multifox-tabbrowser-last-tab"
+// "multifox-tabbrowser-previous-version" - migrating from Multifox 1.x
+
+// tab attributes:
+// "multifox-tab-profile"
+// "multifox-tab-error" - sandbox error, page not supported
+// "multifox-tab-has-login" - login form detected
+
+
 #include "main.window.js"
 #include "main.icon.js"
+#include "main.tab-inherit.js"
 #include "main.script-injection.js"
 #include "main.network.js"
 #include "main.cookies.js"
@@ -56,254 +66,136 @@ console.log("===>LOADING main.js");
 #include "main.util.js"
 
 
-const NewWindow = {
-  newId: function(win) {
-    var id;
-    if (this._shouldBeDefault(win)) {
-      id = Profile.DefaultIdentity;
-    } else {
-      id = Profile.lowerAvailableId(win);
-    }
-    console.log("newIdentity " + id);
-    Profile.defineIdentity(win, id);
-  },
-
-  inheritId: function(newWin) {
-    console.log("inheritId");
-    var id;
-    if (this._shouldBeDefault(newWin)) {
-      id = Profile.DefaultIdentity;
-    } else {
-      //window.open()/fxstarting ==> opener=null
-      var prevWin = newWin.opener;
-      if (prevWin) {
-        id = Profile.getIdentity(prevWin);
-      } else {
-        console.log("inheritId prevWin=" + prevWin);
-        id = Profile.UnknownIdentity;
-      }
-    }
-    Profile.defineIdentity(newWin, id);
-    console.log("/inheritId " + id);
-  },
-
-  applyRestore: function(win) {
-    // restore: window is first configured by NewWindow.inheritId
-    console.log("applyRestore");
-
-    var stringId = Cc["@mozilla.org/browser/sessionstore;1"]
-                    .getService(Ci.nsISessionStore)
-                    .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
-    var id = Profile.toInt(stringId);
-    if (id < Profile.DefaultIdentity) { //UnknownIdentity?
-      id = Profile.DefaultIdentity;
-    }
-    Profile.defineIdentity(win, id);
-  },
-
-  _shouldBeDefault: function(win) {
-    // popup opened by an extension (like GTB)
-    //var chromeHidden = win.document.documentElement.getAttribute("chromehidden");
-    //return chromeHidden.indexOf("location") > -1;
-    return false;
-  }
-
-};
-
-
 const Profile = {
-  UnknownIdentity: 0,
-  DefaultIdentity: 1,
-  MaxIdentity:     999999999999999,
+  UnknownIdentity: "0",
+  DefaultIdentity: "1",
+  MaxIdentity:     "999999999999999",
 
-  defineIdentity: function(win, id) {
-    console.log("defineIdentity " + id);
-    if (id > Profile.MaxIdentity) {
-      console.log("id > max " + id);
+  defineIdentity: function(tab, id) {
+    var id2 = parseInt(id, 10);
+    var min = parseInt(Profile.UnknownIdentity, 10);
+    var max = parseInt(Profile.MaxIdentity, 10);
+
+    if (id2 > max) {
       id = Profile.MaxIdentity;
     }
-    if (id < Profile.UnknownIdentity) {
-      console.log("id < UnknownIdentity " + id);
+    if (id2 < min) {
       id = Profile.UnknownIdentity;
     }
-    var current = Profile.getIdentity(win);
-    if (current === id) {
-      console.log("defineIdentity NOP");
-      return id;
-    }
-    if (current !== Profile.DefaultIdentity) {
-      BrowserWindow.unregister(win);
-    }
 
-    this._save(win, id);
-    BrowserWindow.register(win);
-    updateUI(win);
+    tab.setAttribute("multifox-tab-profile", id);
+    updateUI(tab);
     return id;
   },
 
-  getIdentity: function(chromeWin) {
-    var tabbrowser = chromeWin.getBrowser();
-    if (tabbrowser === null) {
-      console.log("getIdentity=DefaultIdentity, tabbrowser=null");
-      return Profile.DefaultIdentity;
-    }
-    var id = tabbrowser.getUserData("${BASE_DOM_ID}-identity-id");
-    return this.toInt(id);
+  getIdentity: function(tab) {
+    return tab.hasAttribute("multifox-tab-profile")
+         ? tab.getAttribute("multifox-tab-profile")
+         : Profile.DefaultIdentity;
   },
 
-  _save: function(win, id) {
-    console.log("save " + id);
-    win.getBrowser().setUserData("${BASE_DOM_ID}-identity-id", id === Profile.DefaultIdentity ? null : id, null);
-    new SaveToSessionStore(win.document);
+  find: function(contentWin) {
+    if (contentWin === null) {
+      return { profileNumber: Profile.UnknownIdentity };
+    }
+
+    var url = contentWin.document.location.href;
+    if (url.length === 0) {
+      return { profileNumber: Profile.UnknownIdentity };
+    }
+
+    var tab = WindowParents.getContainerElement(contentWin);
+    if (tab === null) {
+      // contentWin = source-view, updates.xul
+      var profileId = OpenerWindowIdentity.findFromOpenerSelectedTab(contentWin);
+      return { profileNumber: profileId };
+    }
+
+
+    var profileId = Profile.getIdentity(tab);
+    if (profileId !== Profile.UnknownIdentity) {
+      return { profileNumber: profileId, tabElement: tab };
+    }
+
+    // fx36 only: "about:blank".contentWin.opener=null => wait real url
+    if ((url === "about:blank") && (contentWin.opener === null)) {
+      return { profileNumber: Profile.UnknownIdentity, tabElement: tab };
+    }
+
+    console.log("Profile.find - finding id - contentWin=" + contentWin.document.location);
+
+    profileId = OpenerWindowIdentity.findFromWindow(contentWin);
+    profileId = Profile.defineIdentity(tab, profileId);
+    console.log("Profile.find - found! id=" + profileId);
+    return { profileNumber: profileId, tabElement: tab };
   },
+
 
   activeIdentities: function(ignoreWin) {
     var winEnum = util2.browserWindowsEnum();
     var arr = [];
     while (winEnum.hasMoreElements()) {
       var win = winEnum.getNext();
-      if (ignoreWin !== win) {
-        var id = Profile.getIdentity(win);
+      if (ignoreWin === win) {
+        continue;
+      }
+
+      var tabs = getTabs(win.getBrowser());
+      for (var idx = tabs.length - 1; idx > -1; idx--) {
+        var id = Profile.getIdentity(tabs[idx]);
         if (arr.indexOf(id) === -1) {
           arr.push(id);
         }
       }
     }
+    console.log("activeIdentities " + JSON.stringify(arr));
     return arr;
-  },
-
-  lowerAvailableId: function(ignoreWin) {
-    var arr = this.activeIdentities(ignoreWin); //ignore win -- it doesn't have a session id yet
-    var id = Profile.DefaultIdentity;
-    while (arr.indexOf(id) > -1) {
-      id++;
-    }
-    return id; // id is available
-  },
-
-  toInt: function(str) {
-    var rv = parseInt(str, 10);
-    return isNaN(rv) ? Profile.DefaultIdentity : rv;
-  },
-
-  toString: function(id) {
-    switch (id) {
-      //case Profile.UnknownIdentity:
-      //  return "\u221e"; // ∞
-      default:
-        return id.toString();
-    }
   }
 
 };
 
 
-function SaveToSessionStore(doc) {
-  this._doc = doc;
-  this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-  this._timer.init(this, 1300, Ci.nsITimer.TYPE_ONE_SHOT);
-}
+const OpenerWindowIdentity = {
 
-SaveToSessionStore.prototype = {
-
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver, Ci.nsISupportsWeakReference]),
-
-  observe: function(aSubject, aTopic, aData) {
-    console.log("SaveToSessionStore timer!");
-    var doc = this._doc;
-    if (doc.defaultView === null) {
-      console.log("_syncToSessionStore window closed");
-      return;
-    }
-
-    var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
-    var val = Profile.getIdentity(doc.defaultView);
-
-    try {
-      // overwrite any previous value if called twice
-      ss.setWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id", val);
-    } catch (ex) {
-      // keep trying
-      util2.logEx("SaveToSessionStore FAIL", val, doc, doc.defaultView, doc.defaultView.state, ex);
-      this._timer.init(this, 700, Ci.nsITimer.TYPE_ONE_SHOT);
-      return;
-    }
-
-    if (val <= Profile.DefaultIdentity) { // UnknownIdentity OR DefaultIdentity
-      ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
-    }
-
-    console.log("_syncToSessionStore OK=" + Profile.getIdentity(doc.defaultView));
-  }
-};
-
-
-const FindIdentity = {
-
-  fromContent: function(contentWin) {
-    if (contentWin === null) {
-      return { profileNumber: Profile.UnknownIdentity };
-    }
-
-    var profileId;
-    var browser = ContentWindow.getContainerElement(contentWin);
-    if (browser === null) {
-      // source-view?
-      profileId = this._getIdentityFromOpenerChrome(contentWin);
-      return { profileNumber: profileId };
-    }
-
-    var chromeWin = browser.ownerDocument.defaultView;
-    profileId = Profile.getIdentity(chromeWin);
-    if (profileId !== Profile.UnknownIdentity) {
-      return { profileNumber: profileId, browserElement: browser };
-    }
-
-    // popup via js/window.open
-    profileId = this._getIdentityFromOpenerContent(contentWin, chromeWin);
-    return { profileNumber: profileId, browserElement: browser };
-  },
-
-  _getIdentityFromOpenerChrome: function(contentWin) {
-    var chromeWin = ContentWindow.getChromeWindow(contentWin);
-    if (chromeWin === null) {
-      return Profile.UnknownIdentity;
-    }
-    var tabbrowser = null;
-    var type = chromeWin.document.documentElement.getAttribute("windowtype");
-    if (type === "navigator:view-source") {
-      var winOpener = chromeWin.opener;
-      if (winOpener) {
-        var type2 = winOpener.document.documentElement.getAttribute("windowtype");
-        if (type2 === "navigator:browser") {
-          tabbrowser = winOpener.getBrowser();
-        }
-      }
-    }
-
-    return tabbrowser !== null ? Profile.getIdentity(tabbrowser.ownerDocument.defaultView)
-                               : Profile.UnknownIdentity; // favicon, ...
-  },
-
-  _getIdentityFromOpenerContent: function(contentWin, chromeWin) {
+  findFromWindow: function(contentWin) {
+    // popup via js/window.open?
     if (contentWin.opener) {
-      var browserOpener = ContentWindow.getContainerElement(contentWin.opener);
-      if (browserOpener) {
-        var chromeOpener = browserOpener.ownerDocument.defaultView;
-        var profileId = Profile.getIdentity(chromeOpener);
-        if (profileId > Profile.UnknownIdentity) {
-          return Profile.defineIdentity(chromeWin, profileId);
-        }
+      console.log("_getFromOpenerContent opener=" + contentWin.opener.document.location);
+      var tabOpener = WindowParents.getContainerElement(contentWin.opener);
+      if (tabOpener) {
+        return Profile.getIdentity(tabOpener);
       }
     }
 
-    console.log("request [" + profileId + "] id.opener="+ profileId);
+    console.log("_getFromOpenerContent - no opener=" + contentWin.opener);
+
+    // fx starting ==> opener=null
+    var profileId = this.findFromOpenerSelectedTab(contentWin); // id from selected tab
+    if (profileId === Profile.UnknownIdentity) {
+      console.log("findFromOpenerSelectedTab id=" + profileId);
+      profileId = Profile.DefaultIdentity;
+    }
+
+    return profileId;
+  },
+
+
+  findFromOpenerSelectedTab: function(contentWin) {
+    var chromeWin = WindowParents.getChromeWindow(contentWin);
+    if (chromeWin && chromeWin.opener) {
+      var type = chromeWin.opener.document.documentElement.getAttribute("windowtype");
+      if (type === "navigator:browser") {
+        var selTab = chromeWin.opener.getBrowser().selectedTab;
+        return Profile.getIdentity(selTab);
+      }
+    }
     return Profile.UnknownIdentity;
   }
+
 };
 
 
-const ContentWindow = {
+const WindowParents = {
   getContainerElement: function(contentWin) {
     var chromeWin = this.getChromeWindow(contentWin);
     if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
@@ -313,7 +205,7 @@ const ContentWindow = {
           var topDoc = contentWin.top.document;
           var idx = elem.getBrowserIndexForDocument(topDoc);
           if (idx > -1) {
-            return elem.browsers[idx];
+            return getTabs(elem)[idx]; // "tab"
           }
           break;
         default: // view-source => tagName="browser"
@@ -349,3 +241,8 @@ const ContentWindow = {
   }
 
 };
+
+
+function getTabs(tabbrowser) {
+  return tabbrowser.mTabContainer.childNodes;
+}

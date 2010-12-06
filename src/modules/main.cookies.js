@@ -49,7 +49,7 @@ function documentCookie(obj, contentDoc) {
 
 
 function documentCookieGetter(obj, contentDoc) {
-  var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
+  var profileId = Profile.find(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
     case Profile.UnknownIdentity:
@@ -68,7 +68,7 @@ function documentCookieGetter(obj, contentDoc) {
 
 
 function documentCookieSetter(obj, contentDoc) {
-  var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
+  var profileId = Profile.find(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
     case Profile.UnknownIdentity:
@@ -200,19 +200,17 @@ function convertCookieDomain(cookieHeader, profileId) {
 }
 
 
-function toInternalUri(uri, sessionId) {
+function toInternalUri(uri, profileId) {
   var u = uri.clone();
-  if (sessionId > Profile.DefaultIdentity) {
-    u.host = cookieInternalDomain(u.host, sessionId);
-  } else {
-    util2.throwStack.go("invalid profile " + sessionId);
-  }
+  u.host = cookieInternalDomain(u.host, profileId);
   return u;
 }
 
 
-function cookieInternalDomain(domain, id) {
-  return domain + ".multifox-profile-" + id;
+function cookieInternalDomain(domain, profileId) {
+  console.assert(profileId !== Profile.UnknownIdentity, "cookieInternalDomain - UnknownIdentity=" + profileId);
+  console.assert(profileId !== Profile.DefaultIdentity, "cookieInternalDomain - DefaultIdentity=" + profileId);
+  return domain + ".multifox-profile-" + profileId;
 }
 
 

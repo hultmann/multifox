@@ -36,18 +36,6 @@
 
 "use strict";
 
-const PlacesOverlay = {
-  add: function(win) {
-    var popup = win.document.getElementById("placesContext");
-    popup.addEventListener("popupshowing", function(evt) {
-      var ns = {};
-      Components.utils.import("${PATH_MODULE}/menus.js", ns);
-      ns.menuShowing(evt);
-    }, false);
-  }
-};
-
-
 const AboutOverlay = {
   add: function(win) {
     if (win.arguments[0].id) {

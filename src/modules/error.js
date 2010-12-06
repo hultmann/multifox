@@ -80,7 +80,7 @@ function appendErrorToPanel(box, panel, error) {
 
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
-  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label", "${EXT_NAME}"));
+  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label"));
   but.setAttribute("accesskey", util.getText("icon.panel.make-tab-default.button.accesskey"));
   but.addEventListener("command", function(evt) {
     panel.hidePopup();
@@ -99,58 +99,7 @@ function appendErrorToPanel(box, panel, error) {
 function moveTabToDefault(button) {
   var sourceWin = button.ownerDocument.defaultView;
   var sourceTab = sourceWin.getBrowser().selectedTab;
-
-  var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"]
-                  .getService(Ci.nsIWindowMediator)
-                  .getEnumerator("navigator:browser");
-
-  var targetWin = null;
-  while (winEnum.hasMoreElements()) {
-    var tmpWin = winEnum.getNext();
-    if (Profile.getIdentity(tmpWin) === Profile.DefaultIdentity) { //isDefaultWindow
-      targetWin = tmpWin;
-      break;
-    }
-  }
-
-  if (targetWin !== null) {
-    moveTab(targetWin, sourceTab, false);
-    return;
-  }
-
-  // there is no default window => next identity will be default
-  newPendingWindow();
-  targetWin = sourceWin.OpenBrowserWindow();
-  targetWin.addEventListener("load", function(evt) {
-    moveTab(targetWin, sourceTab, true);
-  }, false);
-}
-
-
-function moveTab(targetWin, sourceTab, isNewWin) {
-  targetWin.setTimeout(function() { // workaround to avoid exceptions
-    var targetTabBrowser = targetWin.getBrowser();
-    var targetTab;
-
-    if (isNewWin) {
-      targetTab = targetTabBrowser.selectedTab;
-    } else {
-      var props = {
-        allowThirdPartyFixup: false,
-        relatedToCurrent: false,
-        referrerURI: null,
-        charset: null,
-        postData: null,
-        ownerTab: null
-      };
-      targetTab = targetTabBrowser.addTab("about:blank", props);
-    }
-
-    targetTab.linkedBrowser.stop();   // avoid exception in tabbrowser.setAndLoadFaviconForPage
-    targetTab.linkedBrowser.docShell; // make sure tab has a docshell
-    targetTabBrowser.swapBrowsersAndCloseOther(targetTab, sourceTab);
-    targetTabBrowser.selectedTab = targetTab;
-    targetTabBrowser.contentWindow.focus();
-    targetTabBrowser.selectedTab.linkedBrowser.reload();
-  }, 0);
+  Profile.defineIdentity(sourceTab, Profile.DefaultIdentity);
+  // TODO move data to default id
+  sourceTab.linkedBrowser.reload();
 }

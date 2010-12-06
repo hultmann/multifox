@@ -34,107 +34,110 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-function getIconNode(doc) {
-  if (!doc) {
-    util2.throwStack.go("getIconNode "+doc);
+
+function updateUI(tab) {
+  if (tab.hasAttribute("selected") === false) {
+    return;
   }
+
+  var doc = tab.ownerDocument;
+  var iconContainer = getIconNode(doc);
+  if (Profile.getIdentity(tab) === Profile.UnknownIdentity) {
+    // remove badge
+    if (iconContainer !== null) {
+      iconContainer.parentNode.removeChild(iconContainer);
+    }
+    return;
+  }
+
+  if (iconContainer === null) {
+    var ref = doc.getElementById("urlbar-icons");
+    iconContainer = ref.appendChild(doc.createElement("hbox"));
+    iconContainer.setAttribute("hidden", "true");
+    iconContainer.setAttribute("id", "multifox-icon");
+    var win = doc.defaultView;
+    var delay = getTabs(win.getBrowser()).length > 1 ? 50 : 250;
+    win.setTimeout(initBadge, delay, doc); // open window => greater delay
+    return;
+  }
+
+  if (iconContainer.firstChild !== null) { // waiting initBadge?
+    updateBadgeProfile(tab, iconContainer);
+    updateBadgeLogin(tab, iconContainer);
+    updateBadgeError(tab, iconContainer);
+  }
+}
+
+
+function getIconNode(doc) {
   return doc.getElementById("multifox-icon");
 }
 
 
-function removeUI(doc) {
-  console.log("removeUI");
-  var icon = getIconNode(doc);
-  if (icon) {
-    icon.parentNode.removeChild(icon);
+function updateBadgeProfile(tab, iconContainer) {
+  var labelId = iconContainer.querySelector("label");
+  labelId.setAttribute("value", Profile.getIdentity(tab));
+}
+
+
+function updateBadgeLogin(tab, iconContainer) {
+  var label = iconContainer.querySelectorAll("label")[1];
+
+  if (tab.hasAttribute("multifox-tab-has-login")) {
+    var val = tab.getAttribute("multifox-tab-has-login");
+    label.setAttribute("value", val);
+    label.removeAttribute("hidden");
+  } else {
+    if (label.hasAttribute("hidden") === false) {
+      label.setAttribute("hidden", "true");
+      label.setAttribute("value", "");
+    }
   }
 }
 
 
-function getTabStatus(browser) {
-  return browser.hasAttribute("multifox-tab-status")
-          ? browser.getAttribute("multifox-tab-status") : "";
-}
+function updateBadgeError(tab, iconContainer) {
+  var currentError = iconContainer.getAttribute("current-error");
+  var newError = tab.getAttribute("multifox-tab-error");
+  if (currentError === newError) {
+    return;
+  }
 
-
-function tabSelected(evt) {
-  var tab = evt.originalTarget;
+  iconContainer.setAttribute("current-error", newError);
   var doc = tab.ownerDocument;
-  var currentStat = getIconNode(doc).getAttribute("tab-status");
-  var newStat = getTabStatus(tab.linkedBrowser);
-  if (currentStat !== newStat) {
-    updateStatus(doc);
-  }
-}
-
-
-function updateStatus(doc) {
-  var browser = doc.defaultView.getBrowser().selectedBrowser;
-  var tabStat = getTabStatus(browser);
-  getIconNode(doc).setAttribute("tab-status", tabStat);
-
   var stat = doc.getElementById("multifox-icon-stat-icon");
   while (stat.firstChild) {
     stat.removeChild(stat.firstChild);
   }
 
-  var show = tabStat.length > 0;
-  if (show) {
-    var img = stat.appendChild(doc.createElement("image"));
-    img.setAttribute("src", "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
-    img.setAttribute("width", "16");
-    img.setAttribute("height", "16");
-    img.style.margin = "0 -4px 0 7px";
-    stat.removeAttribute("hidden");
-  } else {
+  if (newError.length === 0) {
     stat.setAttribute("hidden", "true");
-  }
-}
-
-
-function updateUI(win) {
-  var profileId = Profile.getIdentity(win);
-  console.log("updateUI " + profileId);
-
-  var doc = win.document;
-  if (profileId <= Profile.DefaultIdentity) {
-    removeUI(doc);
     return;
   }
 
-  var icon = getIconNode(doc);
-  if (icon) {
-    console.log("updateUI=" + profileId + " current=" + Profile.getIdentity(win));
-    icon.querySelector("label").setAttribute("value", Profile.toString(profileId));
-    return;
-  }
-
-
-  // <hbox align="center" id="multifox-icon">
-  //   <box>
-  //     <hbox align="center">
-  //       <hbox id="multifox-icon-stat-icon">
-  //         <image src="warning.png"/>
-  //       </hbox>
-  //       <label value="100"/>
-
-
-  var ref = doc.getElementById("urlbar-icons");
-  var iconContainer = ref.appendChild(doc.createElement("hbox"));
-  iconContainer.setAttribute("hidden", "true");
-  iconContainer.setAttribute("id", "multifox-icon");
-
-
-  if (profileId !== Profile.UnknownIdentity) {
-    win.setTimeout(initIconCore, 250, iconContainer, profileId);
-  }
+  var img = stat.appendChild(doc.createElement("image"));
+  img.setAttribute("src", "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
+  img.setAttribute("width", "16");
+  img.setAttribute("height", "16");
+  img.style.margin = "0 -4px 0 7px";
+  stat.removeAttribute("hidden");
 }
 
 
-function initIconCore(iconContainer, profileId) {
-  var doc = iconContainer.ownerDocument;
-  if (iconContainer !== getIconNode(doc)) {
-    console.log("initIconCore != " + profileId + iconContainer + getIconNode(doc));
+// <hbox align="center" id="multifox-icon">
+//   <box>
+//     <hbox align="center">
+//       <hbox id="multifox-icon-stat-icon">
+//         <image src="warning.png"/>
+//       </hbox>
+//       <label value="100"/>
+//       <label value="LOGIN"/>
+
+function initBadge(doc) {
+  var iconContainer = getIconNode(doc);
+  if (iconContainer === null) {
+    // e.g. user changed tab!
+    console.log("initBadge ignored! " + iconContainer);
     return;
   }
 
@@ -181,10 +184,10 @@ function initIconCore(iconContainer, profileId) {
   stat.setAttribute("hidden", "true");
   stat.setAttribute("id", "multifox-icon-stat-icon");
 
-
-  var lb = labelContainer.appendChild(doc.createElement("label"));
-  lb.setAttribute("value", Profile.toString(profileId));
-  var styleLabel = lb.style;
+  var tab = doc.defaultView.getBrowser().selectedTab;
+  var labelId = labelContainer.appendChild(doc.createElement("label"));
+  labelId.setAttribute("value", Profile.getIdentity(tab));
+  var styleLabel = labelId.style;
 
   styleLabel.color = "white";
   styleLabel.fontWeight = "bold";
@@ -194,7 +197,21 @@ function initIconCore(iconContainer, profileId) {
   styleLabel.padding = "0px 9px";
   styleLabel.margin = "-1px 0px";
 
+
+  var loginStyle = labelContainer.appendChild(doc.createElement("label")).style;
+  loginStyle.color = "white";
+  loginStyle.fontWeight = "bold";
+  loginStyle.fontStyle = "normal";
+  loginStyle.textRendering = "optimizelegibility";
+  loginStyle.textShadow = "1px 1px 1px black, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
+
+
   initIconNormal(icon);
+
+  updateBadgeProfile(tab, iconContainer);
+  updateBadgeLogin(tab, iconContainer);
+  updateBadgeError(tab, iconContainer);
+
   iconContainer.removeAttribute("hidden");
 }
 
@@ -238,40 +255,27 @@ function onIconHover(evt) {
 }
 
 
-/*
-// show/hide [1] "icon"
-function toggleDefaultWindowUI(show) {
-  var winEnum = util2.browserWindowsEnum();
-  while (winEnum.hasMoreElements()) {
-    var doc = winEnum.getNext().document;
-    if (Profile.getIdentity(doc) === Profile.DefaultIdentity) {
-      if (show) {
-        updateUI(doc, Profile.DefaultIdentity);
-      } else {
-        removeUI(doc);
-      }
-    }
-  }
-}
-*/
-
-
 function openMultifoxPopup(evt) {
-  Components.utils.import("${PATH_MODULE}/popup.js");
   var icon = evt.currentTarget; //or this
+  var tab = icon.ownerDocument.defaultView.getBrowser().selectedTab;
+  var afterId = Profile.getIdentity(tab);
 
+  Components.utils.import("${PATH_MODULE}/popup.js");
   var panel = createMultifoxPopup(icon, Profile);
   initIconPressed(icon);
 
   panel.addEventListener("popuphidden", function(evt) {
     initIconNormal(icon);
+
+    var beforeId = Profile.getIdentity(tab);
+    if (beforeId !== afterId) {
+      tab.linkedBrowser.reload();
+    }
   }, false);
 
   panel.openPopup(icon, "after_end", 0, 1);
 
   // remove error icon
-  var doc = icon.ownerDocument;
-  var browser = doc.defaultView.getBrowser().selectedBrowser;
-  browser.removeAttribute("multifox-tab-status");
-  updateStatus(doc);
+  tab.removeAttribute("multifox-tab-error");
+  updateUI(tab);
 }

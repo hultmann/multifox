@@ -60,7 +60,7 @@ function createMultifoxPopup(icon, Profile) {
 
   var but = appendError(container, panel);
   appendLogo(container);
-  appendProfileId(container, icon, Profile.getIdentity(win), Profile);
+  appendProfileId(container, icon, Profile);
   var link = appendAbout(container, panel);
 
   panel.addEventListener("popupshowing", function(evt) {
@@ -84,14 +84,13 @@ function createMultifoxPopup(icon, Profile) {
 
 
 function appendError(container, panel) {
-  var browser = container.ownerDocument.defaultView.getBrowser().selectedBrowser;
-  var error = browser.hasAttribute("multifox-tab-status")
-                ? browser.getAttribute("multifox-tab-status") : "";
-  if (error.length === 0) {
+  var tab = container.ownerDocument.defaultView.getBrowser().selectedTab;
+  var errorId = tab.getAttribute("multifox-tab-error");
+  if (errorId.length === 0) {
     return null;
   }
   Components.utils.import("${PATH_MODULE}/error.js");
-  return appendErrorToPanel(container, panel, error);
+  return appendErrorToPanel(container, panel, errorId);
 }
 
 
@@ -140,8 +139,10 @@ function appendLogo(container) {
 }
 
 
-function appendProfileId(container, icon, profileId, Profile) {
+function appendProfileId(container, icon, Profile) {
   var doc = container.ownerDocument;
+  var tab = doc.defaultView.getBrowser().selectedTab;
+  var profileId = Profile.getIdentity(tab);
 
   var desc1 = container.appendChild(doc.createElement("box"));
   desc1.setAttribute("align", "center");
@@ -155,23 +156,17 @@ function appendProfileId(container, icon, profileId, Profile) {
 
   editProfileId.setAttribute("type", "number");
   editProfileId.setAttribute("size", "1");
-  editProfileId.setAttribute("min", "2");
+  editProfileId.setAttribute("min", Profile.DefaultIdentity);
   editProfileId.setAttribute("max", Profile.MaxIdentity);
   editProfileId.setAttribute("value", profileId);
 
   editProfileId.addEventListener("change", function(evt) {
-    var icon = evt.target;
-    var win = icon.ownerDocument.defaultView;
-    var id = icon.valueNumber;
-    icon.valueNumber = Profile.defineIdentity(win, id);
+    var id = editProfileId.valueNumber;
+    editProfileId.valueNumber = Profile.defineIdentity(tab, id);
   }, false);
 
   var p2 = util.getText("icon.panel.p2.label");
   desc2.appendChild(doc.createTextNode(p2));
-
-  if (profileId === Profile.UnknownIdentity) {
-    desc2.hidden = true;
-  }
 }
 
 

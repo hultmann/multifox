@@ -43,7 +43,6 @@ window.addEventListener("DOMContentLoaded", function() {
   loadBadges();
   populateDescription();
   populatePage();
-  populateId();
 }, false);
 
 
@@ -153,12 +152,4 @@ function hasLocale(code) {
     }
   }
   return false;
-}
-
-
-function populateId() {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/main.js", ns);
-  var n = ns.FindIdentity.fromContent(window).profileNumber;
-  document.getElementById("logo").title = "[" + n + "]";
 }

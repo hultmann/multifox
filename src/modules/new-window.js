@@ -36,22 +36,19 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow"];
+const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-
-var m_pendingNewWindows = 0;
-
-function newPendingWindow() {
-  m_pendingNewWindows++;
-}
 
 var m_docObserver = null;
 
 function init() {
   console.assert(m_docObserver === null, "m_docObserver should be null");
   m_docObserver = new DocObserver();
+  Cc["@mozilla.org/browser/sessionstore;1"]
+    .getService(Ci.nsISessionStore)
+    .persistTabAttribute("multifox-tab-profile");
 }
 
 
@@ -118,21 +115,10 @@ function onDOMContentLoaded(evt) {
   }
 
   chromeWin.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-
   switch (doc.location.href) {
     case "chrome://browser/content/browser.xul":
       console.log("OK overlay DOMContentLoaded " + doc.location.href);
       BrowserOverlay.add(chromeWin);
-      break;
-    case "chrome://browser/content/history/history-panel.xul":
-    case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
-    case "chrome://browser/content/places/places.xul":
-      console.log("OK overlay DOMContentLoaded " + doc.location.href);
-      var ns = {};
-      Cc["@mozilla.org/moz/jssubscript-loader;1"]
-        .getService(Ci.mozIJSSubScriptLoader)
-        .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-      ns.PlacesOverlay.add(chromeWin);
       break;
   }
 }
@@ -143,14 +129,8 @@ const BrowserOverlay = {
   add: function(win) {
     win.addEventListener("unload", BrowserOverlay._unload, false);
 
-    setWindowProfile(win)
-
     var doc = win.document;
     //if ((doc instanceof Ci.nsIDOMDocument) === false) {
-
-    // detect session restore
-    doc.addEventListener("SSTabRestoring", onTabRestoring, false);
-    doc.addEventListener("SSTabRestored", onTabRestored, false);
 
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
@@ -160,19 +140,20 @@ const BrowserOverlay = {
     key.setAttribute("oncommand", "(function dummy(){})()"); // workaround
     key.addEventListener("command", onKey, false);
 
-    // menus
-    addMenuListeners(doc);
+    Components.utils.import("${PATH_MODULE}/main.js");
+    BrowserWindow.register(win);
   },
 
   _unload: function(evt) {
     var win = evt.currentTarget;
     win.removeEventListener("unload", BrowserOverlay._unload, false);
     BrowserOverlay.remove(win);
+
+    Components.utils.import("${PATH_MODULE}/main.js");
+    BrowserWindow.unregister(win);
   },
 
   remove: function(win) {
-    removeMenuListeners(win.document);
-
     // key
     var key = win.document.getElementById("key_${BASE_DOM_ID}-new-identity");
     key.removeEventListener("command", onKey, false);
@@ -186,117 +167,6 @@ function onKey(evt) {
   var win = key.ownerDocument.defaultView.top;
   newPendingWindow();
   win.OpenBrowserWindow();
-}
-
-
-function setWindowProfile(newWin) {
-  if (m_pendingNewWindows > 0) {
-    // new identity profile
-    console.log("m_pendingNewWindows=" + m_pendingNewWindows);
-    m_pendingNewWindows--;
-    Components.utils.import("${PATH_MODULE}/main.js");
-    NewWindow.newId(newWin);
-
-  } else {
-    // inherit identity profile
-    if (util.networkListeners.active) {
-      Components.utils.import("${PATH_MODULE}/main.js");
-      NewWindow.inheritId(newWin);
-    } else {
-      // no Multifox window
-      console.log("setWindowProfile NOP => util.networkListeners.active=false");
-    }
-  }
-}
-
-
-function onTabRestoring(evt) {
-  var doc = evt.currentTarget;
-  var win = doc.defaultView;
-
-  var stringId = Cc["@mozilla.org/browser/sessionstore;1"]
-                  .getService(Ci.nsISessionStore)
-                  .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
-
-  if (util.networkListeners.active === false && stringId.length === 0) {
-    // default scenario
-    console.log("first tab restoring NOP");
-    return;
-  }
-
-  console.log("first tab restoring " + stringId);
-
-  // add icon; sync id — override any previous profile id
-  Components.utils.import("${PATH_MODULE}/main.js");
-  NewWindow.applyRestore(win);
-}
-
-
-function onTabRestored(evt) {
-  var doc = evt.currentTarget;
-  var win = doc.defaultView;
-  var tab = evt.originalTarget;
-  console.log("SSTabRestored " + tab.linkedBrowser.currentURI.spec.substr(0, 80));
-
-
-  // we need to [re]configure identity window id,
-  // only the first restored tab is necessary.
-  if (tab.linkedBrowser.currentURI.spec !== "about:sessionrestore") {
-    console.log("removeEventListener SSTabRestored+SSTabRestoring");
-    doc.removeEventListener("SSTabRestoring", onTabRestoring, false);
-    doc.removeEventListener("SSTabRestored", onTabRestored, false);
-  }
-}
-
-
-function addMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
-  for (var idx = ids.length - 1; idx > -1; idx--) {
-    doc.getElementById(ids[idx]).addEventListener("popupshowing", onMenuPopupShowing, false);
-  }
-  var tabbrowser = doc.getElementById("content");
-  var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
-  if (!menupopup) {
-    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
-
-    var newWinItem = doc.getElementById("appmenu_newNavigator");
-    if (newWinItem) {
-      // appmenu
-      var newTabPopup = newWinItem.parentContainer.menupopup;
-      newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
-      newTabPopup.setAttribute("multifox-id", "app-menu");
-    }
-  }
-  menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
-}
-
-
-function removeMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
-  for (var idx = ids.length - 1; idx > -1; idx--) {
-    doc.getElementById(ids[idx]).removeEventListener("popupshowing", onMenuPopupShowing, false);
-  }
-  var tabbrowser = doc.getElementById("content");
-  var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
-  if (!menupopup) {
-    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
-
-    var newWinItem = doc.getElementById("appmenu_newNavigator");
-    if (newWinItem) {
-      // appmenu
-      var newTabPopup = newWinItem.parentContainer.menupopup;
-      newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
-      newTabPopup.removeAttribute("multifox-id");
-    }
-  }
-  menupopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
-  //doc.getAnonymousElementByAttribute(doc.getElementById("content"), "anonid", "tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
-}
-
-
-function onMenuPopupShowing(evt) {
-  Components.utils.import("${PATH_MODULE}/menus.js");
-  menuShowing(evt);
 }
 
 
@@ -319,7 +189,7 @@ const console = {
   assert: function(test, msg) {
     if (test !== true) {
       var ex =  new Error("console.assert - " + msg + " - " + test);
-      Components.utils.reportError(ex) // sometimes exception doesn't show up in console
+      Components.utils.reportError(ex); // workaround - sometimes exception doesn't show up in console
       throw "";
     }
   }

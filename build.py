@@ -64,7 +64,6 @@ b.add_text("content/about-badges.html")
 
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
-b.add_text("modules/menus.js")
 b.add_text("modules/error.js")
 b.add_text("modules/popup.js")
 
