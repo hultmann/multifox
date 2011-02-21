@@ -106,7 +106,7 @@ function populatePage() {
       case "author":
         pHtml = ns.util.getTextFrom(pId, "about", "mailto:hultmann@gmail.com",
                                                   "http://twitter.com/multifox",
-                                                  "https://bitbucket.org/hultmann/multifox/issues/new");
+                                                  "https://github.com/hultmann/multifox/issues");
         break;
       case "source":
         pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "${EXT_SITE}code.html");
