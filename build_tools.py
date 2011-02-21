@@ -40,6 +40,7 @@
 import os
 import string
 import shutil
+import codecs
 
 
 def get_hash(path):
@@ -101,9 +102,11 @@ class BuildExtension:
     def build(self, dir_src, dir_dst, xpi_name):
         self.__dst = dir_dst + "/unpacked/"
         self.__src = dir_src + "/"
-        self.set_var("XPI_NAME", xpi_name)
         self.__copyFiles()
+        if xpi_name == None:
+            return
 
+        self.set_var("XPI_NAME", xpi_name)
         xpi_path = dir_dst + "/xpi/"
         ensure_path_exists(xpi_path)
         self.__createXpi(xpi_path)
@@ -170,13 +173,13 @@ class BuildExtension:
         buf = "".join(all_lines)
 
         ensure_path_exists(output_path)
-        f = open(output_path, "w")
+        f = codecs.open(output_path, "w", "utf-8")
         f.write(buf)
         f.close()
 
 
     def __load_text_file(self, path):
-        f = open(path, "r")
+        f = codecs.open(path, "r", "utf-8")
         txt = f.read()
         buf = string.Template(txt).safe_substitute(self.__vars) # safe==>%1$S
         f.close()
