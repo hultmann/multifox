@@ -55,7 +55,7 @@ function menuShowing(evt) {
     case "tabContextMenu":
       tabMenu(menu);
       break;
-    case "app-menu": // Firefox 4
+    case "app-menu":
       appMenu(menu);
       break;
   }
@@ -168,10 +168,7 @@ function contentMenu(menu) {
 
 function tabMenu(menu) {
   var doc = menu.ownerDocument;
-  var item = doc.getAnonymousElementByAttribute(doc.getElementById("content"), "id", "context_openTabInWindow");
-  if (item === null) {
-    item = doc.getElementById("context_openTabInWindow"); // Firefox 4
-  }
+  var item = doc.getElementById("context_openTabInWindow");
   if (item === null || item.hidden) {
     item = doc.getElementById("tm-copyTabUrl"); // TMP?
   }

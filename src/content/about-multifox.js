@@ -68,23 +68,11 @@ function loadBadges() {
 
 
 function populateDescription() {
-  if (Cc["@mozilla.org/extensions/manager;1"]) { // Gecko 1.9.2
-    var rdf = Cc["@mozilla.org/rdf/rdf-service;1"].getService(Ci.nsIRDFService);
-    var ext = rdf.GetResource("urn:mozilla:item:${EXT_ID}");
-    var arc = rdf.GetResource("http://www.mozilla.org/2004/em-rdf#description");
-    var em =  Cc["@mozilla.org/extensions/manager;1"].getService(Ci.nsIExtensionManager);
-    var desc =  em.datasource
-                  .GetTarget(ext, arc, true)
-                  .QueryInterface(Ci.nsIRDFLiteral)
-                  .Value;
-    document.getElementById("desc").innerHTML = desc;
-  } else {
-    var jsm = {};
-    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
-    jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
-      document.getElementById("desc").innerHTML = addon.description;
-    });
-  }
+  var jsm = {};
+  Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+  jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
+    document.getElementById("desc").innerHTML = addon.description;
+  });
 }
 
 

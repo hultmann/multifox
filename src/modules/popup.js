@@ -54,22 +54,16 @@ function createMultifoxPopup(icon, Profile) {
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
   panel.setAttribute("id", "multifox-popup");
+  panel.setAttribute("type", "arrow");
 
   var container = panel.appendChild(doc.createElement("vbox"));
   container.style.margin = "1.2em 1.4em";
+  container.style.width = "30em";
 
   var but = appendError(container, panel);
   appendLogo(container);
   appendProfileId(container, icon, Profile.getIdentity(win), Profile);
   var link = appendAbout(container, panel);
-
-  panel.addEventListener("popupshowing", function(evt) {
-    copyCss(doc.getElementById("editBookmarkPanel"), panel);
-    if (but) {
-      copyButtonCss(doc, but);
-    }
-    panel.style.width = "30em";
-  }, false);
 
   panel.addEventListener("popupshown", function(evt) {
     link.focus();
@@ -171,40 +165,5 @@ function appendProfileId(container, icon, profileId, Profile) {
 
   if (profileId === Profile.UnknownIdentity) {
     desc2.hidden = true;
-  }
-}
-
-
-function copyButtonCss(doc, toBut) {
-  var srcBut = doc.getElementById("editBookmarkPanelDoneButton");
-  copyCss(srcBut, toBut);
-  doc.defaultView.setTimeout(function() {
-    // wait xbl
-    var source = doc.getAnonymousElementByAttribute(srcBut, "class", "box-inherit button-box");
-    var target = doc.getAnonymousElementByAttribute(toBut,  "class", "box-inherit button-box");
-    target.setAttribute("style","");
-    copyCss(source, target);
-  }, 0);
-}
-
-
-function copyCss(source, target) {
-  var win = source.ownerDocument.defaultView;
-  var style1 = win.getComputedStyle(source, "");
-  var style2 = target.style;
-
-  for (var name in style1) {
-    if (style1[name]) {
-      switch (name) {
-        case "length":
-        case "parentRule":
-        case "display":
-          continue;
-      }
-      if (name.indexOf("padding") === 0) {
-        continue;
-      }
-      style2[name] = style1[name];
-    }
   }
 }

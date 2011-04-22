@@ -80,9 +80,4 @@ Startup.prototype = {
 };
 
 
-
-if (XPCOMUtils.generateNSGetFactory) {
-  var NSGetFactory = XPCOMUtils.generateNSGetFactory([AboutMultifox, Startup]); // Gecko 2
-} else {
-  var NSGetModule = XPCOMUtils.generateNSGetModule([AboutMultifox, Startup]);   // Gecko 1.9.2
-}
+var NSGetFactory = XPCOMUtils.generateNSGetFactory([AboutMultifox, Startup]);

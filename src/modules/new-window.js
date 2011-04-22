@@ -254,20 +254,12 @@ function addMenuListeners(doc) {
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).addEventListener("popupshowing", onMenuPopupShowing, false);
   }
-  var tabbrowser = doc.getElementById("content");
-  var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
-  if (!menupopup) {
-    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
 
-    var newWinItem = doc.getElementById("appmenu_newNavigator");
-    if (newWinItem) {
-      // appmenu
-      var newTabPopup = newWinItem.parentContainer.menupopup;
-      newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
-      newTabPopup.setAttribute("multifox-id", "app-menu");
-    }
-  }
-  menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
+  doc.getElementById("tabContextMenu").addEventListener("popupshowing", onMenuPopupShowing, false);
+
+  var newTabPopup = doc.getElementById("appmenu_newNavigator").parentNode;
+  newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
+  newTabPopup.setAttribute("multifox-id", "app-menu");
 }
 
 
@@ -276,21 +268,12 @@ function removeMenuListeners(doc) {
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).removeEventListener("popupshowing", onMenuPopupShowing, false);
   }
-  var tabbrowser = doc.getElementById("content");
-  var menupopup = doc.getAnonymousElementByAttribute(tabbrowser, "anonid", "tabContextMenu");
-  if (!menupopup) {
-    menupopup = doc.getElementById("tabContextMenu"); // Firefox 4
 
-    var newWinItem = doc.getElementById("appmenu_newNavigator");
-    if (newWinItem) {
-      // appmenu
-      var newTabPopup = newWinItem.parentContainer.menupopup;
-      newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
-      newTabPopup.removeAttribute("multifox-id");
-    }
-  }
-  menupopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
-  //doc.getAnonymousElementByAttribute(doc.getElementById("content"), "anonid", "tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
+  doc.getElementById("tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
+
+  var newTabPopup = doc.getElementById("appmenu_newNavigator").parentNode;
+  newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
+  newTabPopup.removeAttribute("multifox-id");
 }
 
 

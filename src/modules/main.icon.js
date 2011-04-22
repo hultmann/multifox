@@ -150,7 +150,6 @@ function initIconCore(iconContainer, profileId) {
   styleIcon.padding = "0px";
   styleIcon.margin = "0px";
   styleIcon.background = "transparent repeat-x";
-  styleIcon.MozBorderRadius = "2px"; // Gecko 1.9.2
   styleIcon.borderRadius = "2px";
   styleIcon.minHeight = "16px";
 
@@ -267,7 +266,7 @@ function openMultifoxPopup(evt) {
     initIconNormal(icon);
   }, false);
 
-  panel.openPopup(icon, "after_end", 0, 1);
+  panel.openPopup(icon, "bottomcenter topright");
 
   // remove error icon
   var doc = icon.ownerDocument;

@@ -37,52 +37,25 @@
 // Add hooks to documents (cookie, localStorage, ...)
 
 function DocStartScriptInjection() {
-  var is192 = this._is192();
-  this._loader = new ScriptSourceLoader(is192);
+  this._loader = new ScriptSourceLoader();
   Cc["@mozilla.org/observer-service;1"]
     .getService(Ci.nsIObserverService)
-    .addObserver(this, this._getTopic(is192), false);
+    .addObserver(this, "document-element-inserted", false);
 }
 
 DocStartScriptInjection.prototype = {
   stop: function() {
     Cc["@mozilla.org/observer-service;1"]
       .getService(Ci.nsIObserverService)
-      .removeObserver(this, this._getTopic(this._is192()));
+      .removeObserver(this, "document-element-inserted");
     delete this._loader;
-  },
-
-  _is192: function() {
-    var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
-    return info.platformVersion.indexOf("1.9") === 0; // Gecko 1.9.2
-  },
-
-  _getTopic: function(is192) {
-    return is192 ? "content-document-global-created" : "document-element-inserted";
   },
 
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(subject, topic, data) {
-    var win;
-    var prePath;
-
-    switch (topic) {
-      case "content-document-global-created":
-        win = subject;
-        if (win === null) {
-          return;
-        }
-        prePath = data;
-        break;
-      case "document-element-inserted":
-        win = subject.defaultView;
-        if (win === null) {
-          return; // xsl/xbl
-        }
-        prePath = subject.documentURIObject.spec;
-        break;
-      default:
-        throw new Error(topic);
+    var win = subject.defaultView;
+    if (win === null) {
+      return; // xsl/xbl
     }
 
     var idData = FindIdentity.fromContent(win);
@@ -94,13 +67,12 @@ DocStartScriptInjection.prototype = {
         return;
     }
 
-    if (prePath === "null") {
-      return;
-    }
-    if (prePath.indexOf("http:") !== 0) {
-      if (prePath.indexOf("https:") !== 0) {
+    switch (subject.documentURIObject.scheme) {
+      case "http":
+      case "https":
+        break;
+      default:
         return;
-      }
     }
 
     var sandbox = Components.utils.Sandbox(win);
@@ -111,7 +83,7 @@ DocStartScriptInjection.prototype = {
     try {
       Components.utils.evalInSandbox(src, sandbox);
     } catch (ex) {
-      showError(win, "sandbox", prePath + " " + "//exception=" + ex);
+      showError(win, "sandbox", subject.documentURI + " " + "//exception=" + ex);
     }
 
   }
@@ -144,14 +116,8 @@ function clearStatusIcon(idData, win) {
 }
 
 
-function ScriptSourceLoader(is192) {
-  if (is192) {
-    // Gecko 1.9.2
-    this._path = "${PATH_CONTENT}/content-injection-192.js";
-  } else {
-    // Gecko 2.0
-    this._path = "${PATH_CONTENT}/content-injection.js";
-  }
+function ScriptSourceLoader() {
+  this._path = "${PATH_CONTENT}/content-injection.js";
   this._src = null;
   this._load(true);
 }

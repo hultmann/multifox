@@ -50,16 +50,8 @@ const PlacesOverlay = {
 
 const AboutOverlay = {
   add: function(win) {
-    if (win.arguments[0].id) {
-      // Firefox 4
-      if (win.arguments[0].id !== "${EXT_ID}") {
-        return;
-      }
-    } else {
-      // Firefox 3.6
-      if (win.arguments[0] !== "urn:mozilla:item:${EXT_ID}") {
-        return;
-      }
+    if (win.arguments[0].id !== "${EXT_ID}") {
+      return;
     }
     win.setTimeout(win.close, 0); // setTimeout => workaround to avoid crash
 
