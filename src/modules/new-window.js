@@ -226,7 +226,7 @@ function onTabRestoring(evt) {
 
   console.log("first tab restoring " + stringId);
 
-  // add icon; sync id — override any previous profile id
+  // add icon; sync id â€” override any previous profile id
   Components.utils.import("${PATH_MODULE}/main.js");
   NewWindow.applyRestore(win);
 }

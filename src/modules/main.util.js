@@ -83,14 +83,14 @@ const util2 = {
         name: "?"
       };
 
-      // aparentemente é um bug que ocorre as vezes, todas as propriedades sao undefined
+      // aparentemente Ã© um bug que ocorre as vezes, todas as propriedades sao undefined
       if (theStack.languageName == undefined) {
         var item = new StackItem();
         item.name = theStack.toString();
         allItems.push(item);
       }
 
-      // myStack.caller é quase sempre null, mas algumas vezes é undefined...
+      // myStack.caller Ã© quase sempre null, mas algumas vezes Ã© undefined...
       for (var myStack = theStack; myStack; myStack = myStack.caller) {
         if (webOnly) {
           var n = myStack.filename;
