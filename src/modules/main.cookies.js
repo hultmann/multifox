@@ -52,7 +52,7 @@ function documentCookieGetter(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
-    case Profile.UnknownIdentity:
+    case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
       util2.throwStack.go("documentCookieGetter " + profileId);
@@ -71,7 +71,7 @@ function documentCookieSetter(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
-    case Profile.UnknownIdentity:
+    case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
       util2.throwStack.go("documentCookieSetter " + profileId);

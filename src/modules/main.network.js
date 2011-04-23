@@ -45,7 +45,7 @@ const httpListeners = {
       var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
-        case Profile.UnknownIdentity: // favicon, updates
+        case Profile.UndefinedIdentity: // favicon, updates
           return;
       }
 
@@ -70,7 +70,7 @@ const httpListeners = {
       var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
-        case Profile.UnknownIdentity:
+        case Profile.UndefinedIdentity:
           /*
           var myHeaders = HttpHeaders.fromResponse(httpChannel);
           var setCookies = myHeaders["set-cookie"];

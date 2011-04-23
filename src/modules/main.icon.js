@@ -125,7 +125,7 @@ function updateUI(win) {
   iconContainer.setAttribute("id", "multifox-icon");
 
 
-  if (profileId !== Profile.UnknownIdentity) {
+  if (profileId !== Profile.UndefinedIdentity) {
     win.setTimeout(initIconCore, 250, iconContainer, profileId);
   }
 }

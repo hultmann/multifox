@@ -39,7 +39,7 @@ function windowLocalStorage(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
 
   switch (profileId) {
-    case Profile.UnknownIdentity:
+    case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
       util2.throwStack.go("windowLocalStorage " + profileId);

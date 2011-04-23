@@ -163,7 +163,7 @@ function appendProfileId(container, icon, profileId, Profile) {
   var p2 = util.getText("icon.panel.p2.label");
   desc2.appendChild(doc.createTextNode(p2));
 
-  if (profileId === Profile.UnknownIdentity) {
+  if (profileId === Profile.UndefinedIdentity) {
     desc2.hidden = true;
   }
 }

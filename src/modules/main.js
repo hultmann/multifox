@@ -80,7 +80,7 @@ const NewWindow = {
         id = Profile.getIdentity(prevWin);
       } else {
         console.log("inheritId prevWin=" + prevWin);
-        id = Profile.UnknownIdentity;
+        id = Profile.UndefinedIdentity;
       }
     }
     Profile.defineIdentity(newWin, id);
@@ -95,7 +95,7 @@ const NewWindow = {
                     .getService(Ci.nsISessionStore)
                     .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
     var id = Profile.toInt(stringId);
-    if (id < Profile.DefaultIdentity) { //UnknownIdentity?
+    if (id < Profile.DefaultIdentity) { //UndefinedIdentity?
       id = Profile.DefaultIdentity;
     }
     Profile.defineIdentity(win, id);
@@ -112,9 +112,9 @@ const NewWindow = {
 
 
 const Profile = {
-  UnknownIdentity: 0,
-  DefaultIdentity: 1,
-  MaxIdentity:     999999999999999,
+  UndefinedIdentity: 0,
+  DefaultIdentity:   1,
+  MaxIdentity:       999999999999999,
 
   defineIdentity: function(win, id) {
     console.log("defineIdentity " + id);
@@ -122,9 +122,9 @@ const Profile = {
       console.log("id > max " + id);
       id = Profile.MaxIdentity;
     }
-    if (id < Profile.UnknownIdentity) {
-      console.log("id < UnknownIdentity " + id);
-      id = Profile.UnknownIdentity;
+    if (id < Profile.UndefinedIdentity) {
+      console.log("id < UndefinedIdentity " + id);
+      id = Profile.UndefinedIdentity;
     }
     var current = Profile.getIdentity(win);
     if (current === id) {
@@ -188,7 +188,7 @@ const Profile = {
 
   toString: function(id) {
     switch (id) {
-      //case Profile.UnknownIdentity:
+      //case Profile.UndefinedIdentity:
       //  return "\u221e"; // ∞
       default:
         return id.toString();
@@ -229,7 +229,7 @@ SaveToSessionStore.prototype = {
       return;
     }
 
-    if (val <= Profile.DefaultIdentity) { // UnknownIdentity OR DefaultIdentity
+    if (val <= Profile.DefaultIdentity) { // UndefinedIdentity OR DefaultIdentity
       ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
     }
 
@@ -242,7 +242,7 @@ const FindIdentity = {
 
   fromContent: function(contentWin) {
     if (contentWin === null) {
-      return { profileNumber: Profile.UnknownIdentity };
+      return { profileNumber: Profile.UndefinedIdentity };
     }
 
     var profileId;
@@ -255,7 +255,7 @@ const FindIdentity = {
 
     var chromeWin = browser.ownerDocument.defaultView;
     profileId = Profile.getIdentity(chromeWin);
-    if (profileId !== Profile.UnknownIdentity) {
+    if (profileId !== Profile.UndefinedIdentity) {
       return { profileNumber: profileId, browserElement: browser };
     }
 
@@ -267,7 +267,7 @@ const FindIdentity = {
   _getIdentityFromOpenerChrome: function(contentWin) {
     var chromeWin = ContentWindow.getChromeWindow(contentWin);
     if (chromeWin === null) {
-      return Profile.UnknownIdentity;
+      return Profile.UndefinedIdentity;
     }
     var tabbrowser = null;
     var type = chromeWin.document.documentElement.getAttribute("windowtype");
@@ -282,7 +282,7 @@ const FindIdentity = {
     }
 
     return tabbrowser !== null ? Profile.getIdentity(tabbrowser.ownerDocument.defaultView)
-                               : Profile.UnknownIdentity; // favicon, ...
+                               : Profile.UndefinedIdentity; // favicon, ...
   },
 
   _getIdentityFromOpenerContent: function(contentWin, chromeWin) {
@@ -291,14 +291,14 @@ const FindIdentity = {
       if (browserOpener) {
         var chromeOpener = browserOpener.ownerDocument.defaultView;
         var profileId = Profile.getIdentity(chromeOpener);
-        if (profileId > Profile.UnknownIdentity) {
+        if (profileId > Profile.UndefinedIdentity) {
           return Profile.defineIdentity(chromeWin, profileId);
         }
       }
     }
 
     console.log("request [" + profileId + "] id.opener="+ profileId);
-    return Profile.UnknownIdentity;
+    return Profile.UndefinedIdentity;
   }
 };
 
