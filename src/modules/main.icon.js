@@ -104,9 +104,14 @@ function updateUI(win) {
 
   var icon = getIconNode(doc);
   if (icon) {
-    console.log("updateUI=" + profileId + " current=" + Profile.getIdentity(win));
-    icon.querySelector("label").setAttribute("value", Profile.toString(profileId));
-    return;
+    var label = icon.querySelector("label");
+    console.log("updateUI=" + profileId + " " + label + " current=" + Profile.getIdentity(win));
+    // label=null ==> urlbar has just been placed on the toolbar
+    if (label) {
+      label.setAttribute("value", Profile.toString(profileId));
+      return;
+    }
+    removeUI(doc);
   }
 
 
@@ -120,6 +125,11 @@ function updateUI(win) {
 
 
   var ref = doc.getElementById("urlbar-icons");
+  if (ref === null) {
+    console.log("updateUI ref=null");
+    return; // ref=null after toolbar customization. However, it is valid on new windows!
+  }
+
   var iconContainer = ref.appendChild(doc.createElement("hbox"));
   iconContainer.setAttribute("hidden", "true");
   iconContainer.setAttribute("id", "multifox-icon");
@@ -134,7 +144,9 @@ function updateUI(win) {
 function initIconCore(iconContainer, profileId) {
   var doc = iconContainer.ownerDocument;
   if (iconContainer !== getIconNode(doc)) {
+    // getIconNode(doc)=null ===> urlbar hidden?
     console.log("initIconCore != " + profileId + iconContainer + getIconNode(doc));
+    removeUI(doc);
     return;
   }
 

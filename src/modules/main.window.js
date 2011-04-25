@@ -65,8 +65,7 @@ const BrowserWindow = {
     win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
 
     // restore icon after toolbar customization
-    var toolbox = win.document.getElementById("navigator-toolbox");
-    toolbox.addEventListener("DOMNodeInserted", customizeToolbar, false);
+    win.addEventListener("aftercustomization", customizeToolbar, false);
   },
 
 
@@ -81,13 +80,10 @@ const BrowserWindow = {
     }
 
     win.removeEventListener(m_runner.eventSentByContent, onContentEvent, false);
-
-    var sessions = Profile.activeIdentities(win);
-    var toolbox = win.document.getElementById("navigator-toolbox");
-    toolbox.removeEventListener("DOMNodeInserted", customizeToolbar, false);
-
+    win.removeEventListener("aftercustomization", customizeToolbar, false);
     win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
+    var sessions = Profile.activeIdentities(win);
     var onlyDefault = (sessions.length === 1) && (sessions[0] === Profile.DefaultIdentity);
     if (onlyDefault) {
       // no more multifox windows
@@ -106,10 +102,8 @@ function onUnloadChromeWindow(evt) {
 
 
 function customizeToolbar(evt) {
-  var node = evt.target;
-  if ((node.id === "urlbar-container") && (node.parentNode.tagName === "toolbar")) {
-    updateUI(node.ownerDocument.defaultView);
-  }
+  var toolbox = evt.target;
+  updateUI(toolbox.ownerDocument.defaultView);
 }
 
 
