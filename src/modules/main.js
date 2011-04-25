@@ -36,10 +36,9 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["NewWindow",
-                          "Profile",     // error.js
-                          "FindIdentity" // about:multifox
-                         ];
+var EXPORTED_SYMBOLS = ["NewWindow",
+                        "Profile"      // error.js
+                       ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");

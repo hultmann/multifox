@@ -43,7 +43,6 @@ window.addEventListener("DOMContentLoaded", function() {
   loadBadges();
   populateDescription();
   populatePage();
-  populateId();
 }, false);
 
 
@@ -80,7 +79,7 @@ function populatePage() {
   var ns = {};
   Components.utils.import("${PATH_MODULE}/new-window.js", ns);
 
-  var items = ["spread", "author", "l10n", "source", "legal"];
+  var items = ["spread", "author", "l10n", "source", "legal", "version2"];
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
     var hHtml = ns.util.getTextFrom(id + ".h", "about");
@@ -88,17 +87,22 @@ function populatePage() {
     var pHtml;
     switch (id) {
       case "spread":
-        pHtml = ns.util.getTextFrom(pId, "about");
-        hHtml = ns.util.getTextFrom(id + ".h", "about", "${EXT_NAME}");
+        hHtml = ns.util.getTextFrom(id + ".h", "about");
+        pHtml = "<!-- nop -->";
         break;
 
       case "author":
         pHtml = ns.util.getTextFrom(pId, "about", "mailto:hultmann@gmail.com",
                                                   "http://twitter.com/multifox",
-                                                  "https://bitbucket.org/hultmann/multifox/issues/new");
+                                                  "https://github.com/hultmann/multifox/issues");
         break;
+
+      case "version2":
+        pHtml = ns.util.getTextFrom(pId, "about", "http://br.mozdev.org/multifox/all.html");
+        break;
+
       case "source":
-        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "${EXT_SITE}code.html");
+        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "https://github.com/hultmann/multifox");
         break;
 
       case "l10n":
@@ -141,12 +145,4 @@ function hasLocale(code) {
     }
   }
   return false;
-}
-
-
-function populateId() {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/main.js", ns);
-  var n = ns.FindIdentity.fromContent(window).profileNumber;
-  document.getElementById("logo").title = "[" + n + "]";
 }
