@@ -256,6 +256,11 @@ function toggleDefaultWindowUI(show) {
 
 
 function openMultifoxPopup(evt) {
+  if ((evt.button !== 0) || (evt.detail !== 1)) {
+    // left click only
+    return;
+  }
+
   Components.utils.import("${PATH_MODULE}/popup.js");
   var icon = evt.currentTarget; //or this
 
