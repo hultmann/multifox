@@ -108,19 +108,16 @@ function populatePage() {
       case "l10n":
         var reg = Cc["@mozilla.org/chrome/chrome-registry;1"]
                     .getService(Ci.nsIXULChromeRegistry);
-        var localeApp      = reg.getSelectedLocale("global");
-        var localeMultifox = reg.getSelectedLocale("${CHROME_NAME}");
+        var localeApp = reg.getSelectedLocale("global");
+        var localeExt = reg.getSelectedLocale("${CHROME_NAME}");
 
-        hHtml = ns.util.getTextFrom(id + ".h", "about", localeMultifox);
-        pHtml = ns.util.getTextFrom(pId, "about");
-        /*
-        if (hasLocale(localeApp) === false) {
-          pHtml += " ";
-          var html2 = ns.util.getTextFrom("l10n.notfound.p", "about",
-                                          "${EXT_NAME}", localeApp, "http://www.babelzilla.org/");
-          document.getElementById("l10n-notfound-p").innerHTML = html2;
+        hHtml = ns.util.getTextFrom(id + ".h", "about", localeExt);
+
+        if (hasExtensionLocale(localeApp)) {
+          pHtml = ns.util.getTextFrom(pId, "about").trim();
+        } else {
+          pHtml = 'Multifox is not yet available in your language (<b>' + localeApp + '</b>). <a href="http://br.mozdev.org/multifox/l10n.html">Please join BabelZilla if you are interested in localizing it!</a>';
         }
-        */
         break;
 
       default:
@@ -135,7 +132,7 @@ function populatePage() {
 }
 
 
-function hasLocale(code) {
+function hasExtensionLocale(code) {
   var locales = Cc["@mozilla.org/chrome/chrome-registry;1"]
                   .getService(Ci.nsIToolkitChromeRegistry)
                   .getLocalesForPackage("${CHROME_NAME}");
