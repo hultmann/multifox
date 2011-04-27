@@ -53,18 +53,27 @@ const AboutOverlay = {
     if (win.arguments[0].id !== "${EXT_ID}") {
       return;
     }
-    win.setTimeout(win.close, 0); // setTimeout => workaround to avoid crash
 
     var Cc = Components.classes;
     var Ci = Components.interfaces;
+
     var browserWin = Cc["@mozilla.org/appshell/window-mediator;1"]
                       .getService(Ci.nsIWindowMediator)
                       .getMostRecentWindow("navigator:browser");
-    if (browserWin) {
-      browserWin.openUILinkIn("about:multifox", "tab", false, null, null);
-      win.onunload = function() {
-        browserWin.getBrowser().contentWindow.focus();
-      };
+    if (browserWin === null) {
+      return;
     }
+
+    var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+    var uri = io.newURI("about:multifox", null, null);
+    var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
+    browserWin.browserDOMWindow.openURI(uri, null, where, null);
+
+    win.setTimeout(win.close, 0);
+
+    // hide window to avoid flicker
+    var root = win.document.documentElement;
+    root.setAttribute("hidechrome", "true");
+    root.setAttribute("hidden", "true");
   }
 };

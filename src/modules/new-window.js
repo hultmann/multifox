@@ -61,82 +61,48 @@ function DocObserver() {
   Cc["@mozilla.org/observer-service;1"]
     .getService(Ci.nsIObserverService)
     .addObserver(this, "chrome-document-global-created", false);
-
-  // workaround for top windows until chrome-document-global-created works again in Fx4
-  Cc["@mozilla.org/embedcomp/window-watcher;1"]
-    .getService(Ci.nsIWindowWatcher)
-    .registerNotification(this);
 }
 
 
 DocObserver.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
-    switch (topic) {
-      case "domwindowclosed":
-        return;
-      case "domwindowopened":
-        break;
-      default:
-        if (win.top === win) {
-          if (win.document.location.href === "chrome://mozapps/content/extensions/about.xul") {
-            console.log("OK overlay via " + topic + " / " + win.document.location.href);
-            var ns = {};
-            Cc["@mozilla.org/moz/jssubscript-loader;1"]
-              .getService(Ci.mozIJSSubScriptLoader)
-              .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-            ns.AboutOverlay.add(win);
-          }
-          return;
-        }
-        break; // chrome-document-global-created works for history-panel.xul etc
-    }
-
-    switch (win.document.location.href) {
-      case "chrome://mozapps/content/extensions/about.xul":
-        console.log("OK overlay via " + topic + " / " + win.document.location.href);
-        var ns = {};
-        Cc["@mozilla.org/moz/jssubscript-loader;1"]
-          .getService(Ci.mozIJSSubScriptLoader)
-          .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-        ns.AboutOverlay.add(win);
-        break;
-
-      default:
-        win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-        break;
-    }
+    // win.document.location=about:blank
+    win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
   }
 };
 
 
 function onDOMContentLoaded(evt) {
-  var chromeWin = evt.currentTarget;
-  var doc = chromeWin.document;
-  if (doc !== evt.target) {
+  var win = evt.currentTarget;
+  if (win.document !== evt.target) {
     return; // avoid bubbled DOMContentLoaded events
   }
 
-  chromeWin.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+  win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 
-  switch (doc.location.href) {
+  switch (win.document.location.href) {
     case "chrome://browser/content/browser.xul":
-      console.log("OK overlay DOMContentLoaded " + doc.location.href);
-      BrowserOverlay.add(chromeWin);
+      BrowserOverlay.add(win);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
     case "chrome://browser/content/places/places.xul":
-      console.log("OK overlay DOMContentLoaded " + doc.location.href);
-      var ns = {};
-      Cc["@mozilla.org/moz/jssubscript-loader;1"]
-        .getService(Ci.mozIJSSubScriptLoader)
-        .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-      ns.PlacesOverlay.add(chromeWin);
+      loadSubScript().PlacesOverlay.add(win);
+      break;
+    case "chrome://mozapps/content/extensions/about.xul":
+      loadSubScript().AboutOverlay.add(win);
       break;
   }
 }
 
+
+function loadSubScript() {
+  var ns = {};
+  var sub = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
+  sub.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+  return ns;
+}
 
 
 const BrowserOverlay = {
