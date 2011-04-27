@@ -70,7 +70,7 @@ b.add_text("modules/popup.js")
 
 b.add_locale("en-US")
 b.add_locale("pt-BR")
-#b.add_locale("es-ES")
+b.add_locale("es-ES")
 
 
 b.add_text("locale/${locale}/general.properties")
