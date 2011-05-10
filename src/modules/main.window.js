@@ -147,7 +147,7 @@ function MultifoxRunner() {
   this._inject = new DocStartScriptInjection();
   Cookies.start();
   util.networkListeners.enable(httpListeners.request, httpListeners.response);
-  //toggleDefaultWindowUI(true);
+  PrivateBrowsingListener.enable();
 }
 
 MultifoxRunner.prototype = {
@@ -164,7 +164,7 @@ MultifoxRunner.prototype = {
     util.networkListeners.disable();
     this._inject.stop();
     Cookies.stop();
-    //toggleDefaultWindowUI(false);
+    PrivateBrowsingListener.disable();
   }
 };
 
@@ -191,3 +191,72 @@ function showError(contentWin, notSupportedFeature, details) {
     updateStatus(doc);
   }
 }
+
+
+var PrivateBrowsingListener = {
+  _profileId: -1,
+  _winId: 0,
+
+  enable: function() {
+    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    obs.addObserver(this, "private-browsing-transition-complete", false);
+    obs.addObserver(this, "quit-application", false);
+  },
+
+  disable: function() {
+    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    obs.removeObserver(this, "private-browsing-transition-complete");
+    obs.removeObserver(this, "quit-application");
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+  observe: function(aSubject, aTopic, aData) {
+    if (aTopic === "quit-application") {
+      this.disable();
+      return;
+    }
+
+    var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+    var win = wm.getMostRecentWindow("navigator:browser");
+    var utils = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
+
+    var pb = Cc["@mozilla.org/privatebrowsing;1"].getService(Ci.nsIPrivateBrowsingService);
+    if (pb.privateBrowsingEnabled) {
+      // enter PB
+      // count > 1 ==> "permanent PB" pref enabled
+      // count = 1 ==> "permanent PB" pref enabled OR "Start Private Browsing" cmd
+      if (this._countWindows(wm) > 1) {
+        return;
+      }
+
+      // win is the only one opened window
+      this._profileId = Profile.getIdentity(win);
+      this._winId = utils.outerWindowID;
+      Profile.defineIdentity(win, Profile.DefaultIdentity);
+
+    } else {
+      if (this._profileId < Profile.DefaultIdentity) {
+        return;
+      }
+      var win2 =  utils.getOuterWindowWithId(this._winId);
+      if (win2) {
+        Profile.defineIdentity(win2, this._profileId);
+      }
+      this._profileId = -1;
+    }
+  },
+
+  _countWindows: function(wm) {
+    var winEnum = wm.getEnumerator("navigator:browser");
+    var qty = 0;
+    while (winEnum.hasMoreElements()) {
+      winEnum.getNext();
+      qty++;
+      if (qty > 1) {
+        break;
+      }
+    }
+    return qty;
+  }
+
+};
