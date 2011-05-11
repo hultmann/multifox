@@ -56,11 +56,10 @@ function init() {
 
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 function DocObserver() {
-  Cc["@mozilla.org/observer-service;1"]
-    .getService(Ci.nsIObserverService)
-    .addObserver(this, "chrome-document-global-created", false);
+  Services.obs.addObserver(this, "chrome-document-global-created", false);
 }
 
 
@@ -99,8 +98,7 @@ function onDOMContentLoaded(evt) {
 
 function loadSubScript() {
   var ns = {};
-  var sub = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
-  sub.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+  Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
   return ns;
 }
 
@@ -202,8 +200,6 @@ function onTabRestored(evt) {
   var doc = evt.currentTarget;
   var win = doc.defaultView;
   var tab = evt.originalTarget;
-  console.log("SSTabRestored " + tab.linkedBrowser.currentURI.spec.substr(0, 80));
-
 
   // we need to [re]configure identity window id,
   // only the first restored tab is necessary.
@@ -260,9 +256,7 @@ const console = {
       ms2 = ms.toString();
     }
     var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
-    Cc["@mozilla.org/consoleservice;1"]
-      .getService(Ci.nsIConsoleService)
-      .logStringMessage(p + msg);
+    Services.console.logStringMessage(p + msg);
   },
 
   assert: function(test, msg) {
@@ -285,9 +279,7 @@ const util = {
   },
 
   _getTextCore: function(name, filename, args, startAt) {
-    var bundle = Cc["@mozilla.org/intl/stringbundle;1"]
-                  .getService(Ci.nsIStringBundleService)
-                  .createBundle("${PATH_LOCALE}/" + filename + ".properties");
+    var bundle = Services.strings.createBundle("${PATH_LOCALE}/" + filename + ".properties");
 
     if (args.length === startAt) {
       return bundle.GetStringFromName(name);
@@ -319,9 +311,7 @@ const util = {
       }
       this._observers = [onRequest, onResponse];
 
-      var obs = Cc["@mozilla.org/observer-service;1"]
-                  .getService(Ci.nsIObserverService);
-
+      var obs = Services.obs;
       obs.addObserver(this._observers[0], "http-on-modify-request", false);
       obs.addObserver(this._observers[1], "http-on-examine-response", false);
       obs.addObserver(this._cookieRejectedListener, "cookie-rejected", false);
@@ -329,9 +319,7 @@ const util = {
 
     disable: function() {
       console.log("networkListeners disable");
-      var obs = Cc["@mozilla.org/observer-service;1"]
-                  .getService(Ci.nsIObserverService);
-
+      var obs = Services.obs;
       obs.removeObserver(this._observers[0], "http-on-modify-request");
       obs.removeObserver(this._observers[1], "http-on-examine-response");
       this._observers = null;

@@ -41,6 +41,7 @@ var EXPORTED_SYMBOLS = ["NewWindow",
                        ];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");
 
 console.log("===>LOADING main.js");

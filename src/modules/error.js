@@ -91,11 +91,10 @@ function moveTabToDefault(button) {
   var sourceWin = button.ownerDocument.defaultView;
   var sourceTab = sourceWin.getBrowser().selectedTab;
 
-  var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"]
-                  .getService(Ci.nsIWindowMediator)
-                  .getEnumerator("navigator:browser");
-
+  Components.utils.import("resource://gre/modules/Services.jsm");
+  var winEnum = Services.wm.getEnumerator("navigator:browser");
   var targetWin = null;
+
   while (winEnum.hasMoreElements()) {
     var tmpWin = winEnum.getNext();
     if (Profile.getIdentity(tmpWin) === Profile.DefaultIdentity) { //isDefaultWindow

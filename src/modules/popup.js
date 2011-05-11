@@ -105,9 +105,8 @@ function appendAbout(container, panel) {
 
     panel.hidePopup();
 
-    var uri = Cc["@mozilla.org/network/io-service;1"]
-                .getService(Ci.nsIIOService)
-                .newURI("about:multifox", null, null);
+    Components.utils.import("resource://gre/modules/Services.jsm");
+    var uri = Services.io.newURI("about:multifox", null, null);
     var win = evt.target.ownerDocument.defaultView;
     var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
     win.browserDOMWindow.openURI(uri, null, where, null);

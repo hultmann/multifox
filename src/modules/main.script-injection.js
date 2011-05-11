@@ -38,16 +38,12 @@
 
 function DocStartScriptInjection() {
   this._loader = new ScriptSourceLoader();
-  Cc["@mozilla.org/observer-service;1"]
-    .getService(Ci.nsIObserverService)
-    .addObserver(this, "document-element-inserted", false);
+  Services.obs.addObserver(this, "document-element-inserted", false);
 }
 
 DocStartScriptInjection.prototype = {
   stop: function() {
-    Cc["@mozilla.org/observer-service;1"]
-      .getService(Ci.nsIObserverService)
-      .removeObserver(this, "document-element-inserted");
+    Services.obs.removeObserver(this, "document-element-inserted");
     delete this._loader;
   },
 

@@ -196,9 +196,9 @@ function newIdentityCommand(evt, cmd) {
       win.goDoPlacesCommand("placesCmd_open:window");
       break;
     case "tab":
-      Cc["@mozilla.org/embedcomp/window-watcher;1"]
-        .getService(Ci.nsIWindowWatcher)
-        .openWindow(win,
+      Components.utils.import("resource://gre/modules/Services.jsm");
+      Services.ww.openWindow(
+                    win,
                     "chrome://browser/content/browser.xul",
                     null,
                     "chrome,dialog=no,all",

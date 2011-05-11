@@ -56,16 +56,14 @@ const AboutOverlay = {
 
     var Cc = Components.classes;
     var Ci = Components.interfaces;
+    Components.utils.import("resource://gre/modules/Services.jsm");
 
-    var browserWin = Cc["@mozilla.org/appshell/window-mediator;1"]
-                      .getService(Ci.nsIWindowMediator)
-                      .getMostRecentWindow("navigator:browser");
+    var browserWin = Services.wm.getMostRecentWindow("navigator:browser");
     if (browserWin === null) {
       return;
     }
 
-    var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-    var uri = io.newURI("about:multifox", null, null);
+    var uri = Services.io.newURI("about:multifox", null, null);
     var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
     browserWin.browserDOMWindow.openURI(uri, null, where, null);
 

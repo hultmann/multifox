@@ -166,7 +166,7 @@ function initIconCore(iconContainer, profileId) {
   styleIcon.minHeight = "16px";
 
 
-  var os = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS;
+  var os = Services.appinfo.OS;
   switch (os) {
     case "Darwin":
       styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon-osx.png)";

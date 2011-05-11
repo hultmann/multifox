@@ -198,13 +198,13 @@ var PrivateBrowsingListener = {
   _winId: 0,
 
   enable: function() {
-    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    var obs = Services.obs;
     obs.addObserver(this, "private-browsing-transition-complete", false);
     obs.addObserver(this, "quit-application", false);
   },
 
   disable: function() {
-    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    var obs = Services.obs;
     obs.removeObserver(this, "private-browsing-transition-complete");
     obs.removeObserver(this, "quit-application");
   },
@@ -216,8 +216,7 @@ var PrivateBrowsingListener = {
       return;
     }
 
-    var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-    var win = wm.getMostRecentWindow("navigator:browser");
+    var win = Services.wm.getMostRecentWindow("navigator:browser");
     var utils = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 
     var pb = Cc["@mozilla.org/privatebrowsing;1"].getService(Ci.nsIPrivateBrowsingService);
@@ -225,7 +224,7 @@ var PrivateBrowsingListener = {
       // enter PB
       // count > 1 ==> "permanent PB" pref enabled
       // count = 1 ==> "permanent PB" pref enabled OR "Start Private Browsing" cmd
-      if (this._countWindows(wm) > 1) {
+      if (this._countWindows() > 1) {
         return;
       }
 
@@ -246,8 +245,8 @@ var PrivateBrowsingListener = {
     }
   },
 
-  _countWindows: function(wm) {
-    var winEnum = wm.getEnumerator("navigator:browser");
+  _countWindows: function() {
+    var winEnum = Services.wm.getEnumerator("navigator:browser");
     var qty = 0;
     while (winEnum.hasMoreElements()) {
       winEnum.getNext();

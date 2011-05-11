@@ -38,15 +38,12 @@
 const util2 = {
 
   browserWindowsEnum: function() {
-    return Cc["@mozilla.org/appshell/window-mediator;1"]
-            .getService(Ci.nsIWindowMediator)
-            .getEnumerator("navigator:browser");
+    return Services.wm.getEnumerator("navigator:browser");
   },
 
   stringToUri: function(spec) {
-    var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
     try {
-      return io.newURI(spec, null, null);
+      return Services.io.newURI(spec, null, null);
     } catch (ex) {
       return null;
     }
