@@ -37,10 +37,6 @@
 
 const util2 = {
 
-  browserWindowsEnum: function() {
-    return Services.wm.getEnumerator("navigator:browser");
-  },
-
   stringToUri: function(spec) {
     try {
       return Services.io.newURI(spec, null, null);

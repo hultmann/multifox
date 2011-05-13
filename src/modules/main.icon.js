@@ -249,24 +249,6 @@ function onIconHover(evt) {
 }
 
 
-/*
-// show/hide [1] "icon"
-function toggleDefaultWindowUI(show) {
-  var winEnum = util2.browserWindowsEnum();
-  while (winEnum.hasMoreElements()) {
-    var doc = winEnum.getNext().document;
-    if (Profile.getIdentity(doc) === Profile.DefaultIdentity) {
-      if (show) {
-        updateUI(doc, Profile.DefaultIdentity);
-      } else {
-        removeUI(doc);
-      }
-    }
-  }
-}
-*/
-
-
 function openMultifoxPopup(evt) {
   if ((evt.button !== 0) || (evt.detail !== 1)) {
     // left click only

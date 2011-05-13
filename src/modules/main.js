@@ -158,7 +158,7 @@ const Profile = {
   },
 
   activeIdentities: function(ignoreWin) {
-    var winEnum = util2.browserWindowsEnum();
+    var winEnum = Services.wm.getEnumerator("navigator:browser");
     var arr = [];
     while (winEnum.hasMoreElements()) {
       var win = winEnum.getNext();
