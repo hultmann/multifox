@@ -75,6 +75,7 @@ b.add_locale("fr")
 b.add_locale("sv-SE")
 b.add_locale("zh-CN")
 b.add_locale("zh-TW")
+b.add_locale("sr")
 
 
 b.add_text("locale/${locale}/general.properties")

@@ -16,3 +16,4 @@ locale  ${CHROME_NAME}  fr     locale/fr/
 locale  ${CHROME_NAME}  sv-SE  locale/sv-SE/
 locale  ${CHROME_NAME}  zh-CN  locale/zh-CN/
 locale  ${CHROME_NAME}  zh-TW  locale/zh-TW/
+locale  ${CHROME_NAME}  sr     locale/sr/
