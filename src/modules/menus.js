@@ -83,20 +83,18 @@ function onPopupHidden(evt) {
 
 function appMenu(menu) {
   var doc = menu.ownerDocument;
-
   var position = doc.getElementById("appmenu_openFile");
-  console.log("position "+position);
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), position);
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
 
+  var cmd = doc.createElement("menuitem");
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
-
-
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "appMenu");}, false);
-  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   cmd.setAttribute("label", util.getText("appmenu.new.label"));
   cmd.setAttribute("accesskey", util.getText("appmenu.new.accesskey"));
+  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "appMenu");}, false);
+  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
+  menu.insertBefore(cmd, position);
+
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
+  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
 
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
@@ -104,22 +102,22 @@ function appMenu(menu) {
 
 function fileMenu(menu) {
   var doc = menu.ownerDocument;
-
   var position = doc.getElementById("menu_savePage");
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), position);
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
 
+  var cmd = doc.createElement("menuitem");
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
-
-
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "fileMenu");}, false);
-  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   cmd.setAttribute("label", util.getText("menu.file.label"));
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
+  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "fileMenu");}, false);
+  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
+  menu.insertBefore(cmd, position);
+
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
+  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
 
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
+
 
 function placesMenu(menu) {
   var doc = menu.ownerDocument;
@@ -129,18 +127,17 @@ function placesMenu(menu) {
     return;
   }
 
+  var position = doc.getElementById("placesContext_openSeparator");
 
-  var sepLink = doc.getElementById("placesContext_openSeparator");
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), sepLink);
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), sepLink);
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
 
-
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "places");}, false);
+  var cmd = doc.createElement("menuitem");
+  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("context.places.label"));
   cmd.setAttribute("accesskey", util.getText("context.places.accesskey"));
-
+  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "places");}, false);
+  menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
 
@@ -152,15 +149,17 @@ function contentMenu(menu) {
     return;
   }
 
-  var sepLink = doc.getElementById("context-sep-open");
+  var position = doc.getElementById("context-sep-open");
 
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), sepLink);
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), sepLink);
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
+
+  var cmd = doc.createElement("menuitem");
+  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("context.link.label"));
   cmd.setAttribute("accesskey", util.getText("context.link.accesskey"));
   cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "link");}, false);
+  menu.insertBefore(cmd, position);
 
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
@@ -172,15 +171,18 @@ function tabMenu(menu) {
   if (item === null || item.hidden) {
     item = doc.getElementById("tm-copyTabUrl"); // TMP?
   }
-  var refElem = item === null ? null : item.nextSibling;
 
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), refElem);
-  var cmd = menu.insertBefore(doc.createElement("menuitem"), refElem);
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
+  var position = item === null ? null : item.nextSibling;
+
+  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
+
+  var cmd = doc.createElement("menuitem");
+  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("context.tab.label"));
   cmd.setAttribute("accesskey", util.getText("context.tab.accesskey"));
   cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "tab");}, false);
+  menu.insertBefore(cmd, position);
 
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
