@@ -70,13 +70,6 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     }
   });
 
-  Object.defineProperty(win, "globalStorage", {
-    get: function() {
-      sendCmd({from:"error", cmd:"globalStorage"});
-      return null;
-    }
-  });
-
   var realLocalStorage = win.localStorage;
 
   Object.defineProperty(win, "localStorage", {
@@ -151,4 +144,18 @@ function initContext(win, doc, sentByChrome, sentByContent) {
       return proxy;
     }
   });
+
+
+  // remove unsupported features
+
+  if (win.globalStorage) {
+    delete win.globalStorage; // globalStorage will be removed by bug 687579
+  }
+
+  if (win.mozIndexedDB) {     // TODO
+    delete win.mozIndexedDB;
+  } else if (win.indexedDB) {
+    delete win.indexedDB;
+  }
+
 }
