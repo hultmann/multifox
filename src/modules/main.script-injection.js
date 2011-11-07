@@ -71,7 +71,7 @@ DocStartScriptInjection.prototype = {
         return;
     }
 
-    var sandbox = Components.utils.Sandbox(win);
+    var sandbox = Components.utils.Sandbox(win, {sandboxName: "multifox-content"});
     sandbox.window = win.wrappedJSObject;
     sandbox.document = win.document.wrappedJSObject;
 
