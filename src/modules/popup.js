@@ -57,8 +57,8 @@ function createMultifoxPopup(icon, Profile) {
   panel.setAttribute("type", "arrow");
 
   var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = "1.2em 1.4em";
-  container.style.width = "30em";
+  container.style.margin = "1ch 1ch";
+  container.style.width = "50ch";
 
   var but = appendError(container, panel);
   appendLogo(container);
