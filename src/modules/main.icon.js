@@ -35,93 +35,69 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function updateUI(tab) {
+var m_welcomeMode = false;
+
+function setWelcomeMode(enable) {
+  if (m_welcomeMode === enable) {
+    return;
+  }
+  
+  m_welcomeMode = enable; // TODO check tabs with login attr
+
+  var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator).getEnumerator("navigator:browser");
+  while (winEnum.hasMoreElements()) {
+    var win = winEnum.getNext();
+    var tab = win.getBrowser().selectedTab;
+    updateUI(tab, true);
+    if (enable) {
+      getIconContainer(win.document).setAttribute("current-error", "welcome"); // force updateStatIcon
+    }
+  }
+}
+
+
+function updateUI(tab, force) { // force = optional param
+try {
   if (tab.hasAttribute("selected") === false) {
     return;
   }
 
-  var doc = tab.ownerDocument;
-  var iconContainer = getIconNode(doc);
-  if (Profile.getIdentity(tab) === Profile.UndefinedIdentity) {
-    // remove badge
-    if (iconContainer !== null) {
-      iconContainer.parentNode.removeChild(iconContainer);
-    }
-    return;
-  }
-
-  if (iconContainer === null) {
-    var ref = doc.getElementById("urlbar-icons");
-    iconContainer = ref.appendChild(doc.createElement("hbox"));
-    iconContainer.setAttribute("hidden", "true");
-    iconContainer.setAttribute("id", "multifox-icon");
-    var win = doc.defaultView;
-    var delay = getTabs(win.getBrowser()).length > 1 ? 50 : 250;
-    win.setTimeout(initBadge, delay, doc); // open window => greater delay
-    return;
-  }
-
-  if (iconContainer.firstChild !== null) { // waiting initBadge?
-    updateBadgeProfile(tab, iconContainer);
-    updateBadgeLogin(tab, iconContainer);
-    updateBadgeError(tab, iconContainer);
-  }
-}
-
-
-function getIconNode(doc) {
-  return doc.getElementById("multifox-icon");
-}
-
-
-function updateBadgeProfile(tab, iconContainer) {
-  var labelId = iconContainer.querySelector("label");
-  labelId.setAttribute("value", Profile.getIdentity(tab));
-}
-
-
-function updateBadgeLogin(tab, iconContainer) {
-  var label = iconContainer.querySelectorAll("label")[1];
-
-  if (tab.hasAttribute("multifox-tab-has-login")) {
-    var val = tab.getAttribute("multifox-tab-has-login");
-    label.setAttribute("value", val);
-    label.removeAttribute("hidden");
+  if (tab.hasAttribute("multifox-invalidate-icon")) {
+    tab.removeAttribute("multifox-invalidate-icon");
   } else {
-    if (label.hasAttribute("hidden") === false) {
-      label.setAttribute("hidden", "true");
-      label.setAttribute("value", "");
+    if (force !== true) {
+      return;
     }
   }
-}
 
-
-function updateBadgeError(tab, iconContainer) {
-  var currentError = iconContainer.getAttribute("current-error");
-  var newError = tab.getAttribute("multifox-tab-error");
-  if (currentError === newError) {
-    return;
-  }
-
-  iconContainer.setAttribute("current-error", newError);
   var doc = tab.ownerDocument;
-  var stat = doc.getElementById("multifox-icon-stat-icon");
-  while (stat.firstChild) {
-    stat.removeChild(stat.firstChild);
-  }
+  var container = getIconContainer(doc);
 
-  if (newError.length === 0) {
-    stat.setAttribute("hidden", "true");
+  if ((tab.hasAttribute("multifox-tab-id-provider-tld-enc") === false) && (m_welcomeMode === false)) {
+    // remove box
+    if (container !== null) {
+      container.parentNode.removeChild(container);
+    }
     return;
   }
 
-  var img = stat.appendChild(doc.createElement("image"));
-  img.setAttribute("src", "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
-  img.setAttribute("width", "16");
-  img.setAttribute("height", "16");
-  img.style.margin = "0 -4px 0 7px";
-  stat.removeAttribute("hidden");
+  if (container === null) {
+    createContainer(doc);
+    var win = doc.defaultView;
+    var delay = getTabNodes(win.getBrowser()).length > 1 ? 25 : 200;
+    win.setTimeout(initIcon, delay, doc); // open window => greater delay
+  } else {
+    LoginDB.setTabAsDefaultLogin(tab); // TODO it will call _ensureValid, make sure we don't block TabSelect
+    if (container.firstChild !== null) { // waiting initIcon?
+      updateIconCore(tab, container);
+    }
+  }
+
+} catch (ex) {
+console.error(ex);
 }
+}
+
 
 
 // <hbox align="center" id="multifox-icon">
@@ -130,152 +106,300 @@ function updateBadgeError(tab, iconContainer) {
 //       <hbox id="multifox-icon-stat-icon">
 //         <image src="warning.png"/>
 //       </hbox>
-//       <label value="100"/>
-//       <label value="LOGIN"/>
+//       <label value="username"/>
+//     </hbox>
+//   </box>
+// </hbox>
 
-function initBadge(doc) {
-  var iconContainer = getIconNode(doc);
-  if (iconContainer === null) {
-    // e.g. user changed tab!
-    console.log("initBadge ignored! " + iconContainer);
-    return;
+
+function createContainer(doc) {
+  var container = getIconContainer(doc);
+  if (container === null) {
+    var ref = doc.getElementById("urlbar-icons");
+    container = ref.insertBefore(doc.createElement("hbox"), ref.firstChild);
+    container.setAttribute("hidden", "true");
+    container.setAttribute("id", "multifox-icon");
+    container.setAttribute("align", "center");
   }
+  return container;
+}
 
 
-  iconContainer.setAttribute("align", "center");
-  iconContainer.style.margin = "0px 2px 0px 1px";
+function createBoxDom(container) {
+  var doc = container.ownerDocument;
+  var container2 = container.appendChild(doc.createElement("box"));
+  var container3 = container2.appendChild(doc.createElement("hbox"));
+  var stat = container3.appendChild(doc.createElement("hbox"));
+  var label = container3.appendChild(doc.createElement("label"));
 
-  var icon = iconContainer.appendChild(doc.createElement("box"));
-  icon.setAttribute("tooltiptext", "${EXT_NAME}");
-
-
-  var styleIcon = icon.style;
-  styleIcon.padding = "0px";
-  styleIcon.margin = "0px";
-  styleIcon.background = "transparent repeat-x";
-  styleIcon.MozBorderRadius = "2px"; // Gecko 1.9.2
-  styleIcon.borderRadius = "2px";
-  styleIcon.minHeight = "16px";
-
-
-  var os = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULRuntime).OS;
-  switch (os) {
-    case "Darwin":
-      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon-osx.png)";
-      styleIcon.backgroundColor = "#416ea5";
-      break;
-    case "WINNT":
-      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon.png)";
-      styleIcon.backgroundColor = "#4ab0f6";
-      break;
-    default:
-      styleIcon.backgroundImage = "url(${PATH_CONTENT}/icon-linux.png)";
-      styleIcon.backgroundColor = "#6184c3";
-      break;
-  }
-
-
-
-  var labelContainer = icon.appendChild(doc.createElement("hbox"));
-  labelContainer.setAttribute("align", "center");
-
-
-  var stat = labelContainer.appendChild(doc.createElement("hbox"));
+  container2.setAttribute("tooltiptext", "${EXT_NAME}");
+  container3.setAttribute("align", "center");
   stat.setAttribute("hidden", "true");
   stat.setAttribute("id", "multifox-icon-stat-icon");
 
-  var tab = doc.defaultView.getBrowser().selectedTab;
-  var labelId = labelContainer.appendChild(doc.createElement("label"));
-  labelId.setAttribute("value", Profile.getIdentity(tab));
-  var styleLabel = labelId.style;
-
-  styleLabel.color = "white";
-  styleLabel.fontWeight = "bold";
-  styleLabel.fontStyle = "normal";
-  styleLabel.textRendering = "optimizelegibility";
-  styleLabel.textShadow = "1px 1px 1px black";
-  styleLabel.padding = "0px 9px";
-  styleLabel.margin = "-1px 0px";
-
-
-  var loginStyle = labelContainer.appendChild(doc.createElement("label")).style;
-  loginStyle.color = "white";
-  loginStyle.fontWeight = "bold";
-  loginStyle.fontStyle = "normal";
-  loginStyle.textRendering = "optimizelegibility";
-  loginStyle.textShadow = "1px 1px 1px black, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
-
-
-  initIconNormal(icon);
-
-  updateBadgeProfile(tab, iconContainer);
-  updateBadgeLogin(tab, iconContainer);
-  updateBadgeError(tab, iconContainer);
-
-  iconContainer.removeAttribute("hidden");
+  // max-width
+  container3.style.maxWidth = "20ch"; // TODO util.getText("icon.user.maxWidth");
+  label.setAttribute("crop", "end");
+  label.setAttribute("flex", "1");
 }
 
 
-function initIconNormal(icon) {
-  icon.ownerDocument.defaultView.setTimeout(function() {
+function setStyleCore(container, doc) {
+  container.minHeight = "16px";
+  container.overflow = "hidden";
+  container.padding = "0";
+  container.margin = "0 2px 0 1px";
+  container.border = "1px solid #ccc";
+  container.borderRadius = "2px";
+  container.MozBorderRadius = "2px"; // Gecko 1.9.2
+  container.opacity = "1";
+  container.MozTransition = "";
+
+  var styleLabel = getIconLabel(doc).style;
+  styleLabel.padding = "0px 6px";
+  styleLabel.margin = "-1px 0px";
+  styleLabel.color = "#777";
+}
+
+
+function setStyle(mode, containerStyle, iconStyle, labelStyle) {
+  switch (mode) {
+    case "default":
+      containerStyle.backgroundImage = "-moz-linear-gradient(hsl(214,44%,99%), hsl(214,44%,87%))";
+      labelStyle.textShadow = "0 1px 0 white";
+      iconStyle.opacity = "1";
+      break;
+    case "hover":
+      containerStyle.backgroundImage = "-moz-linear-gradient(hsl(214,44%,80%), hsl(214,44%,60%))";//#fff, #eee)";
+      iconStyle.opacity = "1";
+      labelStyle.textShadow = "0 1px 0 white, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
+      break;
+    case "active":
+      containerStyle.backgroundImage = "-moz-linear-gradient(#ddd, #999)";
+      iconStyle.opacity = ".5";
+      labelStyle.textShadow = "0 1px 0 white, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
+      break;
+    default:
+      throw new Error("setColor");
+  }
+}
+
+
+function invalidateUI(tab) {
+  if (tab.hasAttribute("selected")) {
+    tab.setAttribute("multifox-invalidate-icon", "true");
+  }
+}
+
+
+function updateIconCore(tab, container) {
+  if (m_welcomeMode) {
+    var doc = tab.ownerDocument;
+    getIconLabel(doc).setAttribute("value", "${EXT_NAME}");
+    updateStatIcon3(true, getStatIconContainer(doc), "${PATH_CONTENT}/favicon.ico");
+  } else {
+    updateStatIcon(tab, container);
+    updateIconUserName(tab);
+  }
+}
+
+
+function updateIconUserName(tab) {
+  var tabLogin = new TabLogin(tab);
+  var user;
+  if (tabLogin.isNewUser) {
+    user = util.getText("icon.add-account.label");
+  } else {
+    user = tabLogin.plainUser; // BUG sometimes is null
+  }
+
+  getIconLabel(tab.ownerDocument).setAttribute("value", user);
+}
+
+
+function updateStatIcon(tab, container) {
+  var currentError = container.hasAttribute("current-error") ? container.getAttribute("current-error") : "";
+  var newError = tab.hasAttribute("multifox-tab-error") ? tab.getAttribute("multifox-tab-error") : "";
+  if (currentError !== newError) {
+    container.setAttribute("current-error", newError);
+    var statIcon = getStatIconContainer(tab.ownerDocument);
+    updateStatIcon3(newError.length > 0, statIcon, "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
+  }
+}
+
+
+function updateStatIcon3(show, statIcon, url) {
+  if (statIcon.firstChild) {
+    statIcon.removeChild(statIcon.firstChild);
+  }
+  if (show) {
+    var doc = statIcon.ownerDocument;
+    var img = statIcon.appendChild(doc.createElement("image"));
+    img.setAttribute("src", url);
+    img.setAttribute("width", "16");
+    img.setAttribute("height", "16");
+    img.style.margin = "0 -4px 0 6px"; // marginleft = same as getIconLabel(doc).style.padding
+    statIcon.removeAttribute("hidden");
+  } else {
+    statIcon.setAttribute("hidden", "true");
+  }
+}
+
+
+function getIconContainer(doc) {
+  return doc.getElementById("multifox-icon");
+}
+
+
+function getIconLabel(doc) {
+  var node = getIconContainer(doc); // TODO params should be container instead of doc
+  console.assert(node !== null, "getIconContainer=null");
+  //console.assert(node.firstChild.firstChild !== null, "node.firstChild.firstChild=null");
+  return node.firstChild.firstChild.children[1];
+}
+
+
+function getStatIconContainer(doc) {
+  return doc.getElementById("multifox-icon-stat-icon");
+}
+
+
+function initIcon(doc) {
+  var tab = doc.defaultView.getBrowser().selectedTab;
+  LoginDB.setTabAsDefaultLogin(tab);
+
+  var container = getIconContainer(doc);
+  if (container === null) {
+    // e.g. user changed tab!
+    console.log("initIcon ignored! " + container);
+    return;
+  }
+
+  console.assert(container.children.length === 0, "container has children");
+  createBoxDom(container);
+  setStyleCore(container.style, doc);
+
+  if (tab.hasAttribute("multifox-logging-in")) {
+    tab.removeAttribute("multifox-logging-in");
+    container.style.opacity = "0";
+    container.style.MozTransition = "opacity .3s ease";
+    doc.defaultView.setTimeout(function() {
+      container.style.opacity = "1";
+    }, 50);
+  }
+
+  initIconNormal(doc);
+  updateIconCore(tab, container);
+  container.removeAttribute("hidden");
+}
+
+
+
+function initIconNormal(doc) {
+  var statIcon = getStatIconContainer(doc);
+  var container = getIconContainer(doc);
+  var lab = getIconLabel(doc).style;
+
+  doc.defaultView.setTimeout(function() {
     // workaround
     // otherwise, mousedown on icon will close and open popup, even with stopPropagation
-    icon.addEventListener("mousedown", openMultifoxPopup, false);
+    statIcon.addEventListener("mousedown", showMsgPanel, false);
+    container.addEventListener("mousedown", showMenuPopup, false);
   }, 0);
-  icon.addEventListener("mouseover", onIconHover, false);
-  icon.addEventListener("mouseout", onIconHover, false);
-  icon.style.backgroundPosition = "0pt 0pt";
-  icon.querySelector("label").style.textShadow = "1px 1px 1px black";
+  container.addEventListener("mouseover", onIconHover, false);
+  container.addEventListener("mouseout", onIconHover, false);
+
+  //statIcon.style.opacity = "1";
+  setStyle("default", container.style, statIcon.style, lab);
+  //lab.opacity = "1";
+  //defaultStyle(container.style, lab);
 }
 
 
-function initIconPressed(icon) { // openpopup
-  icon.removeEventListener("mousedown", openMultifoxPopup, false);
-  icon.removeEventListener("mouseover", onIconHover, false);
-  icon.removeEventListener("mouseout", onIconHover, false);
-  icon.style.backgroundPosition = "0pt -64px";
-  icon.querySelector("label").style.textShadow = "1px 1px 1px black, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
+function initIconPressed(doc, popupId) {
+  var container = getIconContainer(doc);
+  container.removeEventListener("mouseover", onIconHover, false);
+  container.removeEventListener("mouseout", onIconHover, false);
+
+  var statIcon = getStatIconContainer(doc);
+  var lab = getIconLabel(doc).style;
+  statIcon.removeEventListener("mousedown", showMsgPanel, false);
+  switch (popupId) {
+    case "menu":
+      setStyle("active", container.style, statIcon.style, lab);
+      break;
+    case "msg":
+      lab.opacity = ".5";
+      break;
+  }
 }
 
 
 function onIconHover(evt) {
   var doc = evt.target.ownerDocument;
-  var icon = getIconNode(doc).firstChild;
-
-  switch (evt.type) {
-    case "mouseover":
-      icon.style.backgroundPosition = "0pt -32px";
-      icon.querySelector("label").style.textShadow = "1px 1px 1px black, 0 1px 5px white, 3px 0 5px white, 0 -1px 5px white, -3px 0 5px white";
-      break;
-    case "mouseout":
-      icon.style.backgroundPosition = "0pt 0pt";
-      icon.querySelector("label").style.textShadow = "1px 1px 1px black";
-      break;
-  }
+  var container = getIconContainer(doc);
+  setStyle(
+    evt.type === "mouseover" ? "hover" : "default",
+    container.style,
+    getStatIconContainer(doc).style,
+    getIconLabel(doc).style);
 }
 
 
-function openMultifoxPopup(evt) {
-  var icon = evt.currentTarget; //or this
-  var tab = icon.ownerDocument.defaultView.getBrowser().selectedTab;
-  var afterId = Profile.getIdentity(tab);
+function isMsgPopup(evt) {
+  return evt.target.localName === "image";
+}
 
-  Components.utils.import("${PATH_MODULE}/popup.js");
-  var panel = createMultifoxPopup(icon, Profile);
-  initIconPressed(icon);
+
+function showMsgPanel(evt) {
+  if (isMsgPopup(evt) === false) {
+    return;
+  }
+
+  var doc = evt.target.ownerDocument;
+  initIconPressed(doc, "msg");
+
+  var ns = loadSubScript("${PATH_MODULE}/popup.js");
+  var panel = ns.createMsgPanel(doc);
 
   panel.addEventListener("popuphidden", function(evt) {
-    initIconNormal(icon);
-
-    var beforeId = Profile.getIdentity(tab);
-    if (beforeId !== afterId) {
-      tab.linkedBrowser.reload();
-    }
+    initIconNormal(doc);
+    // remove error msg
+    var tab = doc.defaultView.getBrowser().selectedTab;
+    tab.removeAttribute("multifox-tab-error");
+    updateUI(tab, true);
   }, false);
 
-  panel.openPopup(icon, "after_end", 0, 1);
+  panel.openPopup(getStatIconContainer(doc), "after_start", 0, 1);
+}
 
-  // remove error icon
-  tab.removeAttribute("multifox-tab-error");
-  updateUI(tab);
+
+function showMenuPopup(evt) {
+  var doc = evt.target.ownerDocument;
+  var container = getIconContainer(doc);
+
+  if (m_welcomeMode) {
+    var ns = loadSubScript("${PATH_MODULE}/welcome.js");
+    var panel = ns.welcomePopup(doc);
+    panel.openPopup(container, "bottomcenter topright");
+    return;
+  }
+
+  if (isMsgPopup(evt)) {
+    return;
+  }
+
+  initIconPressed(doc, "menu");
+  var menu = doc.getElementById("mainPopupSet").appendChild(doc.createElement("menupopup"));
+  var ns = loadSubScript("${PATH_MODULE}/popup.js");
+  ns.createLoginsMenu(menu, function() {initIconNormal(doc);});
+  menu.openPopup(container, "after_end", 0, 1);
+}
+
+
+function loadSubScript(path) {
+  var ns = {};
+  var sub = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
+  sub.loadSubScript(path, ns);
+  return ns;
 }

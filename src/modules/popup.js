@@ -36,43 +36,40 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["createMultifoxPopup"];
-
 Components.utils.import("${PATH_MODULE}/new-window.js");
 
-function createMultifoxPopup(icon, Profile) {
-  var doc = icon.ownerDocument;
-  var win = doc.defaultView;
-
+function createMsgPanel(doc) {
   var panel = doc.getElementById("multifox-popup");
   if (panel) {
     //bug
-    win.alert("createMultifoxPopup dup popup " + panel.state);
+    console.trace("createMsgPanel dup popup " + panel.state);
     panel.hidePopup();
     return panel;
   }
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
   panel.setAttribute("id", "multifox-popup");
+  var fx36 = is192();
+  if (!fx36) {
+    panel.setAttribute("type", "arrow");
+  }
 
   var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = "1.2em 1.4em";
+  container.style.width = "50ch";
 
-  var but = appendError(container, panel);
-  appendLogo(container);
-  appendProfileId(container, icon, Profile);
-  var link = appendAbout(container, panel);
+  var but = appendContent(container, panel);
 
   panel.addEventListener("popupshowing", function(evt) {
-    copyCss(doc.getElementById("editBookmarkPanel"), panel);
-    if (but) {
-      copyButtonCss(doc, but);
+    if (fx36) {
+      copyCss(doc.getElementById("editBookmarkPanel"), panel);
+      if (but) {
+        copyButtonCss(doc, but);
+      }
     }
-    panel.style.width = "30em";
   }, false);
 
   panel.addEventListener("popupshown", function(evt) {
-    link.focus();
+    but.focus();
   }, false);
 
   panel.addEventListener("popuphidden", function(evt) {
@@ -83,90 +80,17 @@ function createMultifoxPopup(icon, Profile) {
 }
 
 
-function appendError(container, panel) {
+function appendContent(container, panel) {
   var tab = container.ownerDocument.defaultView.getBrowser().selectedTab;
   var errorId = tab.getAttribute("multifox-tab-error");
   if (errorId.length === 0) {
     return null;
   }
-  Components.utils.import("${PATH_MODULE}/error.js");
-  return appendErrorToPanel(container, panel, errorId);
-}
 
-
-function appendAbout(container, panel) {
-  var doc = container.ownerDocument;
-  var box = container.appendChild(doc.createElement("hbox"));
-  var spc = box.appendChild(doc.createElement("spacer"));
-  spc.flex = 1;
-
-  var link = box.appendChild(doc.createElement("label"));
-  link.setAttribute("value", util.getText("icon.panel.link.label", "${EXT_NAME}"));
-  link.setAttribute("class", "text-link");
-  link.addEventListener("click", function(evt) {
-    if (evt.button !== 0) {
-      return;
-    }
-
-    panel.hidePopup();
-
-    var uri = Cc["@mozilla.org/network/io-service;1"]
-                .getService(Ci.nsIIOService)
-                .newURI("about:multifox", null, null);
-    var win = evt.target.ownerDocument.defaultView;
-    var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
-    win.browserDOMWindow.openURI(uri, null, where, null);
-
-  }, false);
-
-  var selectedUri = doc.defaultView.getBrowser().selectedBrowser.currentURI;
-  if (selectedUri.spec === "about:multifox") {
-    link.setAttribute("hidden", "true");
-  }
-
-  return link;
-}
-
-
-function appendLogo(container) {
-  var doc = container.ownerDocument;
-  var box = container.appendChild(doc.createElement("hbox"));
-  var img = box.appendChild(doc.createElement("image"));
-  img.setAttribute("src", "${PATH_CONTENT}/logo-popup.png");
-  img.setAttribute("width", "175");
-  img.setAttribute("height", "97");
-  img.style.marginLeft = "-10px";
-}
-
-
-function appendProfileId(container, icon, Profile) {
-  var doc = container.ownerDocument;
-  var tab = doc.defaultView.getBrowser().selectedTab;
-  var profileId = Profile.getIdentity(tab);
-
-  var desc1 = container.appendChild(doc.createElement("box"));
-  desc1.setAttribute("align", "center");
-  var desc2 = container.appendChild(doc.createElement("description"));
-
-  var p1 = util.getText("icon.panel.p1.label", "[${PATH_CONTENT}]").split("[${PATH_CONTENT}]");
-  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[0]);
-
-  var editProfileId = desc1.appendChild(doc.createElement("textbox"));
-  desc1.appendChild(doc.createElement("label")).setAttribute("value", p1[1]);
-
-  editProfileId.setAttribute("type", "number");
-  editProfileId.setAttribute("size", "1");
-  editProfileId.setAttribute("min", Profile.DefaultIdentity);
-  editProfileId.setAttribute("max", Profile.MaxIdentity);
-  editProfileId.setAttribute("value", profileId);
-
-  editProfileId.addEventListener("change", function(evt) {
-    var id = editProfileId.valueNumber;
-    editProfileId.valueNumber = Profile.defineIdentity(tab, id);
-  }, false);
-
-  var p2 = util.getText("icon.panel.p2.label");
-  desc2.appendChild(doc.createTextNode(p2));
+  var ns = {};
+  var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
+  subscript.loadSubScript("${PATH_MODULE}/error.js", ns);
+  return ns.appendErrorToPanel(container, panel, errorId);
 }
 
 
@@ -177,7 +101,7 @@ function copyButtonCss(doc, toBut) {
     // wait xbl
     var source = doc.getAnonymousElementByAttribute(srcBut, "class", "box-inherit button-box");
     var target = doc.getAnonymousElementByAttribute(toBut,  "class", "box-inherit button-box");
-    target.setAttribute("style","");
+    target.setAttribute("style",""); // BUG Error: target is null
     copyCss(source, target);
   }, 0);
 }
@@ -202,4 +126,184 @@ function copyCss(source, target) {
       style2[name] = style1[name];
     }
   }
+}
+
+
+function is192() {
+  var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
+  return info.platformVersion.indexOf("1.9") === 0; // Gecko 1.9.2
+}
+
+
+function createLoginsMenu(menupopup, onHidden) {
+  menupopup.addEventListener("command", onLoginCommand, false);
+  menupopup.addEventListener("click", onLoginClick, false);
+  menupopup.addEventListener("popuphidden", function(evt) {
+    if (evt.currentTarget === evt.target) { // bubbled event?
+      onHidden();
+      menupopup.removeEventListener("command", onLoginCommand, false);
+      menupopup.parentNode.removeChild(menupopup);
+    }
+  }, false);
+
+
+  var doc = menupopup.ownerDocument;
+  var tab = doc.defaultView.getBrowser().selectedTab;
+  var tabLogin = new TabLogin(tab);
+
+  // list all accounts
+  populateUsers(tabLogin, menupopup);
+
+  // new account
+  var newAccount = menupopup.appendChild(doc.createElement("menuitem"));
+  newAccount.setAttribute("label", util.getText("icon.user.new.label"));
+  newAccount.setAttribute("accesskey", util.getText("icon.user.new.accesskey"));
+  newAccount.setAttribute("cmd", "new account");
+  if (tabLogin.isNewUser) {
+    newAccount.className = "menuitem-iconic";
+    newAccount.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
+  }
+
+  // about
+  menupopup.appendChild(doc.createElement("menuseparator"));
+  var item4 = menupopup.appendChild(doc.createElement("menuitem"));
+  item4.setAttribute("label", util.getText("icon.user.about.label", "${EXT_NAME}"));
+  item4.setAttribute("accesskey", util.getText("icon.user.about.accesskey"));
+  item4.setAttribute("cmd", "about");
+}
+
+
+function populateUsers(tabLogin, menupopup) {
+  var users = LoginDB.getEncodedTldUsers(tabLogin.getEncodedTabTld());
+  if (users.length === 0) {
+    return;
+  }
+
+  var doc = menupopup.ownerDocument;
+
+  for (var idx = users.length - 1; idx > -1; idx--) {
+    var myUser = users[idx];
+
+    if ((tabLogin.encodedUser === myUser.encodedLoginUser) && (tabLogin.encodedTld === myUser.encodedLoginTld)) {
+      // current user
+      var userMenu = menupopup.appendChild(doc.createElement("menu"));
+      userMenu.className = "menu-iconic";
+      userMenu.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
+      userMenu.setAttribute("label", myUser.plainLoginUser);
+      if (myUser.encodedLoginTld !== tabLogin.getEncodedTabTld()) {
+        userMenu.setAttribute("tooltiptext", StringEncoding.decode(myUser.encodedLoginTld));
+      }
+      var userPopup = userMenu.appendChild(doc.createElement("menupopup"));
+      var delItem = userPopup.appendChild(doc.createElement("menuitem"));
+
+      delItem.setAttribute("label", util.getText("icon.user.current.remove.label"));
+      delItem.setAttribute("accesskey", util.getText("icon.user.current.remove.accesskey"));
+      delItem.setAttribute("cmd", "del user");
+      delItem.setAttribute("login-user16", myUser.encodedLoginUser);
+      delItem.setAttribute("login-tld", myUser.encodedLoginTld);
+
+    } else {
+      var usernameItem = menupopup.appendChild(doc.createElement("menuitem"));
+      usernameItem.setAttribute("type", "radio");
+      usernameItem.setAttribute("label", myUser.plainLoginUser);
+      usernameItem.setAttribute("cmd", "switch user");
+      usernameItem.setAttribute("login-user16", myUser.encodedLoginUser);
+      usernameItem.setAttribute("login-tld", myUser.encodedLoginTld);
+      if (myUser.encodedLoginTld !== tabLogin.getEncodedTabTld()) {
+        usernameItem.setAttribute("tooltiptext", StringEncoding.decode(myUser.encodedLoginTld));
+      }
+    }
+  }
+
+  menupopup.appendChild(doc.createElement("menuseparator"));
+}
+
+
+function onLoginClick(evt){
+  if ((evt.button !== 1) || (evt.detail !== 1)) {
+    return;
+  }
+
+  var menuItem = evt.target;
+  if (menuItem.hasAttribute("disabled") && (menuItem.getAttribute("disabled") === "true")) {
+    return;
+  }
+
+  menuItem.parentNode.hidePopup();
+  loginCommandCore(menuItem, true);
+}
+
+
+function onLoginCommand(evt){
+  loginCommandCore(evt.target, evt.ctrlKey);
+}
+
+
+function loginCommandCore(menuItem, newTab) {
+  var win = menuItem.ownerDocument.defaultView;
+  var tab = win.getBrowser().selectedTab;
+  var uri = tab.linkedBrowser.contentDocument.documentURIObject;
+  if (isSupportedScheme(uri.scheme) === false) {
+    // Error page:
+    // documentURI = about:neterror?e=netTimeout...
+    // location    = http://twitter.com/
+    return;
+  }
+
+  var tabTld = getTldFromHost(uri.host);
+
+  switch (menuItem.getAttribute("cmd")) {
+    case "new account":
+      console.log("removeTldData_cookies", tabTld);
+      removeTldData_cookies(tabTld);
+      removeTldData_LS(tabTld);
+      loadTab(newTab, tab, TabLoginHelper.NewAccount, new TabLogin(tab).encodedTld);
+      break;
+
+    case "switch user":
+      var encUser = menuItem.getAttribute("login-user16");
+      var encTld = menuItem.getAttribute("login-tld");
+      loadTab(newTab, tab, encUser, encTld);
+      break;
+
+    case "del user":
+      var encUser = menuItem.getAttribute("login-user16");
+      var encTld = menuItem.getAttribute("login-tld");
+      removeCookies(CookieUtils.getUserCookies(encUser, encTld));
+      loadTab(newTab, tab, TabLoginHelper.NewAccount, encTld);
+      break;
+
+    case "about":
+      openNewTab("about:multifox", win);
+      break;
+
+    default:
+      console.trace();
+      throw new Error("loginCommandCore:" + menuItem.getAttribute("cmd"));
+  }
+}
+
+
+function loadTab(newTab, tab, encUser, encTld) {
+  var tabLogin = TabLoginHelper.create(tab, encUser, encTld);
+  var browser = tab.linkedBrowser;
+  var url = browser.contentDocument.location.href;
+
+  if (newTab) {
+    LoginDB.setDefaultLogin(tabLogin.getEncodedTabTld(), encUser, encTld);
+    openNewTab(url, tab.ownerDocument.defaultView);
+  } else {
+    tabLogin.saveToTab();
+    updateUI(tab, true);
+    // don't use browser.reload(), it would reload POST requests
+    browser.loadURIWithFlags(url, Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
+  }
+}
+
+
+function openNewTab(url, win) {
+  var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+  var uri = io.newURI(url, null, null);
+  var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
+  var win2 = win.browserDOMWindow.openURI(uri, null, where, 0); // TODO open tab at the right
 }

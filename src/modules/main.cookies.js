@@ -35,57 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function documentCookie(obj, contentDoc) {
-  switch (obj.cmd) {
-    case "set":
-      documentCookieSetter(obj, contentDoc);
-      return undefined;
-    case "get":
-      return documentCookieGetter(obj, contentDoc);
-    default:
-      throw new Error("documentCookie " + obj.cmd);
-  }
-}
+var PREF_COOKIE_BEHAVIOR = "network.cookie.cookieBehavior";
 
-
-function documentCookieGetter(obj, contentDoc) {
-  var profileId = Profile.find(contentDoc.defaultView).profileNumber;
-
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      util2.throwStack.go("documentCookieGetter " + profileId);
-      return;
-  }
-
-  var uri = util2.stringToUri(contentDoc.location.href);
-  var cookie2 = Cookies.getCookie(true, uri, profileId);
-
-  var cookie = cookie2 === null ? "" : cookie2;
-  return cookie; // send cookie value to content
-}
-
-
-function documentCookieSetter(obj, contentDoc) {
-  var profileId = Profile.find(contentDoc.defaultView).profileNumber;
-
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      util2.throwStack.go("documentCookieSetter " + profileId);
-      return;
-  }
-
-  var originalUri = util2.stringToUri(contentDoc.location.href);
-  Cookies.setCookie(profileId, originalUri, obj.value, true);
-}
-
-
-const PREF_COOKIE_BEHAVIOR = "network.cookie.cookieBehavior";
-
-const Cookies = {
+var Cookies = {
   _service: null,
   _prefs: null,
 
@@ -107,19 +59,19 @@ const Cookies = {
     behavior: -1,
 
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-    // aTopic=nsPref:changed aData=network.cookie.cookieBehavior
-    observe: function(aSubject, aTopic, aData) {
-      this.behavior = aSubject
+    // topic=nsPref:changed data=network.cookie.cookieBehavior
+    observe: function(subject, topic, data) {
+      this.behavior = subject
                       .QueryInterface(Ci.nsIPrefBranch)
                       .getIntPref(PREF_COOKIE_BEHAVIOR);
-      console.log("pref! " + aSubject + aTopic + aData + this.behavior);
+      console.log("pref! " + subject + topic + data + this.behavior);
     }
 
   },
 
-  setCookie: function(profileId, originalUri, originalCookie, fromJs) {
-    var uri = toInternalUri(originalUri, profileId);
-    var val = convertCookieDomain(originalCookie, profileId);
+  setCookie: function(tabLogin, originalUri, originalCookie, fromJs) {
+    var uri = tabLogin.formatUri(originalUri);
+    var val = convertCookieDomain(originalCookie, tabLogin);
 
     if (this._prefListener.behavior === 0) {
       this._setCookie(fromJs, uri, val);
@@ -134,8 +86,8 @@ const Cookies = {
     p.addObserver(PREF_COOKIE_BEHAVIOR, this._prefListener, false);
   },
 
-  getCookie: function(fromJs, originalUri, profileId) {
-    var uri = toInternalUri(originalUri, profileId);
+  getCookie: function(fromJs, originalUri, tabLogin) {
+    var uri = tabLogin.formatUri(originalUri);
 
     if (this._prefListener.behavior === 0) {
       return this._getCookie(fromJs, uri);
@@ -180,7 +132,7 @@ const Cookies = {
 };
 
 
-function convertCookieDomain(cookieHeader, profileId) {
+function convertCookieDomain(cookieHeader, tabLogin) {
   var objCookies = new SetCookieParser(cookieHeader, true);
   var len = objCookies.length;
   var newCookies = new Array(len);
@@ -189,7 +141,7 @@ function convertCookieDomain(cookieHeader, profileId) {
     var myCookie = objCookies.getCookieByIndex(idx);
     var realDomain = myCookie.getStringProperty("domain");
     if (realDomain.length > 0) {
-      myCookie.defineMeta("domain", cookieInternalDomain(realDomain, profileId));
+      myCookie.defineMeta("domain", tabLogin.formatHost(realDomain));
       newCookies[idx] = myCookie.toHeaderLine();
     } else {
       newCookies[idx] = myCookie.raw;
@@ -198,21 +150,6 @@ function convertCookieDomain(cookieHeader, profileId) {
 
   return newCookies.join("\n");//objCookies.toHeader();
 }
-
-
-function toInternalUri(uri, profileId) {
-  var u = uri.clone();
-  u.host = cookieInternalDomain(u.host, profileId);
-  return u;
-}
-
-
-function cookieInternalDomain(domain, profileId) {
-  console.assert(profileId !== Profile.UndefinedIdentity, "cookieInternalDomain - UndefinedIdentity=" + profileId);
-  console.assert(profileId !== Profile.DefaultIdentity,   "cookieInternalDomain - DefaultIdentity="   + profileId);
-  return domain + ".multifox-profile-" + profileId;
-}
-
 
 
 function toLines(txt) {
@@ -252,7 +189,7 @@ SetCookieParser.prototype = {
         if (name.length > 0 && value !== null) {
           unit.defineValue(name, value);
         } else {
-          util2.logEx("_allCookies invalid", name, value, headerLine);
+          console.trace("_allCookies invalid " + name + "/" + value + "/" + headerLine);
           break;
         }
       } else {
@@ -286,23 +223,6 @@ SetCookieParser.prototype = {
     }
     return this.m_hasMeta ? buf.join("\n") : buf.join(";");
   },
-
-  getCookie: function(name) {
-    var aCookie = this._allCookies;
-    for (var idx = 0, len = aCookie.length; idx < len; idx++) {
-      if (name === aCookie[idx].name) {
-        return aCookie[idx];
-      }
-    }
-    return null;
-  },
-
-  forEach: function(fn) {
-    var c = this._allCookies;
-    for (var idx = 0, len = c.length; idx < len; idx++) {
-      fn(c[idx]);
-    }
-  }
   */
 
   get length() {

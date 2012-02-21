@@ -36,33 +36,35 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "Cu", "console", "util", "init"];
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
+var Cc = Components.classes;
+var Ci = Components.interfaces;
+var Cu = Components.utils;
+
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 var m_docObserver = null;
 
 function init() {
   console.assert(m_docObserver === null, "m_docObserver should be null");
-  m_docObserver = new DocObserver();
-  Cc["@mozilla.org/browser/sessionstore;1"]
-    .getService(Ci.nsISessionStore)
-    .persistTabAttribute("multifox-tab-profile");
+  m_docObserver = new DocObserver(); // make "About" menuitem open about:multifox tab
+  var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+  ss.persistTabAttribute("multifox-tab-id-provider-tld-enc");
+  ss.persistTabAttribute("multifox-tab-id-provider-user-enc");
+  ss.persistTabAttribute("multifox-tab-current-tld"); // detect TLD change
+  ss.persistTabAttribute("multifox-tab-previous-tld");
 }
 
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 function DocObserver() {
-  Cc["@mozilla.org/observer-service;1"]
-    .getService(Ci.nsIObserverService)
-    .addObserver(this, "chrome-document-global-created", false);
+  var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+  obs.addObserver(this, "chrome-document-global-created", false);
 
   // workaround for top windows until chrome-document-global-created works again in Fx4
-  Cc["@mozilla.org/embedcomp/window-watcher;1"]
-    .getService(Ci.nsIWindowWatcher)
-    .registerNotification(this);
+  var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].getService(Ci.nsIWindowWatcher);
+  ww.registerNotification(this);
 }
 
 
@@ -77,11 +79,10 @@ DocObserver.prototype = {
       default:
         if (win.top === win) {
           if (win.document.location.href === "chrome://mozapps/content/extensions/about.xul") {
-            console.log("OK overlay via " + topic + " / " + win.document.location.href);
+            console.log("OK overlay via", topic, "/", win.document.location.href);
             var ns = {};
-            Cc["@mozilla.org/moz/jssubscript-loader;1"]
-              .getService(Ci.mozIJSSubScriptLoader)
-              .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+            var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
+            subscript.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
             ns.AboutOverlay.add(win);
           }
           return;
@@ -91,11 +92,10 @@ DocObserver.prototype = {
 
     switch (win.document.location.href) {
       case "chrome://mozapps/content/extensions/about.xul":
-        console.log("OK overlay via " + topic + " / " + win.document.location.href);
+        console.log("OK overlay via", topic, "/", win.document.location.href);
         var ns = {};
-        Cc["@mozilla.org/moz/jssubscript-loader;1"]
-          .getService(Ci.mozIJSSubScriptLoader)
-          .loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+        var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
+        subscript.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
         ns.AboutOverlay.add(win);
         break;
 
@@ -117,7 +117,7 @@ function onDOMContentLoaded(evt) {
   chromeWin.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
   switch (doc.location.href) {
     case "chrome://browser/content/browser.xul":
-      console.log("OK overlay DOMContentLoaded " + doc.location.href);
+      console.log("OK overlay DOMContentLoaded", doc.location.href);
       BrowserOverlay.add(chromeWin);
       break;
   }
@@ -125,22 +125,14 @@ function onDOMContentLoaded(evt) {
 
 
 
-const BrowserOverlay = {
+var BrowserOverlay = {
   add: function(win) {
     win.addEventListener("unload", BrowserOverlay._unload, false);
 
     var doc = win.document;
     //if ((doc instanceof Ci.nsIDOMDocument) === false) {
 
-    // key
-    var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
-    key.setAttribute("id", "key_${BASE_DOM_ID}-new-identity");
-    key.setAttribute("modifiers", "accel,shift");
-    key.setAttribute("key", "M");
-    key.setAttribute("oncommand", "(function dummy(){})()"); // workaround
-    key.addEventListener("command", onKey, false);
-
-    Components.utils.import("${PATH_MODULE}/main.js");
+    Cu.import("${PATH_MODULE}/main.js");
     BrowserWindow.register(win);
   },
 
@@ -149,28 +141,16 @@ const BrowserOverlay = {
     win.removeEventListener("unload", BrowserOverlay._unload, false);
     BrowserOverlay.remove(win);
 
-    Components.utils.import("${PATH_MODULE}/main.js");
+    Cu.import("${PATH_MODULE}/main.js");
     BrowserWindow.unregister(win);
   },
 
   remove: function(win) {
-    // key
-    var key = win.document.getElementById("key_${BASE_DOM_ID}-new-identity");
-    key.removeEventListener("command", onKey, false);
-    key.parentNode.removeChild(key);
   }
 };
 
 
-function onKey(evt) {
-  var key = evt.target;
-  var win = key.ownerDocument.defaultView.top;
-  newPendingWindow();
-  win.OpenBrowserWindow();
-}
-
-
-const console = {
+var console = {
   log: function(msg) {
     var now = new Date();
     var ms = now.getMilliseconds();
@@ -181,34 +161,77 @@ const console = {
       ms2 = ms.toString();
     }
     var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
+
+    var len = arguments.length;
+    var msg = len > 1 ? Array.prototype.slice.call(arguments, 0, len).join(" ")
+                      : arguments[0];
     Cc["@mozilla.org/consoleservice;1"]
       .getService(Ci.nsIConsoleService)
       .logStringMessage(p + msg);
   },
 
+  warn: function(msg) {
+    var message = Cc["@mozilla.org/scripterror;1"].createInstance(Ci.nsIScriptError);
+    message.init(msg,
+                 null, // sourceName
+                 null, // sourceLine
+                 0, 0, // line, col
+                 Ci.nsIScriptError.warningFlag,
+                 "component javascript");
+    Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService).logMessage(message);
+    this.trace(msg);
+  },
+
+  error: function(msg) {
+    var ex = new Error(msg);
+    Cu.reportError(ex);
+    this.trace(msg);
+  },
+
   assert: function(test, msg) {
     if (test !== true) {
       var ex =  new Error("console.assert - " + msg + " - " + test);
-      Components.utils.reportError(ex); // workaround - sometimes exception doesn't show up in console
+      Cu.reportError(ex); // workaround - sometimes exception doesn't show up in console
+      console.trace("console.assert()");
       throw ex;
     }
+  },
+
+  trace: function console_trace(desc) {
+    var b = [];
+    for (var s = Components.stack; s; s = s.caller) {
+      b.push(s);
+    }
+
+    var padding = "";
+    var t = new Array(b.length);
+    for (var idx = b.length - 1; idx > -1; idx--) {
+      var s = b[idx];
+      var name = s.name === null ? "(anonymous)" : s.name;
+      t[idx] = s.languageName + " " + padding + s.filename + "\t\t" + name + "\t" + s.lineNumber;
+      padding += " ";
+    }
+    if (!desc) {
+      desc = "console.trace()";
+    }
+    console.log(desc, "\n" + t.reverse().join("\n"));
   }
 };
 
 
-const util = {
+var util = {
   getText: function(name) {
-    return this._getTextCore(name, "general", arguments, 1);
+    return this._getTextCore("general.properties", name, arguments, 1);
   },
 
-  getTextFrom: function(name, filename) {
-    return this._getTextCore(name, filename, arguments, 2);
+  getTextFrom: function(filename, name) {
+    return this._getTextCore(filename, name, arguments, 2);
   },
 
-  _getTextCore: function(name, filename, args, startAt) {
+  _getTextCore: function(filename, name, args, startAt) {
     var bundle = Cc["@mozilla.org/intl/stringbundle;1"]
                   .getService(Ci.nsIStringBundleService)
-                  .createBundle("${PATH_LOCALE}/" + filename + ".properties");
+                  .createBundle("${PATH_LOCALE}/" + filename);
 
     if (args.length === startAt) {
       return bundle.GetStringFromName(name);
@@ -226,13 +249,6 @@ const util = {
       return this._observers !== null;
     },
 
-    _cookieRejectedListener: {
-      observe: function(aSubject, aTopic, aData) {
-        Components.utils.import("${PATH_MODULE}/main.js");
-        console.log("cookie-rejected\n" + aSubject + "\n" + aTopic + "\n" + aData + "\n" + aSubject.QueryInterface(Ci.nsIURI).spec);
-      }
-    },
-
     enable: function(onRequest, onResponse) {
       console.log("networkListeners enable");
       if (this._observers !== null) {
@@ -245,7 +261,6 @@ const util = {
 
       obs.addObserver(this._observers[0], "http-on-modify-request", false);
       obs.addObserver(this._observers[1], "http-on-examine-response", false);
-      obs.addObserver(this._cookieRejectedListener, "cookie-rejected", false);
     },
 
     disable: function() {
@@ -256,7 +271,6 @@ const util = {
       obs.removeObserver(this._observers[0], "http-on-modify-request");
       obs.removeObserver(this._observers[1], "http-on-examine-response");
       this._observers = null;
-      obs.removeObserver(this._cookieRejectedListener, "cookie-rejected");
     }
   }
 };

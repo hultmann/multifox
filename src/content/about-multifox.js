@@ -94,44 +94,47 @@ function populatePage() {
   var items = ["spread", "author", "l10n", "source", "legal"];
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
-    var hHtml = ns.util.getTextFrom(id + ".h", "about");
+    var hHtml = ns.util.getTextFrom("about.properties", id + ".h");
     var pId = id + ".p";
     var pHtml;
     switch (id) {
       case "spread":
-        pHtml = ns.util.getTextFrom(pId, "about");
-        hHtml = ns.util.getTextFrom(id + ".h", "about", "${EXT_NAME}");
+        hHtml = ns.util.getTextFrom("about.properties", id + ".h");
+        pHtml = "<!-- nop -->";
         break;
 
       case "author":
-        pHtml = ns.util.getTextFrom(pId, "about", "mailto:hultmann@gmail.com",
-                                                  "http://twitter.com/multifox",
-                                                  "https://github.com/hultmann/multifox/issues");
+        pHtml = ns.util.getTextFrom("about.properties",
+                                    pId,
+                                    "mailto:hultmann@gmail.com",
+                                    "http://twitter.com/multifox",
+                                    "https://github.com/hultmann/multifox/issues");
         break;
+/*
+      case "version1":
+        pHtml = ns.util.getTextFrom("about.properties", Id, "http://br.mozdev.org/multifox/all.html");
+        break;
+*/
       case "source":
-        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "${EXT_SITE}code.html");
+        pHtml = ns.util.getTextFrom("about.properties", pId, "${EXT_NAME}", "https://github.com/hultmann/multifox/tree/${EXT_VERSION}");
         break;
 
       case "l10n":
-        var reg = Cc["@mozilla.org/chrome/chrome-registry;1"]
-                    .getService(Ci.nsIXULChromeRegistry);
-        var localeApp      = reg.getSelectedLocale("global");
-        var localeMultifox = reg.getSelectedLocale("${CHROME_NAME}");
+        var reg = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
+        var localeApp = reg.getSelectedLocale("global");
+        var localeExt = reg.getSelectedLocale("${CHROME_NAME}");
 
-        hHtml = ns.util.getTextFrom(id + ".h", "about", localeMultifox);
-        pHtml = ns.util.getTextFrom(pId, "about");
-        /*
-        if (hasLocale(localeApp) === false) {
-          pHtml += " ";
-          var html2 = ns.util.getTextFrom("l10n.notfound.p", "about",
-                                          "${EXT_NAME}", localeApp, "http://www.babelzilla.org/");
-          document.getElementById("l10n-notfound-p").innerHTML = html2;
+        hHtml = ns.util.getTextFrom("about.properties", id + ".h", localeExt);
+
+        if (hasExtensionLocale(localeApp)) {
+          pHtml = ns.util.getTextFrom("about.properties", pId).trim();
+        } else {
+          pHtml = 'Multifox is not yet available in your language (<b>' + localeApp + '</b>). <a href="http://br.mozdev.org/multifox/l10n.html?v=${EXT_VERSION}">Please join BabelZilla if you are interested in localizing it!</a>';
         }
-        */
         break;
 
       default:
-        pHtml = ns.util.getTextFrom(pId, "about");
+        pHtml = ns.util.getTextFrom("about.properties", pId);
         break;
     }
     if (pHtml.length > 0) {
@@ -142,7 +145,7 @@ function populatePage() {
 }
 
 
-function hasLocale(code) {
+function hasExtensionLocale(code) {
   var locales = Cc["@mozilla.org/chrome/chrome-registry;1"]
                   .getService(Ci.nsIToolkitChromeRegistry)
                   .getLocalesForPackage("${CHROME_NAME}");

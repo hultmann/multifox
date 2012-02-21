@@ -36,10 +36,8 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["appendErrorToPanel"];
-
 Components.utils.import("${PATH_MODULE}/new-window.js");
-Components.utils.import("${PATH_MODULE}/main.js");
+Cu.import("${PATH_MODULE}/main.js");
 
 // <vbox>  <== box
 //   <hbox>  <== box2
@@ -48,7 +46,6 @@ Components.utils.import("${PATH_MODULE}/main.js");
 //       <description/>
 //       <hbox>  <== box4
 //         <button/>
-//   <separator/>
 
 function appendErrorToPanel(box, panel, error) {
   var doc = box.ownerDocument;
@@ -80,26 +77,42 @@ function appendErrorToPanel(box, panel, error) {
 
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
-  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label"));
+  but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label", "${EXT_NAME}"));
   but.setAttribute("accesskey", util.getText("icon.panel.make-tab-default.button.accesskey"));
   but.addEventListener("command", function(evt) {
     panel.hidePopup();
     moveTabToDefault(but);
   }, false);
 
-
-  var sep = box.appendChild(doc.createElement("separator"));
-  sep.setAttribute("class", "groove");
-  sep.style.margin = "1.2em 0";
-
   return but;
 }
 
 
 function moveTabToDefault(button) {
-  var sourceWin = button.ownerDocument.defaultView;
-  var sourceTab = sourceWin.getBrowser().selectedTab;
-  Profile.defineIdentity(sourceTab, Profile.DefaultIdentity);
-  // TODO move data to default id
-  sourceTab.linkedBrowser.reload();
+  var win = button.ownerDocument.defaultView;
+  var tab = win.getBrowser().selectedTab;
+  var tabLogin = new TabLogin(tab);
+  tabLogin.setTabAsAnon();
+  moveData_toDefault(tabLogin.getPlainTabTld(), tabLogin);
+  tab.linkedBrowser.loadURIWithFlags(tab.linkedBrowser.contentDocument.documentURI,
+                                     Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
+}
+
+
+function moveData_toDefault(tabTld, tabLogin) {
+  //removeTldData_cookies(tabTld);
+
+  var all = removeTldData_cookies(tabLogin.formatHost(tabTld));
+  console.log("===>moveData_toDefault", tabTld, tabLogin.toString(), "cookies:", all.length);
+  var cookie;
+  var realHost;
+  for (var idx = all.length - 1; idx > -1; idx--) {
+    cookie = all[idx];
+    realHost = CookieUtils.getRealHost(cookie.host);
+    if (realHost !== null) {
+      copyCookieToNewHost(cookie, realHost);
+    }
+  }
+
+  var all2 = removeTldData_LS(tabTld);
 }

@@ -57,7 +57,8 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     if (hasReply) {
       return rv;
     } else {
-      throw new Error("Return value not received.");
+      // this seems to happen when a tab is closed. the event handler is never called.
+      throw new Error("${EXT_NAME} - Return value not received.\n" + sentByContent + "\n" + rv + "\n" + doc.location + "\n" + JSON.stringify(obj));
     }
   }
 
@@ -70,13 +71,6 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     }
   });
 
-  Object.defineProperty(win, "globalStorage", {
-    get: function() {
-      sendCmd({from:"error", cmd:"globalStorage"});
-      return null;
-    }
-  });
-
   var realLocalStorage = win.localStorage;
 
   Object.defineProperty(win, "localStorage", {
@@ -86,7 +80,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
         sendCmd({from:"localStorage", cmd:"setItem", key:k, val:v});
       }
 
-      const Storage = {
+      var Storage = {
         setItem: function(k, v) {setItemCore(k, v);},
         removeItem: function(k) {sendCmd({from:"localStorage", cmd:"removeItem", key:k});},
         clear: function() {      sendCmd({from:"localStorage", cmd:"clear"});},
@@ -151,4 +145,17 @@ function initContext(win, doc, sentByChrome, sentByContent) {
       return proxy;
     }
   });
+
+
+  // remove unsupported features
+
+  if (win.globalStorage) {
+    delete win.globalStorage; // globalStorage will be removed by bug 687579
+  }
+
+  if (win.mozIndexedDB) {     // TODO
+    delete win.mozIndexedDB;
+  } else if (win.indexedDB) {
+    delete win.indexedDB;
+  }
 }

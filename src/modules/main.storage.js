@@ -35,20 +35,50 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function windowLocalStorage(obj, contentDoc) {
-  var profileId = Profile.find(contentDoc.defaultView).profileNumber;
+function onContentEvent(evt) {
+  evt.stopPropagation();
 
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      util2.throwStack.go("windowLocalStorage " + profileId);
-      return;
+  var obj = JSON.parse(evt.data);
+  var contentDoc = evt.target;
+  var rv;
+
+  switch (obj.from) {
+    case "cookie":
+      rv = documentCookie(obj, contentDoc);
+      break;
+    case "localStorage":
+      rv = windowLocalStorage(obj, contentDoc);
+      break;
+    case "error":
+      showError(contentDoc.defaultView, obj.cmd, "-");
+      break;
+    default:
+      throw new Error("onContentEvent: " + obj.from);
   }
 
+  if (rv === undefined) {
+    // no response
+    return;
+  }
 
-  var originalUri = util2.stringToUri(contentDoc.location.href);
-  var uri = toInternalUri(originalUri, profileId);
+  // send data to content
+  var evt2 = contentDoc.createEvent("MessageEvent");
+  evt2.initMessageEvent(DocStartScriptInjection.eventNameSentByChrome, false, false, rv, null, null, null);
+  var success = contentDoc.dispatchEvent(evt2);
+}
+
+
+function windowLocalStorage(obj, contentDoc) {
+  if (contentDoc.documentURI === "about:blank") { // BUG 1.9.2
+    console.log("windowLocalStorage doc=", contentDoc.documentURI, "/",
+                                           contentDoc.location, "/",
+                                           contentDoc.URL);
+    return "";
+  }
+
+  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
+  var uri = tabLogin.formatUri(contentDoc.documentURIObject);
+
   var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
                   .getService(Ci.nsIScriptSecurityManager)
                   .getCodebasePrincipal(uri);
@@ -81,6 +111,85 @@ function windowLocalStorage(obj, contentDoc) {
       throw new Error("localStorage interface unknown: " + obj.cmd);
   }
 
-  console.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);
   return rv;
+}
+
+
+function documentCookie(obj, contentDoc) {
+  switch (obj.cmd) {
+    case "set":
+      documentCookieSetter(obj, contentDoc);
+      return undefined;
+    case "get":
+      var rv = "foo";
+      try {
+        rv = documentCookieGetter(obj, contentDoc);
+        return rv;
+      } catch (ex) {
+        console.trace(ex);
+      }
+      break;
+    default:
+      throw new Error("documentCookie " + obj.cmd);
+  }
+}
+
+
+function documentCookieSetter(obj, contentDoc) {
+  // tabLogin can be anon and the new tabLogin can be a different login (e.g. facebook iframe)
+  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
+  console.assert(tabLogin.isLoggedIn, "documentCookieSetter not logged in=" + tabLogin.toString()); // login cancelado, mas document já foi interceptado
+  Cookies.setCookie(tabLogin, contentDoc.documentURIObject, obj.value, true);
+}
+
+
+function documentCookieGetter(obj, contentDoc) {
+  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
+  console.assert(tabLogin.isLoggedIn, "documentCookieGetter not logged=" + tabLogin.toString() + "," + contentDoc.documentURI);
+
+  var cookie2 = Cookies.getCookie(true, contentDoc.documentURIObject, tabLogin);
+  var cookie = cookie2 === null ? "" : cookie2;
+  return cookie; // send cookie value to content
+}
+
+
+function getJsCookieLogin(domWin) { // getJsMethodLogin
+  // tabLogin can be anon and the new tabLogin can be a different login (e.g. domWin=facebook iframe)
+  var tabLogin = TabLoginHelper.getFromDomWindow(domWin);
+  console.assert(tabLogin !== null, "is contentDoc not from a tab?");
+
+  if (isTopWindow(domWin)) {
+    if (tabLogin.isLoginInProgress) {
+      if (tabLogin.hasLoginInProgressMoveData) {
+        // data already moved to new user
+        tabLogin = TabLoginHelper.getLoginInProgress(tabLogin.tabElement);
+      }
+    }
+    return tabLogin;
+  }
+
+
+  // domWin=iframe
+
+
+  if (tabLogin.isLoginInProgress) {
+    if (tabLogin.hasLoginInProgressMoveData) {
+      return TabLoginHelper.getLoginInProgress(tabLogin.tabElement);
+    } else {
+      return tabLogin;
+    }
+  }
+
+
+  var tld = getTldFromHost(domWin.document.location.hostname);
+  var iframeLogin = LoginDB.getDefaultLogin(tld, tabLogin);
+  if (iframeLogin !== null) {
+    return iframeLogin;
+
+  } else {
+    // iframe tld is not a logged in tab ==> third party iframe
+    console.log("getJsCookieLogin - executing method from anon iframe", tld, "- top", domWin.top.document.location);
+    // BUG qdo google pergunta soh a senha, começa a validar youtube etc, mas nao ha logininprogress e login falha
+    return tabLogin.toAnon();
+  }
 }

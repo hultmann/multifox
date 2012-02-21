@@ -35,3 +35,4 @@
  * ***** END LICENSE BLOCK ***** */
 
 pref("extensions.${EXT_ID}.description", "${PATH_LOCALE}/about.properties");
+pref("extensions.${EXT_ID}.currentVersion", "");

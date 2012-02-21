@@ -35,12 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-// new tab:                     TabOpen
 // tab moved (between windows): TabClose + TabSelect
-
-
-// workaround: check call stack to detect clicks or d&d
-const StackAnalyzer = {
+// workaround: check call stack to detect d&d
+var StackAnalyzer = {
   swapBrowsersOnTabSelect: function() {
     for (var s = Components.stack; s; s = s.caller) {
       switch (s.name) {
@@ -51,74 +48,21 @@ const StackAnalyzer = {
       }
     }
     return false;
-  },
-
-  inheritIdOnTabOpen: function() {
-    for (var s = Components.stack; s; s = s.caller) {
-      switch (s.name) {
-        case "openNewTabWith":
-        case "handleLinkClick":
-        case "BrowserReloadOrDuplicate":
-          return true;
-      }
-    }
-    return false;
-  }
-};
-
-
-function findTabByLinkedPanel(tabId, tabbrowser) {
-  var tabs = getTabs(tabbrowser);
-  for (var idx = tabs.length - 1; idx > -1; idx--) {
-    if (tabs[idx].linkedPanel === tabId) {
-      return tabs[idx];
-    }
-  }
-  return null;
-}
-
-
-// check if new tab should inherit identity from current tab
-const NewTabId = {
-  tabSelectSetAsLastTab: function(tab) {
-    var tabId = tab.getAttribute("linkedpanel");
-    var tabbrowser = tab.ownerDocument.defaultView.getBrowser();
-    tabbrowser.setAttribute("multifox-tabbrowser-last-tab", tabId);
-  },
-
-  tabOpenInheritId: function(tab) {
-    if (StackAnalyzer.inheritIdOnTabOpen() === false) {
-      return false;
-    }
-
-    // find inherited id
-    var doc = tab.ownerDocument;
-    var tabbrowser = doc.defaultView.getBrowser();
-    var attr = "multifox-tabbrowser-last-tab";
-    if (tabbrowser.hasAttribute(attr) === false) {
-      return false;
-    }
-
-    var tabId = tabbrowser.getAttribute(attr);
-    var inheritedTab = findTabByLinkedPanel(tabId, tabbrowser);
-    if (inheritedTab === null) {
-      return false;
-    }
-
-    Profile.defineIdentity(tab, Profile.getIdentity(inheritedTab));
-    return true;
   }
 };
 
 
 // keep multifox id when tab is moved between windows
-const MoveTabWindows = {
-  _lastClosedTab: null,
-  _remainingTabSelect: 0,
+var MoveTabWindows = {
+  _lastClosedTab_domain: null,
+  _lastClosedTab_user:   null,
+  _remainingTabSelect:   0,
 
   tabCloseSaveId: function(tab) {
-    if (tab.hasAttribute("multifox-tab-profile")) {
-      this._lastClosedTab = Profile.getIdentity(tab);
+    if (tab.hasAttribute("multifox-tab-id-provider-tld-enc")) {
+      var tabLogin = new TabLogin(tab);
+      this._lastClosedTab_domain = tabLogin.encodedTld;
+      this._lastClosedTab_user   = tabLogin.encodedUser;
       this._remainingTabSelect = 2;
     } else {
       this._remainingTabSelect = 0;
@@ -126,12 +70,14 @@ const MoveTabWindows = {
   },
 
   tabSelectDetectMove: function(tab) {
-    if (this._remainingTabSelect > 0) {
-      this._remainingTabSelect--;
-      if (StackAnalyzer.swapBrowsersOnTabSelect()) {
-        Profile.defineIdentity(tab, this._lastClosedTab);
-        this._remainingTabSelect = 0;
-      }
+    if (this._remainingTabSelect === 0) {
+      return;
+    }
+    this._remainingTabSelect--;
+    if (StackAnalyzer.swapBrowsersOnTabSelect()) {
+      this._remainingTabSelect = 0;
+      var tabLogin = TabLoginHelper.create(tab, this._lastClosedTab_user, this._lastClosedTab_domain);
+      tabLogin.saveToTab();
     }
   }
 };

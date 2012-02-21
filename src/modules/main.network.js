@@ -34,29 +34,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const httpListeners = {
+var HttpListeners = {
   request: {
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
 
     // nsIObserver
-    observe: function(aSubject, aTopic, aData) {
-      var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var winChannel = getChannelWindow(httpChannel);
-      var profileId = Profile.find(winChannel).profileNumber;
-      switch (profileId) {
-        case Profile.DefaultIdentity:
-        case Profile.UndefinedIdentity: // favicon, updates
-          return;
+    observe: function HttpListeners_request(subject, topic, data) {
+      var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+      var win = getChannelWindow(httpChannel);
+
+      if (win === null) {
+        // safebrowsing, http://wpad/wpad.dat
+        return;
+      }
+
+      var isWin = isWindowChannel(httpChannel);
+      var isXhr = false;
+      if (httpChannel.notificationCallbacks) {
+        isXhr = httpChannel.notificationCallbacks instanceof Ci.nsIXMLHttpRequest;
+        try {
+          isXhr = httpChannel.notificationCallbacks.getInterface(Ci.nsIXMLHttpRequest) != null;
+        } catch (ex) {
+        }
+      }
+
+
+      var tabLogin = getLoginForRequest(httpChannel, win);
+      if ((tabLogin === null) || (tabLogin.isLoggedIn === false)) {
+        return; // use default session
       }
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
-        showError(winChannel, "authorization", "-");
+        showError(win, "authorization", "-"); // not supported
         return;
       }
 
-      var cook = Cookies.getCookie(false, httpChannel.URI, profileId);
-      httpChannel.setRequestHeader("Cookie", cook, false);
+      RequestLogin.save(tabLogin, httpChannel);
+
+      var cookie = Cookies.getCookie(false, httpChannel.URI, tabLogin);
+      httpChannel.setRequestHeader("Cookie", cookie, false);
+
     }
   },
 
@@ -64,27 +82,22 @@ const httpListeners = {
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
 
     // nsIObserver
-    observe: function(aSubject, aTopic, aData) {
-      var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var winChannel = getChannelWindow(httpChannel);
-      var profileId = Profile.find(winChannel).profileNumber;
-      switch (profileId) {
-        case Profile.DefaultIdentity:
-        case Profile.UndefinedIdentity:
-          /*
-          var myHeaders = HttpHeaders.fromResponse(httpChannel);
-          var setCookies = myHeaders["set-cookie"];
-          if (setCookies !== null) {
-            console.log("req "+profileId+"--"+httpChannel.URI.spec+"\n"+setCookies);
-          }
-          */
-          return;
-      }
+    observe: function HttpListeners_response(subject, topic, data) {
+      var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+      var tabLogin = RequestLogin.get(httpChannel);
 
+      if (tabLogin === null) {
+        // RequestLogin.findSavedLoginByUrl(httpChannel.URI.spec);
+        return; // use original Set-Cookie
+      }
 
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
       if (myHeaders["www-authenticate"] !== null) {
-        showError(winChannel, "www-authenticate", "-");
+        var win = getChannelWindow(httpChannel);
+        if (win === null) {
+          return;
+        }
+        showError(win, "www-authenticate", "-");
         return;
       }
 
@@ -93,15 +106,82 @@ const httpListeners = {
         return;
       }
 
-      // server sent "Set-Cookie"
+      // replace "Set-Cookie"
       httpChannel.setResponseHeader("Set-Cookie", null, false);
-      Cookies.setCookie(profileId, httpChannel.URI, setCookies, false);
+      Cookies.setCookie(tabLogin, httpChannel.URI, setCookies, false);
     }
   }
 };
 
 
-const HttpHeaders = {
+var RequestLogin = {
+  _logins:   [],
+  _channels: [],
+
+  save: function(tabLogin, request) {
+    this._logins.push(tabLogin);
+    this._channels.push(Cu.getWeakReference(request));
+  },
+
+  get: function(response) {
+    var chann = this._channels;
+    for (var idx = chann.length - 1; idx > -1; idx--) {
+      var request = chann[idx].get();
+      if (request !== null) {
+        if (request === response) {
+          chann.splice(idx, 1);
+          return this._logins.splice(idx, 1)[0];
+        }
+      } else {
+        // remove requests without response (from cache)?
+        chann.splice(idx, 1);
+        this._logins.splice(idx, 1);
+      }
+    }
+    return null;
+  }
+
+};
+
+
+// pageshow event => call updateUI for non http/https protocols and cached pages
+function updateNonNetworkDocuments(evt) {
+  var doc = evt.target;
+  var uri = doc.documentURIObject; // TODO use doc.location?
+  if (isTopWindow(doc.defaultView) === false) {
+    return;
+  }
+
+  if (isSupportedScheme(uri.scheme)) {
+    // BUG rightclick>show image ==> evt.persisted=false
+    // BUG google => br.mozdev=>back=>fw fica login do goog
+    if (evt.persisted) {
+      // http top doc from cache
+      var tabLogin = TabLoginHelper.getFromDomWindow(doc.defaultView);
+      if (tabLogin !== null) {
+        var tab = tabLogin.tabElement;
+        RedirDetector.invalidateTab(tab); // invalidate redir before calling defineTopWindowLogin
+        var dummy = defineTopWindowLogin(uri, tabLogin);
+        updateUI(tab);
+      }
+    }
+
+  } else { // about: etc
+    // request listener was not called
+    var tabLogin = TabLoginHelper.getFromDomWindow(doc.defaultView);
+    if (tabLogin !== null) {
+      console.log("updateNonNetworkDocuments del", uri.scheme);
+      var tab = tabLogin.tabElement;
+      tab.removeAttribute("multifox-tab-current-tld");
+      RedirDetector.resetTab(tab);
+      tabLogin.setTabAsAnon();
+      updateUI(tab);
+    }
+  }
+}
+
+
+var HttpHeaders = {
   visitLoop: {
     values: null,
     visitHeader: function(name, value) {
@@ -142,7 +222,7 @@ function getChannelWindow(channel) {
               .getInterface(Ci.nsILoadContext)
               .associatedWindow;
     } catch (ex) {
-      //util2.logEx("channel.notificationCallbacks ", channel.notificationCallbacks, channel.URI.spec, ex);
+      //console.trace("channel.notificationCallbacks " + "/" + channel.notificationCallbacks + "/" + channel.URI.spec + "/" + ex);
     }
   }
 
@@ -154,7 +234,7 @@ function getChannelWindow(channel) {
               .getInterface(Ci.nsILoadContext)
               .associatedWindow;
     } catch (ex) {
-      util2.logEx("channel.loadGroup", channel.loadGroup, channel.URI.spec, ex);
+      console.trace("channel.loadGroup " + channel.loadGroup + "/" + channel.URI.spec + "/" + ex);
     }
   }
 

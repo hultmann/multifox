@@ -35,101 +35,250 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-const util2 = {
+var StringEncoding = {
+  _conv: null,
 
-  browserWindowsEnum: function() {
-    return Cc["@mozilla.org/appshell/window-mediator;1"]
-            .getService(Ci.nsIWindowMediator)
-            .getEnumerator("navigator:browser");
+  init: function() {
+    this._conv = Cc["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Ci.nsIScriptableUnicodeConverter);
+    this._conv.charset = "UTF-8";
   },
 
-  stringToUri: function(spec) {
-    var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-    try {
-      return io.newURI(spec, null, null);
-    } catch (ex) {
-      return null;
+
+  encode: function(str) {
+    // chars are > 8bits ("â‚¬".charCodeAt(0) = 8364)
+    var bin = this._conv.convertToByteArray(str, {});
+    var len = bin.length;
+    var hex = new Array(len * 2);
+
+    var j = 0;
+    var alphabet = "abcdefghijklmnop";
+
+    for (var idx = 0; idx < len; idx++) {
+      var myByte = bin[idx];
+      var nibble1 = (myByte & 0xf0) >> 4;
+      var nibble0 =  myByte & 0x0f;
+      hex[j++] = alphabet[nibble1];
+      hex[j++] = alphabet[nibble0];
     }
+
+    return hex.join("");
   },
 
-  logEx: function() {
-    var buf = "logEx";// + this.logEx.caller + "\n";// + util2.throwStack._toString(false, Components.stack) + "===";
-    for (var idx = 0, len = arguments.length; idx < len; idx++) {
-      buf += "\n" + arguments[idx];// + "=" + this.caller[arguments[idx]];
+
+  decode: function(hex) {
+    console.assert(typeof hex === "string", "StringEncoding.decode val=" + hex);
+    var len = hex.length / 2;
+    if (len === 0) {
+      return "";
     }
 
-    buf += "\n====\n" + util2.throwStack._toString(false, Components.stack);
-    console.log(buf);
-  },
+    console.assert((len % 1) === 0, "invalid hex string: " + hex);
+    var bin = new Array(len);
 
-  throwStack: {
+    var j = 0;
+    var offset = 97; // "abcdefghijklmnop".charCodeAt(0)=97
 
-    go: function(txt) {
-      console.log("Stack: " + txt + "\n" + this._toString(false, Components.stack));
-      throw new Error(txt);
-    },
-
-    _toArray: function(webOnly, theStack) {
-      var allItems = [];
-      if (!theStack) {
-        return allItems;
-      }
-
-      function StackItem() {}
-      StackItem.prototype = {
-        lang: "?",
-        filename: "?",
-        lineNumber: -1,
-        name: "?"
-      };
-
-      // aparentemente é um bug que ocorre as vezes, todas as propriedades sao undefined
-      if (theStack.languageName == undefined) {
-        var item = new StackItem();
-        item.name = theStack.toString();
-        allItems.push(item);
-      }
-
-      // myStack.caller é quase sempre null, mas algumas vezes é undefined...
-      for (var myStack = theStack; myStack; myStack = myStack.caller) {
-        if (webOnly) {
-          var n = myStack.filename;
-          if (n === null) {
-            continue;
-          }
-
-          if ((n.indexOf("http:") !== 0) && (n.indexOf("https:") !== 0)) {
-            continue;
-          }
-        }
-
-
-        var item = new StackItem();
-        allItems.push(item);
-        item.lang = myStack.languageName;
-        item.filename = myStack.filename;
-        item.lineNumber = myStack.lineNumber; // Valid line numbers begin at "1". "0" indicates unknown.
-        item.name = myStack.name;
-      }
-
-      allItems.reverse();
-      return allItems;
-    },
-
-    _toString: function(webOnly, theStack) {
-      var arr = this._toArray(webOnly, theStack);
-      var lines = new Array(arr.length);
-      for (var idx = arr.length - 1, idx2 = 0; idx > -1; idx--) {
-        var lang = webOnly ? "" : arr[idx].lang + " ";
-        lines[idx2] = "[" + (idx + 1) + "] "
-                    + lang
-                    + arr[idx].filename + " "
-                    + arr[idx].name + " ("
-                    + arr[idx].lineNumber + ")";
-        idx2++;
-      }
-      return lines.join("\n");
+    for (var idx = 0; idx < len; idx++) {
+      var nibble1 = hex.charCodeAt(j++) - offset;
+      var nibble0 = hex.charCodeAt(j++) - offset;
+      bin[idx] = (nibble1 << 4) | nibble0;
     }
 
+    return this._conv.convertFromByteArray(bin, bin.length);
   }
 };
+
+
+var WindowParents = {
+  getTabElement: function(contentWin) {
+    var chromeWin = this.getChromeWindow(contentWin);
+    if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
+      var elem = chromeWin.getBrowser(); // BUG elem=null for sidebar browsing
+      switch (elem.tagName) {
+        case "tabbrowser":
+          var topDoc = contentWin.top.document;
+          var idx = elem.getBrowserIndexForDocument(topDoc);
+          if (idx > -1) {
+            return getTabNodes(elem)[idx];
+          }
+          break;
+        default: // view-source => tagName="browser"
+          // Note that this file uses document.documentURI to get
+          // the URL (with the format from above). This is because
+          // document.location.href gets the current URI off the docshell,
+          // which is the URL displayed in the location bar, i.e.
+          // the URI that the user attempted to load.
+          console.log("getTabElement=" + elem.tagName + "\n" +
+                       contentWin.document.documentURI+ " " +chromeWin.document.location +"\n"+
+                       contentWin.document.location   + " " +chromeWin.document.documentURI);
+          break;
+      }
+    }
+    return null;
+  },
+
+  getChromeWindow: function(contentWin) { // getTopWindowElement
+    if (!contentWin) console.trace('contentWin='+contentWin);
+    var qi = contentWin.QueryInterface;
+    if (!qi) {
+      return null;
+    }
+
+    if (contentWin instanceof Ci.nsIDOMChromeWindow) {
+      // extensions.xul, updates.xul ...
+      return contentWin;
+    }
+
+    var win = qi(Ci.nsIInterfaceRequestor)
+                .getInterface(Ci.nsIWebNavigation)
+                .QueryInterface(Ci.nsIDocShell)
+                .chromeEventHandler
+                .ownerDocument
+                .defaultView;
+    // wrappedJSObject allows access to gBrowser etc
+    // wrappedJSObject=undefined sometimes. e.g. contentWin=about:multifox
+    var unwrapped = win.wrappedJSObject; // TODO XPCNativeWrapper.unwrap?
+    return unwrapped ? unwrapped : win;
+  }
+};
+
+
+function isEmptyPage(contentDoc) {
+  //var a = contentDoc.getElementsByTagName("head")[0].getElementsByTagName("*").length;
+  var body = contentDoc.getElementsByTagName("body");
+  var tags = body.length > 0 ? body[0].getElementsByTagName("*").length : 0;
+
+  // TODO
+  /*
+  var all = contentDoc.forms;
+  var qty = 0;
+  for (var idx = all.length - 1; idx > -1; idx--) {
+    qty += countPasswordFields(all[idx], ???);
+  }
+  */
+  console.log("isEmptyPage", tags < 15, contentDoc.location);
+  return tags < 15;
+}
+
+
+function countPasswordFields(form, populatedOnly) {
+  var qty = 0;
+  var all = form.elements;
+  var INPUT = Ci.nsIDOMHTMLInputElement;
+  for (var idx = all.length - 1; idx > -1; idx--) {
+    var elem = all[idx];
+    if ((elem instanceof INPUT) && (elem.type === "password")) {
+      if (isElementVisible(elem)) {
+        if (populatedOnly && (elem.value.trim().length === 0)) {
+          continue;
+        }
+        qty++;
+      }
+    }
+  }
+  return qty;
+}
+
+
+function isSupportedScheme(scheme) {
+  return (scheme === "http") || (scheme === "https");
+}
+
+
+function isWindowChannel(channel) {
+  return (channel.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI) !== 0;
+}
+
+
+function isTopWindow(win) {
+  return win === win.top;
+}
+
+
+function getTabNodes(tabbrowser) {
+  return tabbrowser.mTabContainer.childNodes;
+}
+
+
+function getTldFromHost(hostname) {
+  try {
+    return Services.eTLD.getBaseDomainFromHost(hostname);
+  } catch (ex) {
+    var Cr = Components.results;
+    switch (ex.result) {
+      case Cr.NS_ERROR_INSUFFICIENT_DOMAIN_LEVELS: // "localhost"?
+      case Cr.NS_ERROR_HOST_IS_IP_ADDRESS:         // literal ipv6? 3ffe:2a00:100:7031::1
+        return hostname;                           // literal ipv4? 127.0.0.1, 0x7f.0.0.1
+      case Cr.NS_ERROR_ILLEGAL_VALUE:              // ".foo.tld"?
+        break;
+      default:
+        console.log(ex, hostname);                 // ???
+        return hostname;
+    }
+  }
+
+  // NS_ERROR_ILLEGAL_VALUE
+  var firstDot = hostname.indexOf(".");
+  //  "local.host" ==> >0 OK
+  // ".localhost"  ==>  0 exception
+  // ".loc.al.ho.st" ==> 0 exception
+  //  "localhost" ==> -1 exception
+  if (firstDot === -1) {
+    console.log("NS_ERROR_ILLEGAL_VALUE firstDot=-1", hostname);
+    return hostname; // ???
+  }
+
+  // firstDot=0 ("...local.host") (e.g. from cookies)
+  // OBS "..local.host" returns "localhost"
+  if (firstDot === 0) {
+    return getTldFromHost(hostname.substr(1)); // recursive
+  }
+  return hostname;
+}
+
+
+function endsWith(sufix, str) {
+  var idx = str.lastIndexOf(sufix);
+  if (idx === -1) {
+    return false;
+  }
+  var idxMatch = str.length - sufix.length;
+  return idx === idxMatch;
+}
+
+
+function hasRootDomain(domain, host) {
+  if (host === domain) {
+    return true;
+  }
+
+  var idx = host.lastIndexOf(domain);
+  if (idx === -1) {
+    return false;
+  }
+
+  if ((host.length - domain.length) === idx) {
+    return host[idx - 1] === ".";
+  }
+
+  return false;
+}
+
+
+function showError(contentWin, notSupportedFeature, details) {
+  var msg = [];
+  msg.push("ERROR=" + notSupportedFeature);
+  msg.push(details);
+  if (contentWin.document) {
+    msg.push("location=" + contentWin.document.location);
+    if (contentWin.document.documentURIObject) {
+      msg.push("uri=     " + contentWin.document.documentURIObject.spec);
+    }
+  }
+  msg.push("title=[" + contentWin.document.title + "]");
+  console.log(msg.join("\n"));
+
+  var tab = WindowParents.getTabElement(contentWin);
+  tab.setAttribute("multifox-tab-error", notSupportedFeature);
+  updateUI(tab, true);
+}

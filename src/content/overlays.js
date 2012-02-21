@@ -36,7 +36,7 @@
 
 "use strict";
 
-const AboutOverlay = {
+var AboutOverlay = {
   add: function(win) {
     if (win.arguments[0].id) {
       // Firefox 4
