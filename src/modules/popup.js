@@ -172,9 +172,16 @@ function onLoginMiddleClick(evt){
   }
 
   var menuItem = evt.target;
-  if ((menuItem.hasAttribute("type") === false) ||
-    (menuItem.hasAttribute("disabled") && (menuItem.getAttribute("disabled") === "true"))) {
-    // ignore type=radio or disabled items
+  switch (menuItem.getAttribute("cmd")) {
+    case "switch user":
+    case "new account":
+      break;
+    default:
+      return;
+  }
+
+  if (menuItem.hasAttribute("disabled") && (menuItem.getAttribute("disabled") === "true")) {
+    // ignore disabled items
     return;
   }
 
