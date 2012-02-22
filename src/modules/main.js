@@ -67,7 +67,7 @@ function MultifoxRunner() {
   StringEncoding.init();
   DocStartScriptInjection.start();
 
-  var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+  var obs = Services.obs;
   obs.addObserver(SubmitObserver, "earlyformsubmit", false);
   obs.addObserver(LoginDB.onCookieRejected, "cookie-rejected", false);
   obs.addObserver(LoginDB.onCookieChanged, "cookie-changed", false);
@@ -87,7 +87,7 @@ MultifoxRunner.prototype = {
     Cookies.stop();
     LoginDB.shutdown();
 
-    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    var obs = Services.obs;
     obs.removeObserver(SubmitObserver, "earlyformsubmit");
     obs.removeObserver(LoginDB.onCookieRejected, "cookie-rejected");
     obs.removeObserver(LoginDB.onCookieChanged, "cookie-changed");

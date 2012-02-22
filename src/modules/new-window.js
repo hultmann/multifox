@@ -43,6 +43,7 @@ var Ci = Components.interfaces;
 var Cu = Components.utils;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
 
 var m_docObserver = null;
 
@@ -59,12 +60,10 @@ function init() {
 
 
 function DocObserver() {
-  var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-  obs.addObserver(this, "chrome-document-global-created", false);
+  Services.obs.addObserver(this, "chrome-document-global-created", false);
 
   // workaround for top windows until chrome-document-global-created works again in Fx4
-  var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].getService(Ci.nsIWindowWatcher);
-  ww.registerNotification(this);
+  Services.ww.registerNotification(this);
 }
 
 
@@ -81,8 +80,7 @@ DocObserver.prototype = {
           if (win.document.location.href === "chrome://mozapps/content/extensions/about.xul") {
             console.log("OK overlay via", topic, "/", win.document.location.href);
             var ns = {};
-            var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
-            subscript.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+            Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
             ns.AboutOverlay.add(win);
           }
           return;
@@ -94,8 +92,7 @@ DocObserver.prototype = {
       case "chrome://mozapps/content/extensions/about.xul":
         console.log("OK overlay via", topic, "/", win.document.location.href);
         var ns = {};
-        var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
-        subscript.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+        Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
         ns.AboutOverlay.add(win);
         break;
 
@@ -165,9 +162,7 @@ var console = {
     var len = arguments.length;
     var msg = len > 1 ? Array.prototype.slice.call(arguments, 0, len).join(" ")
                       : arguments[0];
-    Cc["@mozilla.org/consoleservice;1"]
-      .getService(Ci.nsIConsoleService)
-      .logStringMessage(p + msg);
+    Services.console.logStringMessage(p + msg);
   },
 
   warn: function(msg) {
@@ -178,7 +173,7 @@ var console = {
                  0, 0, // line, col
                  Ci.nsIScriptError.warningFlag,
                  "component javascript");
-    Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService).logMessage(message);
+    Services.console.logMessage(message);
     this.trace(msg);
   },
 
@@ -229,9 +224,7 @@ var util = {
   },
 
   _getTextCore: function(filename, name, args, startAt) {
-    var bundle = Cc["@mozilla.org/intl/stringbundle;1"]
-                  .getService(Ci.nsIStringBundleService)
-                  .createBundle("${PATH_LOCALE}/" + filename);
+    var bundle = Services.strings.createBundle("${PATH_LOCALE}/" + filename);
 
     if (args.length === startAt) {
       return bundle.GetStringFromName(name);
@@ -256,18 +249,14 @@ var util = {
       }
       this._observers = [onRequest, onResponse];
 
-      var obs = Cc["@mozilla.org/observer-service;1"]
-                  .getService(Ci.nsIObserverService);
-
+      var obs = Services.obs;
       obs.addObserver(this._observers[0], "http-on-modify-request", false);
       obs.addObserver(this._observers[1], "http-on-examine-response", false);
     },
 
     disable: function() {
       console.log("networkListeners disable");
-      var obs = Cc["@mozilla.org/observer-service;1"]
-                  .getService(Ci.nsIObserverService);
-
+      var obs = Services.obs;
       obs.removeObserver(this._observers[0], "http-on-modify-request");
       obs.removeObserver(this._observers[1], "http-on-examine-response");
       this._observers = null;

@@ -37,10 +37,9 @@
 
 function copyCookieToNewHost(cookie, newHost) {
   var expiryTime = cookie.isSession ? 4611686018427388 : cookie.expiry; // Math.pow(2, 62)=4611686018427388000
-  var mgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager2);
-  mgr.add(newHost,         cookie.path,
-          cookie.name,     cookie.value,
-          cookie.isSecure, cookie.isHttpOnly, cookie.isSession, expiryTime);
+  Services.cookies.add(newHost,         cookie.path,
+                       cookie.name,     cookie.value,
+                       cookie.isSecure, cookie.isHttpOnly, cookie.isSession, expiryTime);
 }
 
 
@@ -114,14 +113,13 @@ var CookieUtils = {
 
 function getAllCookiesFromHost(h) {
   var rv = [];
-  var mgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager2);
   var COOKIE = Ci.nsICookie2;
 
   var _qty = 0;
   var _t = new Date().getTime();
 
-  // TODO use mgr.getCookiesFromHost when it works properly
-  var all = mgr.enumerator;
+  // TODO use nsICookieManager2.getCookiesFromHost when it works properly
+  var all = Services.cookies.enumerator;
   while (all.hasMoreElements()) {
     var cookie = all.getNext().QueryInterface(COOKIE);
     _qty++;
@@ -139,7 +137,7 @@ function removeCookies(all) {
   var tlds = [];
   var realHost;
 
-  var mgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager2);
+  var mgr = Services.cookies;
   var cookie;
   for (var idx = all.length - 1; idx > -1; idx--) {
     cookie = all[idx];

@@ -48,9 +48,8 @@ window.addEventListener("DOMContentLoaded", function() {
 
 // load badges document into file:// iframe
 function loadBadges() {
-  var uri = Cc["@mozilla.org/network/io-service;1"]
-            .getService(Ci.nsIIOService)
-            .newURI("${PATH_CONTENT}/about-badges.html", "UTF-8", null);
+  Components.utils.import("resource://gre/modules/Services.jsm");
+  var uri = Services.io.newURI("${PATH_CONTENT}/about-badges.html", "UTF-8", null);
 
   var fileUrl = Cc["@mozilla.org/chrome/chrome-registry;1"]
                 .getService(Ci.nsIChromeRegistry)

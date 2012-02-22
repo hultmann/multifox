@@ -162,7 +162,7 @@ var TabContainerEvents = {
 // first run?
 function onStart() {
   var prefName = "extensions.${EXT_ID}.currentVersion";
-  var prefs = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefBranch2);
+  var prefs = Services.prefs;
   var ver = prefs.prefHasUserValue(prefName) ? prefs.getCharPref(prefName) : "";
   if (ver === "${EXT_VERSION}") {
     return;

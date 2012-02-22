@@ -45,9 +45,7 @@ var AboutOverlay = {
 
     var Cc = Components.classes;
     var Ci = Components.interfaces;
-    var browserWin = Cc["@mozilla.org/appshell/window-mediator;1"]
-                      .getService(Ci.nsIWindowMediator)
-                      .getMostRecentWindow("navigator:browser");
+    var browserWin = Services.wm.getMostRecentWindow("navigator:browser");
     if (browserWin) {
       browserWin.openUILinkIn("about:multifox", "tab", false, null, null);
       win.onunload = function() {

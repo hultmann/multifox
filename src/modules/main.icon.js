@@ -44,7 +44,7 @@ function setWelcomeMode(enable) {
 
   m_welcomeMode = enable; // TODO check tabs with login attr
 
-  var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator).getEnumerator("navigator:browser");
+  var winEnum = Services.wm.getEnumerator("navigator:browser");
   while (winEnum.hasMoreElements()) {
     var win = winEnum.getNext();
     var tab = win.getBrowser().selectedTab;
@@ -403,7 +403,6 @@ function showMenuPopup(evt) {
 
 function loadSubScript(path) {
   var ns = {};
-  var sub = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
-  sub.loadSubScript(path, ns);
+  Services.scriptloader.loadSubScript(path, ns);
   return ns;
 }

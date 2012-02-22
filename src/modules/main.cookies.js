@@ -43,7 +43,7 @@ var Cookies = {
 
   start: function() {
     this._service = Cc["@mozilla.org/cookieService;1"].getService().QueryInterface(Ci.nsICookieService);
-    this._prefs = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefBranch2);
+    this._prefs = Services.prefs;
     this._prefListener.behavior = this._prefs.getIntPref(PREF_COOKIE_BEHAVIOR);
     this._prefs.addObserver(PREF_COOKIE_BEHAVIOR, this._prefListener, false);
   },

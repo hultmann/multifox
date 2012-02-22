@@ -37,6 +37,7 @@
 "use strict";
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 
 function AboutMultifox() {}
@@ -51,9 +52,7 @@ AboutMultifox.prototype = {
     return Components.interfaces.nsIAboutModule.ALLOW_SCRIPT;
   },
   newChannel: function(aURI) {
-    var channel = Components.classes["@mozilla.org/network/io-service;1"]
-                    .getService(Components.interfaces.nsIIOService)
-                    .newChannel("${PATH_CONTENT}/about-multifox.html", null, null);
+    var channel = Services.io.newChannel("${PATH_CONTENT}/about-multifox.html", null, null);
     channel.originalURI = aURI;
     return channel;
   }

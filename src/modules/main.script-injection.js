@@ -41,13 +41,11 @@ var DocStartScriptInjection = {
     this._loader = new ScriptSourceLoader();
     this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
     this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
-    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-    obs.addObserver(this, "document-element-inserted", false);
+    Services.obs.addObserver(this, "document-element-inserted", false);
   },
 
   stop: function() {
-    var obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-    obs.removeObserver(this, "document-element-inserted");
+    Services.obs.removeObserver(this, "document-element-inserted");
     delete this._loader;
   },
 

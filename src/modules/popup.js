@@ -76,8 +76,7 @@ function appendContent(container, panel) {
   }
 
   var ns = {};
-  var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
-  subscript.loadSubScript("${PATH_MODULE}/error.js", ns);
+  Services.scriptloader.loadSubScript("${PATH_MODULE}/error.js", ns);
   return ns.appendErrorToPanel(container, panel);
 }
 
@@ -252,8 +251,7 @@ function loadTab(newTab, tab, encUser, encTld) {
 
 
 function openNewTab(url, win) {
-  var io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-  var uri = io.newURI(url, null, null);
+  var uri = Services.io.newURI(url, null, null);
   var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
   var win2 = win.browserDOMWindow.openURI(uri, null, where, 0); // TODO open tab at the right
 }
