@@ -84,7 +84,7 @@ function appendContent(container, panel) {
 
 function createLoginsMenu(menupopup, onHidden) {
   menupopup.addEventListener("command", onLoginCommand, false);
-  menupopup.addEventListener("click", onLoginClick, false);
+  menupopup.addEventListener("click", onLoginMiddleClick, false);
   menupopup.addEventListener("popuphidden", function(evt) {
     if (evt.currentTarget === evt.target) { // bubbled event?
       onHidden();
@@ -166,13 +166,16 @@ function populateUsers(tabLogin, menupopup) {
 }
 
 
-function onLoginClick(evt){
+function onLoginMiddleClick(evt){
   if ((evt.button !== 1) || (evt.detail !== 1)) {
+    // allow only middle clicks/single clicks
     return;
   }
 
   var menuItem = evt.target;
-  if (menuItem.hasAttribute("disabled") && (menuItem.getAttribute("disabled") === "true")) {
+  if ((menuItem.hasAttribute("type") === false) ||
+    (menuItem.hasAttribute("disabled") && (menuItem.getAttribute("disabled") === "true"))) {
+    // ignore type=radio or disabled items
     return;
   }
 

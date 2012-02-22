@@ -374,6 +374,11 @@ function showMsgPanel(evt) {
 
 
 function showMenuPopup(evt) {
+  if ((evt.button !== 0) || (evt.detail !== 1)) {
+    // allow only left clicks
+    return;
+  }
+
   var doc = evt.target.ownerDocument;
   var container = getIconContainer(doc);
 
