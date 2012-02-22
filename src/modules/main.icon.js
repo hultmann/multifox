@@ -41,7 +41,7 @@ function setWelcomeMode(enable) {
   if (m_welcomeMode === enable) {
     return;
   }
-  
+
   m_welcomeMode = enable; // TODO check tabs with login attr
 
   var winEnum = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator).getEnumerator("navigator:browser");
@@ -151,7 +151,6 @@ function setStyleCore(container, doc) {
   container.margin = "0 2px 0 1px";
   container.border = "1px solid #ccc";
   container.borderRadius = "2px";
-  container.MozBorderRadius = "2px"; // Gecko 1.9.2
   container.opacity = "1";
   container.MozTransition = "";
 
@@ -370,7 +369,7 @@ function showMsgPanel(evt) {
     updateUI(tab, true);
   }, false);
 
-  panel.openPopup(getStatIconContainer(doc), "after_start", 0, 1);
+  panel.openPopup(getStatIconContainer(doc), "bottomcenter topleft", 5, 0); // due to img.style.margin
 }
 
 

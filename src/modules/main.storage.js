@@ -49,9 +49,6 @@ function onContentEvent(evt) {
     case "localStorage":
       rv = windowLocalStorage(obj, contentDoc);
       break;
-    case "error":
-      showError(contentDoc.defaultView, obj.cmd, "-");
-      break;
     default:
       throw new Error("onContentEvent: " + obj.from);
   }
@@ -69,13 +66,6 @@ function onContentEvent(evt) {
 
 
 function windowLocalStorage(obj, contentDoc) {
-  if (contentDoc.documentURI === "about:blank") { // BUG 1.9.2
-    console.log("windowLocalStorage doc=", contentDoc.documentURI, "/",
-                                           contentDoc.location, "/",
-                                           contentDoc.URL);
-    return "";
-  }
-
   var tabLogin = getJsCookieLogin(contentDoc.defaultView);
   var uri = tabLogin.formatUri(contentDoc.documentURIObject);
 

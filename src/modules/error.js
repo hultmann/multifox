@@ -47,7 +47,7 @@ Cu.import("${PATH_MODULE}/main.js");
 //       <hbox>  <== box4
 //         <button/>
 
-function appendErrorToPanel(box, panel, error) {
+function appendErrorToPanel(box, panel) {
   var doc = box.ownerDocument;
 
   var box2 = box.appendChild(doc.createElement("hbox"));
@@ -65,16 +65,6 @@ function appendErrorToPanel(box, panel, error) {
   var txt = util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}");
   box3.appendChild(doc.createElement("description"))
       .appendChild(doc.createTextNode(txt));
-
-  switch (error) {
-    case "localStorage":
-      var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
-      var msg = util.getText("icon.panel.unsupported-moz19.label", info.name, "4");
-      box3.appendChild(doc.createElement("description"))
-          .appendChild(doc.createTextNode(msg));
-      break;
-  }
-
 
   var but = box3.appendChild(doc.createElement("hbox")).appendChild(doc.createElement("button"));
   but.setAttribute("label", util.getText("icon.panel.make-tab-default.button.label", "${EXT_NAME}"));

@@ -49,10 +49,7 @@ function createMsgPanel(doc) {
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
   panel.setAttribute("id", "multifox-popup");
-  var fx36 = is192();
-  if (!fx36) {
-    panel.setAttribute("type", "arrow");
-  }
+  panel.setAttribute("type", "arrow");
 
   var container = panel.appendChild(doc.createElement("vbox"));
   container.style.width = "50ch";
@@ -90,7 +87,7 @@ function appendContent(container, panel) {
   var ns = {};
   var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
   subscript.loadSubScript("${PATH_MODULE}/error.js", ns);
-  return ns.appendErrorToPanel(container, panel, errorId);
+  return ns.appendErrorToPanel(container, panel);
 }
 
 
@@ -126,12 +123,6 @@ function copyCss(source, target) {
       style2[name] = style1[name];
     }
   }
-}
-
-
-function is192() {
-  var info = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
-  return info.platformVersion.indexOf("1.9") === 0; // Gecko 1.9.2
 }
 
 

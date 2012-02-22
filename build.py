@@ -53,7 +53,6 @@ b.add_text("components/protocol.js")
 b.add_text("defaults/preferences/prefs.js")
 
 b.add_text("content/content-injection.js")
-b.add_text("content/content-injection-192.js")
 b.add_text("content/overlays.js")
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
