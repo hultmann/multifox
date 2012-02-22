@@ -41,9 +41,8 @@ var StackAnalyzer = {
   swapBrowsersOnTabSelect: function() {
     for (var s = Components.stack; s; s = s.caller) {
       switch (s.name) {
-        case "swapBrowsersAndCloseOther":
-        case "onxbldrop": //fx4
-        case "_onDrop":   //fx36
+        case "onxbldrop":                 // swap windows
+        case "swapBrowsersAndCloseOther": // swap windows & close previous window (last tab)
           return true;
       }
     }

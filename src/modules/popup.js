@@ -56,15 +56,6 @@ function createMsgPanel(doc) {
 
   var but = appendContent(container, panel);
 
-  panel.addEventListener("popupshowing", function(evt) {
-    if (fx36) {
-      copyCss(doc.getElementById("editBookmarkPanel"), panel);
-      if (but) {
-        copyButtonCss(doc, but);
-      }
-    }
-  }, false);
-
   panel.addEventListener("popupshown", function(evt) {
     but.focus();
   }, false);
@@ -88,41 +79,6 @@ function appendContent(container, panel) {
   var subscript = Cc["@mozilla.org/moz/jssubscript-loader;1"].getService(Ci.mozIJSSubScriptLoader);
   subscript.loadSubScript("${PATH_MODULE}/error.js", ns);
   return ns.appendErrorToPanel(container, panel);
-}
-
-
-function copyButtonCss(doc, toBut) {
-  var srcBut = doc.getElementById("editBookmarkPanelDoneButton");
-  copyCss(srcBut, toBut);
-  doc.defaultView.setTimeout(function() {
-    // wait xbl
-    var source = doc.getAnonymousElementByAttribute(srcBut, "class", "box-inherit button-box");
-    var target = doc.getAnonymousElementByAttribute(toBut,  "class", "box-inherit button-box");
-    target.setAttribute("style",""); // BUG Error: target is null
-    copyCss(source, target);
-  }, 0);
-}
-
-
-function copyCss(source, target) {
-  var win = source.ownerDocument.defaultView;
-  var style1 = win.getComputedStyle(source, "");
-  var style2 = target.style;
-
-  for (var name in style1) {
-    if (style1[name]) {
-      switch (name) {
-        case "length":
-        case "parentRule":
-        case "display":
-          continue;
-      }
-      if (name.indexOf("padding") === 0) {
-        continue;
-      }
-      style2[name] = style1[name];
-    }
-  }
 }
 
 
