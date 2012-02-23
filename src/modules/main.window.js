@@ -62,10 +62,9 @@ var BrowserWindow = {
     container.addEventListener("TabClose", TabContainerEvents, false);
     container.addEventListener("SSTabRestoring", TabContainerEvents, false);
 
-    // restore icon after toolbar customization
-    var toolbox = win.document.getElementById("navigator-toolbox");
-    toolbox.addEventListener("DOMNodeInserted", customizeToolbar, false);
-
+    // hide icon during toolbar customization
+    win.addEventListener("beforecustomization", beforeCustomization, false);
+    win.addEventListener("aftercustomization", afterCustomization, false);
 
     win.document.documentElement.setAttribute("multifox-window-uninitialized", "true");
   },
@@ -88,8 +87,8 @@ var BrowserWindow = {
     container.removeEventListener("TabClose", TabContainerEvents, false);
     container.removeEventListener("SSTabRestoring", TabContainerEvents, false);
 
-    var toolbox = win.document.getElementById("navigator-toolbox");
-    toolbox.removeEventListener("DOMNodeInserted", customizeToolbar, false);
+    win.removeEventListener("beforecustomization", beforeCustomization, false);
+    win.removeEventListener("aftercustomization", afterCustomization, false);
 
     // TODO last window?
     /*
@@ -197,10 +196,18 @@ function onStart() {
 }
 
 
-function customizeToolbar(evt) {
-  var node = evt.target;
-  if ((node.id === "urlbar-container") && (node.parentNode.tagName === "toolbar")) {
-    var tab = node.ownerDocument.defaultView.getBrowser().selectedTab;
-    updateUI(tab, true);
+function beforeCustomization(evt) {
+  var toolbox = evt.target;
+  var container = getIconContainer(toolbox.ownerDocument);
+  if (container !== null) {
+    // remove icon - BUG changing tabs will make it appear again
+    container.parentNode.removeChild(container);
   }
+}
+
+
+function afterCustomization(evt) {
+  var toolbox = evt.target;
+  var tab = toolbox.ownerDocument.defaultView.getBrowser().selectedTab;
+  updateUI(tab, true);
 }
