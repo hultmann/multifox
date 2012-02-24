@@ -49,7 +49,7 @@ var m_docObserver = null;
 
 function init() {
   console.assert(m_docObserver === null, "m_docObserver should be null");
-  m_docObserver = new DocObserver(); // make "About" menuitem open about:multifox tab
+  m_docObserver = new DocObserver();
   var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
   ss.persistTabAttribute("multifox-tab-id-provider-tld-enc");
   ss.persistTabAttribute("multifox-tab-id-provider-user-enc");
@@ -58,11 +58,7 @@ function init() {
 }
 
 
-
 function DocObserver() {
-  Services.obs.addObserver(this, "chrome-document-global-created", false);
-
-  // workaround for top windows until chrome-document-global-created works again in Fx4
   Services.ww.registerNotification(this);
 }
 
@@ -70,52 +66,30 @@ function DocObserver() {
 DocObserver.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
-    switch (topic) {
-      case "domwindowclosed":
-        return;
-      case "domwindowopened":
-        break;
-      default:
-        if (win.top === win) {
-          if (win.document.location.href === "chrome://mozapps/content/extensions/about.xul") {
-            console.log("OK overlay via", topic, "/", win.document.location.href);
-            var ns = {};
-            Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-            ns.AboutOverlay.add(win);
-          }
-          return;
-        }
-        break; // chrome-document-global-created works for history-panel.xul etc
-    }
-
-    switch (win.document.location.href) {
-      case "chrome://mozapps/content/extensions/about.xul":
-        console.log("OK overlay via", topic, "/", win.document.location.href);
-        var ns = {};
-        Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-        ns.AboutOverlay.add(win);
-        break;
-
-      default:
-        win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-        break;
+    if (topic === "domwindowopened") {
+      win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
     }
   }
 };
 
 
 function onDOMContentLoaded(evt) {
-  var chromeWin = evt.currentTarget;
-  var doc = chromeWin.document;
-  if (doc !== evt.target) {
+  var win = evt.currentTarget;
+
+  if (win.document !== evt.target) {
     return; // avoid bubbled DOMContentLoaded events
   }
 
-  chromeWin.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-  switch (doc.location.href) {
+  win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+  switch (win.document.location.href) {
     case "chrome://browser/content/browser.xul":
-      console.log("OK overlay DOMContentLoaded", doc.location.href);
-      BrowserOverlay.add(chromeWin);
+      BrowserOverlay.add(win);
+      break;
+    case "chrome://mozapps/content/extensions/about.xul":
+      // make "About" menuitem open about:multifox tab
+      var ns = {};
+      Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
+      ns.AboutOverlay.add(win);
       break;
   }
 }
