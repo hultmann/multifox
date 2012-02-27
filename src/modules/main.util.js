@@ -196,7 +196,7 @@ function isTopWindow(win) {
 
 
 function getTabNodes(tabbrowser) {
-  return tabbrowser.mTabContainer.childNodes;
+  return tabbrowser.mTabContainer.childNodes; // <tab>
 }
 
 
@@ -282,3 +282,99 @@ function showError(contentWin, notSupportedFeature, details) {
   tab.setAttribute("multifox-tab-error", notSupportedFeature);
   updateUI(tab, true);
 }
+
+
+var console = {
+  log: function(msg) {
+    var now = new Date();
+    var ms = now.getMilliseconds();
+    var ms2;
+    if (ms < 100) {
+      ms2 = ms < 10 ? "00" + ms : "0" + ms;
+    } else {
+      ms2 = ms.toString();
+    }
+    var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
+
+    var len = arguments.length;
+    var msg = len > 1 ? Array.prototype.slice.call(arguments, 0, len).join(" ")
+                      : arguments[0];
+    Services.console.logStringMessage(p + msg);
+  },
+
+  warn: function(msg) {
+    var message = Cc["@mozilla.org/scripterror;1"].createInstance(Ci.nsIScriptError);
+    message.init(msg,
+                 null, // sourceName
+                 null, // sourceLine
+                 0, 0, // line, col
+                 Ci.nsIScriptError.warningFlag,
+                 "component javascript");
+    Services.console.logMessage(message);
+    this.trace(msg);
+  },
+
+  error: function(msg) {
+    var ex = new Error(msg);
+    Cu.reportError(ex);
+    this.trace(msg);
+  },
+
+  assert: function(test, msg) {
+    if (test !== true) {
+      var ex =  new Error("console.assert - " + msg + " - " + test);
+      Cu.reportError(ex); // workaround - sometimes exception doesn't show up in console
+      console.trace("console.assert()");
+      throw ex;
+    }
+  },
+
+  trace: function console_trace(desc) {
+    var b = [];
+    for (var s = Components.stack; s; s = s.caller) {
+      b.push(s);
+    }
+
+    var padding = "";
+    var t = new Array(b.length);
+    for (var idx = b.length - 1; idx > -1; idx--) {
+      var s = b[idx];
+      var name = s.name === null ? "(anonymous)" : s.name;
+      t[idx] = s.languageName + " " + padding + s.filename + "\t\t" + name + "\t" + s.lineNumber;
+      padding += " ";
+    }
+    if (!desc) {
+      desc = "console.trace()";
+    }
+    console.log(desc, "\n" + t.reverse().join("\n"));
+  }
+};
+
+
+var util = {
+  loadSubScript: function(path) {
+    var ns = {};
+    Services.scriptloader.loadSubScript(path, ns);
+    return ns;
+  },
+
+  getText: function(name) {
+    return this._getTextCore("general.properties", name, arguments, 1);
+  },
+
+  getTextFrom: function(filename, name) {
+    return this._getTextCore(filename, name, arguments, 2);
+  },
+
+  _getTextCore: function(filename, name, args, startAt) {
+    var bundle = Services.strings.createBundle("${PATH_LOCALE}/" + filename);
+
+    if (args.length === startAt) {
+      return bundle.GetStringFromName(name);
+    } else {
+      var args2 = Array.prototype.slice.call(args, startAt, args.length);
+      console.assert(args2.length > 0, "_getTextCore");
+      return bundle.formatStringFromName(name, args2, args2.length)
+    }
+  }
+};

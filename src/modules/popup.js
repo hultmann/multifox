@@ -36,7 +36,6 @@
 
 "use strict";
 
-Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function createMsgPanel(doc) {
   var panel = doc.getElementById("multifox-popup");
@@ -75,8 +74,7 @@ function appendContent(container, panel) {
     return null;
   }
 
-  var ns = {};
-  Services.scriptloader.loadSubScript("${PATH_MODULE}/error.js", ns);
+  var ns = util.loadSubScript("${PATH_MODULE}/error.js");
   return ns.appendErrorToPanel(container, panel);
 }
 

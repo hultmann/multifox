@@ -74,12 +74,6 @@ var LoginDB = {
     this._invalidated = false;
   },
 
-  shutdown: function() {
-    this._auths = null;
-    this._loggedInTabs = null;
-    this._tldCookieCounter = null;
-  },
-
   _invalidate: function() {
     console.trace("_invalidate");
     this._invalidated = true;

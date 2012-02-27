@@ -1,12 +1,3 @@
-component ${XPCOM_ABOUT_CLASS}    components/protocol.js
-contract  ${XPCOM_ABOUT_CONTRACT} ${XPCOM_ABOUT_CLASS}
-
-component ${XPCOM_STARTUP_CLASS}    components/protocol.js
-contract  ${XPCOM_STARTUP_CONTRACT} ${XPCOM_STARTUP_CLASS}
-category  profile-after-change      ${XPCOM_STARTUP_CONTRACT} ${XPCOM_STARTUP_CONTRACT}
-
-resource  ${RESOURCE_NAME}  modules/
-
 content   ${CHROME_NAME} content/
 
 locale  ${CHROME_NAME}  en-US  locale/en-US/

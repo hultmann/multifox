@@ -36,60 +36,96 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["BrowserWindow"]; // new-window.js
+var EXPORTED_SYMBOLS = ["Main",  // bootstrap.js
+                        "util"]; // about-multifox.html
 
-Components.utils.import("${PATH_MODULE}/new-window.js");
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-Components.utils.import("resource://gre/modules/Services.jsm");
+var Cc = Components.classes;
+var Ci = Components.interfaces;
+var Cu = Components.utils;
 
-console.log("===>LOADING main.js");
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
 
-#include "main.tablogin.js"
-#include "main.logindb.js"
+#include "main.window.js"
 #include "main.network.js"
-#include "main.channel-login.js"
 #include "main.script-injection.js"
 #include "main.storage.js"
+#include "main.tablogin.js"
+#include "main.logindb.js"
+#include "main.channel-login.js"
 #include "main.utils-storage.js"
 #include "main.login-submit.js"
 #include "main.cookies.js"
 #include "main.util.js"
+#include "main.about.js"
 #include "main.tab-inherit.js"
 #include "main.icon.js"
-#include "main.window.js"
 
 
-var m_runner = null;
+var Main = {
+  _install: false,
 
-function MultifoxRunner() {
-  console.log("MultifoxRunner");
+  install: function() {
+    this._install = true;
+    var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
+    ns.install();
+  },
 
-  StringEncoding.init();
-  DocStartScriptInjection.start();
+  uninstall: function() {
+    var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
+    ns.uninstall();
+  },
 
-  var obs = Services.obs;
-  obs.addObserver(SubmitObserver, "earlyformsubmit", false);
-  obs.addObserver(LoginDB.onCookieRejected, "cookie-rejected", false);
-  obs.addObserver(LoginDB.onCookieChanged, "cookie-changed", false);
+  startup: function(isAppStartup) {
+    if (this._install) {
+      // set localized description (install cannot read locale files)
+      var desc = util.getTextFrom("about.properties", "extensions.${EXT_ID}.description");
+      Services.prefs.getBranch("extensions.${EXT_ID}.").setCharPref("description", desc);
+    }
 
-  Cookies.start();
-  util.networkListeners.enable(HttpListeners.request, HttpListeners.response);
+    var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+    ss.persistTabAttribute("multifox-tab-id-provider-tld-enc");
+    ss.persistTabAttribute("multifox-tab-id-provider-user-enc");
+    ss.persistTabAttribute("multifox-tab-current-tld"); // detect TLD change
+    ss.persistTabAttribute("multifox-tab-previous-tld");
 
-  onStart();
-}
+    StringEncoding.init();
+    registerAbout();
+    DocOverlay.start();
+    SubmitObserver.start();
+    NetworkObserver.start();
 
+    Cookies.start();
+    var obs = Services.obs;
+    obs.addObserver(LoginDB.onCookieRejected, "cookie-rejected", false);
+    obs.addObserver(LoginDB.onCookieChanged, "cookie-changed", false);
 
-MultifoxRunner.prototype = {
+    WindowWatcher.start();
+    if (isAppStartup === false) {
+      var winEnum = Services.wm.getEnumerator("navigator:browser");
+      while (winEnum.hasMoreElements()) {
+        BrowserWindow.register(winEnum.getNext());
+      }
+    }
+
+    LoginDB._ensureValid(); // BUG workaround to display welcome icon
+  },
+
   shutdown: function() {
-    console.log("MultifoxRunner.shutdown");
-    util.networkListeners.disable();
-    DocStartScriptInjection.stop();
+    WindowWatcher.stop();
+    DocOverlay.stop();
+    SubmitObserver.stop();
+    NetworkObserver.stop();
     Cookies.stop();
-    LoginDB.shutdown();
+    unregisterAbout();
 
     var obs = Services.obs;
-    obs.removeObserver(SubmitObserver, "earlyformsubmit");
     obs.removeObserver(LoginDB.onCookieRejected, "cookie-rejected");
     obs.removeObserver(LoginDB.onCookieChanged, "cookie-changed");
+
+    var winEnum = Services.wm.getEnumerator("navigator:browser");
+    while (winEnum.hasMoreElements()) {
+      BrowserWindow.unregister(winEnum.getNext());
+    }
   }
 };

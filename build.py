@@ -46,11 +46,9 @@ b.add_binary("content/favicon.ico")
 b.add_binary("content/logo-about.png")
 b.add_binary("content/logo-popup.png")
 
-
 b.add_text("install.rdf")
 b.add_text("chrome.manifest")
-b.add_text("components/protocol.js")
-b.add_text("defaults/preferences/prefs.js")
+b.add_text("bootstrap.js")
 
 b.add_text("content/content-injection.js")
 b.add_text("content/overlays.js")
@@ -58,11 +56,11 @@ b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
 b.add_text("content/about-badges.html")
 
-b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
 b.add_text("modules/error.js")
 b.add_text("modules/popup.js")
 b.add_text("modules/welcome.js")
+b.add_text("modules/maintenance.js")
 
 
 b.add_locale("en-US")
@@ -94,9 +92,6 @@ b.set_var("INTERNAL_DOMAIN_SUFFIX_ANON",     "multifox-anon-1") #external anon 3
 
 b.set_var("XPCOM_ABOUT_CLASS",      "{347c41b6-1417-411c-b87a-422bcfc1899a}")
 b.set_var("XPCOM_ABOUT_CONTRACT",   "@mozilla.org/network/protocol/about;1?what=multifox")
-
-b.set_var("XPCOM_STARTUP_CLASS",    "{56c5d3a5-e39c-4131-af85-ebee4fceb792}")
-b.set_var("XPCOM_STARTUP_CONTRACT", "@hultmann/multifox/bg;1")
 
 xpi = b.get_var("CHROME_NAME") + "-" + b.get_var("EXT_VERSION") + ".xpi"
 b.build("src", "build", xpi)

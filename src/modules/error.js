@@ -36,9 +36,6 @@
 
 "use strict";
 
-Components.utils.import("${PATH_MODULE}/new-window.js");
-Cu.import("${PATH_MODULE}/main.js");
-
 // <vbox>  <== box
 //   <hbox>  <== box2
 //     <image/>

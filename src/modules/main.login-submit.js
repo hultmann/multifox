@@ -36,6 +36,14 @@
 
 
 var SubmitObserver = {
+  start: function() {
+    Services.obs.addObserver(this, "earlyformsubmit", false);
+  },
+
+  stop: function() {
+    Services.obs.removeObserver(this, "earlyformsubmit");
+  },
+
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIFormSubmitObserver]),
 
   notify: function (form, win, actionURI, cancelSubmit) {

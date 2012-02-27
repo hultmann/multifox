@@ -60,7 +60,7 @@ function onContentEvent(evt) {
 
   // send data to content
   var evt2 = contentDoc.createEvent("MessageEvent");
-  evt2.initMessageEvent(DocStartScriptInjection.eventNameSentByChrome, false, false, rv, null, null, null);
+  evt2.initMessageEvent(DocOverlay.eventNameSentByChrome, false, false, rv, null, null, null);
   var success = contentDoc.dispatchEvent(evt2);
 }
 

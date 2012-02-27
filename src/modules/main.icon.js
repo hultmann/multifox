@@ -358,7 +358,7 @@ function showMsgPanel(evt) {
   var doc = evt.target.ownerDocument;
   initIconPressed(doc, "msg");
 
-  var ns = loadSubScript("${PATH_MODULE}/popup.js");
+  var ns = util.loadSubScript("${PATH_MODULE}/popup.js");
   var panel = ns.createMsgPanel(doc);
 
   panel.addEventListener("popuphidden", function(evt) {
@@ -383,7 +383,7 @@ function showMenuPopup(evt) {
   var container = getIconContainer(doc);
 
   if (m_welcomeMode) {
-    var ns = loadSubScript("${PATH_MODULE}/welcome.js");
+    var ns = util.loadSubScript("${PATH_MODULE}/welcome.js");
     var panel = ns.welcomePopup(doc);
     panel.openPopup(container, "bottomcenter topright");
     return;
@@ -395,14 +395,7 @@ function showMenuPopup(evt) {
 
   initIconPressed(doc, "menu");
   var menu = doc.getElementById("mainPopupSet").appendChild(doc.createElement("menupopup"));
-  var ns = loadSubScript("${PATH_MODULE}/popup.js");
+  var ns = util.loadSubScript("${PATH_MODULE}/popup.js");
   ns.createLoginsMenu(menu, function() {initIconNormal(doc);});
   menu.openPopup(container, "after_end", 0, 1);
-}
-
-
-function loadSubScript(path) {
-  var ns = {};
-  Services.scriptloader.loadSubScript(path, ns);
-  return ns;
 }

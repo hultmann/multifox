@@ -35,22 +35,55 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-var BrowserWindow = {
+var WindowWatcher = {
+  start: function() {
+    Services.ww.registerNotification(this);
+  },
 
+  stop: function() {
+    Services.ww.unregisterNotification(this);
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+  observe: function(win, topic, data) {
+    if (topic === "domwindowopened") {
+      win.addEventListener("DOMContentLoaded", WindowWatcher._onLoad, false);
+    }
+  },
+
+  _onLoad: function(evt) {
+    var win = evt.currentTarget;
+    var doc = win.document;
+    if (doc !== evt.target) {
+      return; // avoid bubbled DOMContentLoaded events
+    }
+    win.removeEventListener("DOMContentLoaded", WindowWatcher._onLoad, false);
+
+    switch (doc.location.href) {
+      case "chrome://browser/content/browser.xul":
+        //if ((win.document instanceof Ci.nsIDOMDocument) === false) {
+        BrowserWindow.register(win);
+        break;
+      case "chrome://mozapps/content/extensions/about.xul":
+        // make "About" menuitem open about:multifox tab
+        var ns = util.loadSubScript("${PATH_CONTENT}/overlays.js");
+        ns.AboutOverlay.add(win);
+        break;
+    }
+  }
+};
+
+
+var BrowserWindow = {
   register: function(win) {
     console.log("BrowserWindow.register");
-
-    if (m_runner === null) {
-      // first multifox tab!
-      m_runner = new MultifoxRunner();
-    }
 
     // some MultifoxContentEvent_* listeners are not called when
     // there are "unload" listeners with useCapture=true. o_O
     // But they are called if event listener is an anonymous function.
     win.addEventListener("unload", ChromeWindowEvents, false);
     win.addEventListener("activate", ChromeWindowEvents, false);
-    win.addEventListener(DocStartScriptInjection.eventNameSentByContent, onContentEvent, false, true);
+    win.addEventListener(DocOverlay.eventNameSentByContent, onContentEvent, false, true);
     win.addEventListener("mousedown", RedirDetector.onMouseDown, false); // command/click listeners can be called after network request
     win.addEventListener("keydown", RedirDetector.onKeyDown, false);
 
@@ -67,6 +100,9 @@ var BrowserWindow = {
     win.addEventListener("aftercustomization", afterCustomization, false);
 
     win.document.documentElement.setAttribute("multifox-window-uninitialized", "true");
+
+    // show icon
+    updateUI(tabbrowser.selectedTab, true); // BUG at startup(), LoginDB is still empty
   },
 
 
@@ -75,7 +111,7 @@ var BrowserWindow = {
 
     win.removeEventListener("unload", ChromeWindowEvents, false);
     win.removeEventListener("activate", ChromeWindowEvents, false);
-    win.removeEventListener(DocStartScriptInjection.eventNameSentByContent, onContentEvent, false);
+    win.removeEventListener(DocOverlay.eventNameSentByContent, onContentEvent, false);
     win.removeEventListener("mousedown", RedirDetector.onMouseDown, false);
     win.removeEventListener("keydown", RedirDetector.onKeyDown, false);
 
@@ -90,14 +126,12 @@ var BrowserWindow = {
     win.removeEventListener("beforecustomization", beforeCustomization, false);
     win.removeEventListener("aftercustomization", afterCustomization, false);
 
-    // TODO last window?
-    /*
-    if () {
-      m_runner.shutdown();
-      m_runner = null;
-      Cu.unload("${PATH_MODULE}/main.js");
+
+    // remove icon - TODO skip when closing the window
+    var container = getIconContainer(win.document);
+    if (container !== null) {
+      container.parentNode.removeChild(container);
     }
-    */
   }
 };
 
@@ -127,7 +161,7 @@ var ChromeWindowEvents = {
       updateUI(tab, true);
     }
   }
-}
+};
 
 
 var TabContainerEvents = {
@@ -156,44 +190,6 @@ var TabContainerEvents = {
     updateUI(tab, true);
   }
 };
-
-
-// first run?
-function onStart() {
-  var prefName = "extensions.${EXT_ID}.currentVersion";
-  var prefs = Services.prefs;
-  var ver = prefs.prefHasUserValue(prefName) ? prefs.getCharPref(prefName) : "";
-  if (ver === "${EXT_VERSION}") {
-    return;
-  }
-  prefs.setCharPref(prefName, "${EXT_VERSION}");
-
-
-  // TODO ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
-
-  // remove Multifox 1.x cookies
-  var profileId = 2;
-  var all;
-  do {
-    all = removeTldData_cookies("multifox-profile-" + profileId);
-    console.log("Migrating: removing cookies 1.x", profileId, ":", all.length);
-    profileId++;
-  } while ((profileId < 20) || (all.length > 0));
-
-
-  // remove Multifox 2.x beta 1 cookies
-  all = removeTldData_cookies("x-content.x-namespace");
-  console.log("Migrating: removing cookies 2.0b1", all.length);
-
-  // remove Multifox 2.x beta 2 cookies
-  all = removeTldData_cookies("-.x-namespace");
-  console.log("Migrating: removing cookies 2.0b2", all.length);
-
-  // remove Multifox 2.x beta 3 cookies
-  //all = removeTldData_cookies("multifox-auth-1");
-  //var all2 = removeTldData_cookies("multifox-anon-1");
-  //console.log("Migrating: removing cookies 2.0b3", all.length + all2.length);
-}
 
 
 function beforeCustomization(evt) {

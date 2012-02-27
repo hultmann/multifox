@@ -3,6 +3,7 @@
   <RDF:Description about="urn:mozilla:install-manifest">
 
     <em:type>2</em:type>
+    <em:bootstrap>true</em:bootstrap>
     <em:id>${EXT_ID}</em:id>
     <em:version>${EXT_VERSION}</em:version>
     <em:homepageURL>${EXT_SITE}</em:homepageURL>

@@ -38,6 +38,7 @@
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
+var Cu = Components.utils;
 
 window.addEventListener("DOMContentLoaded", function() {
   loadBadges();
@@ -48,7 +49,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
 // load badges document into file:// iframe
 function loadBadges() {
-  Components.utils.import("resource://gre/modules/Services.jsm");
+  Cu.import("resource://gre/modules/Services.jsm");
   var uri = Services.io.newURI("${PATH_CONTENT}/about-badges.html", "UTF-8", null);
 
   var fileUrl = Cc["@mozilla.org/chrome/chrome-registry;1"]
@@ -67,7 +68,7 @@ function loadBadges() {
 
 function populateDescription() {
   var jsm = {};
-  Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+  Cu.import("resource://gre/modules/AddonManager.jsm", jsm);
   jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
     document.getElementById("desc").innerHTML = addon.description;
   });
@@ -76,7 +77,7 @@ function populateDescription() {
 
 function populatePage() {
   var ns = {};
-  Components.utils.import("${PATH_MODULE}/new-window.js", ns);
+  Cu.import("${PATH_MODULE}/main.js", ns);
 
   var items = ["spread", "author", "l10n", "source", "legal"];
   for (var idx = items.length - 1; idx > -1; idx--) {

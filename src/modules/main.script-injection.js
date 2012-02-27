@@ -36,17 +36,18 @@
 
 // Add hooks to documents (cookie, localStorage, ...)
 
-var DocStartScriptInjection = {
+var DocOverlay = {
   start: function() {
     this._loader = new ScriptSourceLoader();
+    Services.obs.addObserver(this, "document-element-inserted", false);
+
+    // TODO event names need to be constant (due to session restore or enable/disable/update)
     this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
     this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
-    Services.obs.addObserver(this, "document-element-inserted", false);
   },
 
   stop: function() {
     Services.obs.removeObserver(this, "document-element-inserted");
-    delete this._loader;
   },
 
   get eventNameSentByChrome() {
@@ -137,8 +138,8 @@ ScriptSourceLoader.prototype = {
     var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
     xhr.onload = function() {
       me._src = xhr.responseText + "initContext(window, document, '" +
-                                   DocStartScriptInjection.eventNameSentByChrome + "','" +
-                                   DocStartScriptInjection.eventNameSentByContent + "');";
+                                   DocOverlay.eventNameSentByChrome + "','" +
+                                   DocOverlay.eventNameSentByContent + "');";
     };
     xhr.open("GET", "${PATH_CONTENT}/content-injection.js", async);
     xhr.overrideMimeType("text/plain");

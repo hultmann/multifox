@@ -36,8 +36,6 @@
 
 "use strict";
 
-Components.utils.import("${PATH_MODULE}/new-window.js");
-
 
 function welcomePopup(doc) {
   var panel = doc.getElementById("multifox-popup");
