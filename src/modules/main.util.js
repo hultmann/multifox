@@ -265,22 +265,25 @@ function hasRootDomain(domain, host) {
 }
 
 
-function showError(contentWin, notSupportedFeature, details) {
-  var msg = [];
-  msg.push("ERROR=" + notSupportedFeature);
-  msg.push(details);
-  if (contentWin.document) {
-    msg.push("location=" + contentWin.document.location);
-    if (contentWin.document.documentURIObject) {
-      msg.push("uri=     " + contentWin.document.documentURIObject.spec);
-    }
+function enableErrorMsg(notSupportedFeature, msgData, tab) {
+  var msg = ["ERROR"];
+  msg.push("Type: " + notSupportedFeature);
+  msg.push("URL:  " + msgData.url);
+  if (msgData.topUrl) {
+    msg.push("Top:  " + msgData.topUrl);
   }
-  msg.push("title=[" + contentWin.document.title + "]");
+  msg.push("Desc: " + msgData.err);
   console.log(msg.join("\n"));
 
-  var tab = WindowParents.getTabElement(contentWin);
   tab.setAttribute("multifox-tab-error", notSupportedFeature);
   updateUI(tab, true);
+}
+
+
+function enableErrorMsgLocal(notSupportedFeature, win) {
+  var msgData = {url: win.document.location.href, err: ""};
+  msgData.topUrl = win !== win.top ? win.top.document.location.href : "";
+  enableErrorMsg(notSupportedFeature, msgData, WindowParents.getTabElement(win));
 }
 
 

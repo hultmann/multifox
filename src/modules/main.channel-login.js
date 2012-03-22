@@ -71,7 +71,7 @@ function getLoginForRequest(channel, win) {
       return defineTopWindowLogin(requestUri, tabLogin);
     } else {
       // frames shouldn't modify tab identity (obs: frames may have a login, e.g. facebook)
-      return getSubElementLogin(requestUri, tabLogin, null);
+      return getSubElementLogin(requestUri.host, tabLogin, null);
     }
 
   } else {
@@ -83,7 +83,7 @@ function getLoginForRequest(channel, win) {
         tabLogin = TabLoginHelper.getLoginInProgress(tabLogin.tabElement);
       }
     }
-    return getSubElementLogin(requestUri, tabLogin, win);
+    return getSubElementLogin(requestUri.host, tabLogin, win);
   }
 }
 
@@ -167,8 +167,8 @@ function defineNewTldLogin(requestTld, tab, prevLogin, prevTopTld, redirInvalida
 
 
 // tab element = css, img, iframe, ... ==> not called for top doc, so tabLogin is already valid
-function getSubElementLogin(elemUri, tabLogin, elementWindow) {
-  var tldElem = getTldFromHost(elemUri.host);
+function getSubElementLogin(elemUriHost, tabLogin, elementWindow) {
+  var tldElem = getTldFromHost(elemUriHost);
 
   if (elementWindow === null) {
     // elemUri is an iframe!

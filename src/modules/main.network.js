@@ -81,7 +81,7 @@ var NetworkObserver = {
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
-        showError(win, "authorization", "-"); // not supported
+        enableErrorMsgLocal("authorization", win);
         return;
       }
 
@@ -112,7 +112,7 @@ var NetworkObserver = {
         if (win === null) {
           return;
         }
-        showError(win, "www-authenticate", "-");
+        enableErrorMsgLocal("www-authenticate", win);
         return;
       }
 

@@ -91,7 +91,7 @@ var Main = {
 
     StringEncoding.init();
     registerAbout();
-    DocOverlay.start();
+    DocOverlay.init();
     SubmitObserver.start();
     NetworkObserver.start();
 
@@ -113,7 +113,6 @@ var Main = {
 
   shutdown: function() {
     WindowWatcher.stop();
-    DocOverlay.stop();
     SubmitObserver.stop();
     NetworkObserver.stop();
     Cookies.stop();

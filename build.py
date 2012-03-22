@@ -61,6 +61,7 @@ b.add_text("modules/error.js")
 b.add_text("modules/popup.js")
 b.add_text("modules/welcome.js")
 b.add_text("modules/maintenance.js")
+b.add_text("modules/remote-browser.js")
 
 
 b.add_locale("en-US")

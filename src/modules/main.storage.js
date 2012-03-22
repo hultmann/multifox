@@ -35,39 +35,52 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function onContentEvent(evt) {
-  evt.stopPropagation();
+function onRemoteBrowserEvent(browserData) {
+  // this = nsIChromeFrameMessageManager
+  var msgData = browserData.json;
+  msgData.uri = Services.io.newURI(msgData.url, null, null);
 
-  var obj = JSON.parse(evt.data);
-  var contentDoc = evt.target;
-  var rv;
+  var tab = findTabByBrowser(browserData.target); // target=<browser>
+  console.assert(tab !== null, "tab not found");
+  var tabLogin = new TabLogin(tab);
 
-  switch (obj.from) {
+  switch (msgData.msg) {
     case "cookie":
-      rv = documentCookie(obj, contentDoc);
-      break;
+      var loginContent = findFrameLogin(msgData, tabLogin);
+      return documentCookie(msgData, loginContent);
+
     case "localStorage":
-      rv = windowLocalStorage(obj, contentDoc);
-      break;
+      var loginContent = findFrameLogin(msgData, tabLogin);
+      return windowLocalStorage(msgData, loginContent);
+
+    case "new-doc":
+      return DocOverlay.getNewDocData(msgData, tabLogin);
+
+    case "error":
+      console.assert(browserData.sync === false, "use sendAsyncMessage!");
+      enableErrorMsg("sandbox", msgData, tab);
+      return null;
+
     default:
-      throw new Error("onContentEvent: " + obj.from);
+      throw new Error("onRemoteBrowserEvent: " + JSON.stringify(msgData, null, 2));
   }
-
-  if (rv === undefined) {
-    // no response
-    return;
-  }
-
-  // send data to content
-  var evt2 = contentDoc.createEvent("MessageEvent");
-  evt2.initMessageEvent(DocOverlay.eventNameSentByChrome, false, false, rv, null, null, null);
-  var success = contentDoc.dispatchEvent(evt2);
 }
 
 
-function windowLocalStorage(obj, contentDoc) {
-  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
-  var uri = tabLogin.formatUri(contentDoc.documentURIObject);
+function findTabByBrowser(browser) {
+  var tabs = browser.getTabBrowser().mTabContainer.childNodes;
+  for (var idx = tabs.length - 1; idx > -1; idx--) {
+    if (tabs[idx].linkedBrowser === browser) {
+      return tabs[idx];
+    }
+  }
+  return null;
+
+}
+
+
+function windowLocalStorage(msgData, loginContent) {
+  var uri = loginContent.formatUri(msgData.uri);
 
   var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
                   .getService(Ci.nsIScriptSecurityManager)
@@ -77,78 +90,59 @@ function windowLocalStorage(obj, contentDoc) {
                 .getService(Ci.nsIDOMStorageManager)
                 .getLocalStorageForPrincipal(principal, "");
 
-  var rv = undefined;
-  switch (obj.cmd) {
+  var rv;
+  switch (msgData.cmdMethod) {
     case "clear":
       storage.clear();
-      break;
+      return null;
     case "removeItem":
-      storage.removeItem(obj.key);
-      break;
+      storage.removeItem(msgData.cmdKey);
+      return null;
     case "setItem":
-      storage.setItem(obj.key, obj.val); // BUG it's ignoring https
-      break;
+      storage.setItem(msgData.cmdKey, msgData.cmdVal); // BUG it's ignoring https
+      return null;
     case "getItem":
-      rv = storage.getItem(obj.key);
+      rv = storage.getItem(msgData.cmdKey);
       break;
     case "key":
-      rv = storage.key(obj.index);
+      rv = storage.key(msgData.cmdIndex);
       break;
     case "length":
       rv = storage.length;
       break;
     default:
-      throw new Error("localStorage interface unknown: " + obj.cmd);
+      throw new Error("localStorage interface unknown: " + msgData.cmdMethod);
   }
-
-  return rv;
+  return {responseData: rv};
 }
 
 
-function documentCookie(obj, contentDoc) {
-  switch (obj.cmd) {
+function documentCookie(msgData, loginContent) {
+  switch (msgData.cmdMethod) {
     case "set":
-      documentCookieSetter(obj, contentDoc);
-      return undefined;
+      console.assert(loginContent.isLoggedIn, "documentCookieSetter not logged in=" + loginContent.toString()); // login cancelled, mas document já foi interceptado
+      Cookies.setCookie(loginContent, msgData.uri, msgData.cmdValue, true);
+      return null;
+
     case "get":
-      var rv = "foo";
+      var val = "foo@documentCookie";
+      console.assert(loginContent.isLoggedIn, "documentCookieGetter not logged=" + loginContent.toString() + "," + msgData.uri.host);
       try {
-        rv = documentCookieGetter(obj, contentDoc);
-        return rv;
+        var cookie = Cookies.getCookie(true, msgData.uri, loginContent);
+        val = cookie === null ? "" : cookie;
       } catch (ex) {
         console.trace(ex);
       }
-      break;
+      return {responseData: val};
     default:
-      throw new Error("documentCookie " + obj.cmd);
+      throw new Error("documentCookie " + msgData.cmdMethod);
   }
 }
 
 
-function documentCookieSetter(obj, contentDoc) {
-  // tabLogin can be anon and the new tabLogin can be a different login (e.g. facebook iframe)
-  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
-  console.assert(tabLogin.isLoggedIn, "documentCookieSetter not logged in=" + tabLogin.toString()); // login cancelado, mas document já foi interceptado
-  Cookies.setCookie(tabLogin, contentDoc.documentURIObject, obj.value, true);
-}
-
-
-function documentCookieGetter(obj, contentDoc) {
-  var tabLogin = getJsCookieLogin(contentDoc.defaultView);
-  console.assert(tabLogin.isLoggedIn, "documentCookieGetter not logged=" + tabLogin.toString() + "," + contentDoc.documentURI);
-
-  var cookie2 = Cookies.getCookie(true, contentDoc.documentURIObject, tabLogin);
-  var cookie = cookie2 === null ? "" : cookie2;
-  return cookie; // send cookie value to content
-}
-
-
-function getJsCookieLogin(domWin) { // getJsMethodLogin
+function findFrameLogin(msgData, tabLogin) {
   // tabLogin can be anon and the new tabLogin can be a different login (e.g. domWin=facebook iframe)
-  var tabLogin = TabLoginHelper.getFromDomWindow(domWin);
-  console.assert(tabLogin !== null, "is contentDoc not from a tab?");
-
-  if (isTopWindow(domWin)) {
+  if (msgData.top) {
     if (tabLogin.isLoginInProgress) {
       if (tabLogin.hasLoginInProgressMoveData) {
         // data already moved to new user
@@ -159,7 +153,7 @@ function getJsCookieLogin(domWin) { // getJsMethodLogin
   }
 
 
-  // domWin=iframe
+  // origin=>iframe
 
 
   if (tabLogin.isLoginInProgress) {
@@ -171,14 +165,14 @@ function getJsCookieLogin(domWin) { // getJsMethodLogin
   }
 
 
-  var tld = getTldFromHost(domWin.document.location.hostname);
+  var tld = getTldFromHost(msgData.uri.host);
   var iframeLogin = LoginDB.getDefaultLogin(tld, tabLogin);
   if (iframeLogin !== null) {
     return iframeLogin;
 
   } else {
     // iframe tld is not a logged in tab ==> third party iframe
-    console.log("getJsCookieLogin - executing method from anon iframe", tld, "- top", domWin.top.document.location);
+    console.log("findFrameLogin - executing method from anon iframe", tld, "- top");
     // BUG qdo google pergunta soh a senha, começa a validar youtube etc, mas nao ha logininprogress e login falha
     return tabLogin.toAnon();
   }

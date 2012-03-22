@@ -83,12 +83,15 @@ var BrowserWindow = {
     // But they are called if event listener is an anonymous function.
     win.addEventListener("unload", ChromeWindowEvents, false);
     win.addEventListener("activate", ChromeWindowEvents, false);
-    win.addEventListener(DocOverlay.eventNameSentByContent, onContentEvent, false, true);
     win.addEventListener("mousedown", RedirDetector.onMouseDown, false); // command/click listeners can be called after network request
     win.addEventListener("keydown", RedirDetector.onKeyDown, false);
 
     var tabbrowser = win.getBrowser();
     tabbrowser.addEventListener("pageshow", updateNonNetworkDocuments, false);
+
+    var mm = win.messageManager;
+    mm.loadFrameScript("${PATH_MODULE}/remote-browser.js", true);
+    mm.addMessageListener("multifox-remote-msg", onRemoteBrowserEvent);
 
     var container = tabbrowser.tabContainer;
     container.addEventListener("TabSelect", TabContainerEvents, false);
@@ -111,7 +114,6 @@ var BrowserWindow = {
 
     win.removeEventListener("unload", ChromeWindowEvents, false);
     win.removeEventListener("activate", ChromeWindowEvents, false);
-    win.removeEventListener(DocOverlay.eventNameSentByContent, onContentEvent, false);
     win.removeEventListener("mousedown", RedirDetector.onMouseDown, false);
     win.removeEventListener("keydown", RedirDetector.onKeyDown, false);
 
@@ -126,6 +128,10 @@ var BrowserWindow = {
     win.removeEventListener("beforecustomization", beforeCustomization, false);
     win.removeEventListener("aftercustomization", afterCustomization, false);
 
+    var mm = win.messageManager;
+    mm.removeMessageListener("multifox-remote-msg", onRemoteBrowserEvent);
+    mm.removeDelayedFrameScript("${PATH_MODULE}/remote-browser.js");
+    mm.sendAsyncMessage("multifox-shutdown"); // no effect when closing the window
 
     // remove icon - TODO skip when closing the window
     var container = getIconContainer(win.document);

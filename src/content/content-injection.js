@@ -37,37 +37,37 @@
 "use strict";
 
 function initContext(win, doc, sentByChrome, sentByContent) {
-  function sendCmd(obj) {
-    var evt = doc.createEvent("MessageEvent");
-    evt.initMessageEvent(sentByContent, true, true, JSON.stringify(obj), null, null, null);
+  function sendCmd(msgData) {
+    var evt = doc.createEvent("CustomEvent");
+    evt.initCustomEvent(sentByContent, true, true, msgData);
     doc.dispatchEvent(evt);
   }
 
-  function sendCmdRv(obj) {
+  function sendCmdRv(msgData) {
     var rv = null;
     var hasReply = false;
     function chromeListener(evt) {
       hasReply = true;
-      rv = evt.data;
+      rv = evt.detail;
       evt.stopPropagation();
     };
     win.addEventListener(sentByChrome, chromeListener, true);
-    sendCmd(obj); // set rv
+    sendCmd(msgData); // set rv
     win.removeEventListener(sentByChrome, chromeListener, true);
     if (hasReply) {
       return rv;
     } else {
       // this seems to happen when a tab is closed. the event handler is never called.
-      throw new Error("${EXT_NAME} - Return value not received.\n" + sentByContent + "\n" + rv + "\n" + doc.location + "\n" + JSON.stringify(obj));
+      throw new Error("${EXT_NAME} - Return value not received.\n" + sentByContent + "\n" + rv + "\n" + doc.location + "\n" + JSON.stringify(msgData));
     }
   }
 
   Object.defineProperty(doc, "cookie", {
     set: function(jsCookie) {
-      sendCmd({from:"cookie", cmd:"set", value:jsCookie});
+      sendCmd({msg:"cookie", cmdMethod:"set", cmdValue:jsCookie});
     },
     get: function() {
-      return sendCmdRv({from:"cookie", cmd:"get"});
+      return sendCmdRv({msg:"cookie", cmdMethod:"get"});
     }
   });
 
@@ -77,16 +77,16 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     get: function() {
 
       function setItemCore(k, v) {
-        sendCmd({from:"localStorage", cmd:"setItem", key:k, val:v});
+        sendCmd({msg:"localStorage", cmdMethod:"setItem", cmdKey:k, cmdVal:v});
       }
 
       var Storage = {
         setItem: function(k, v) {setItemCore(k, v);},
-        removeItem: function(k) {sendCmd({from:"localStorage", cmd:"removeItem", key:k});},
-        clear: function() {      sendCmd({from:"localStorage", cmd:"clear"});},
-        getItem: function(k) {return sendCmdRv({from:"localStorage", cmd:"getItem", key:k});},
-        key: function(idx) {  return sendCmdRv({from:"localStorage", cmd:"key", index:idx});},
-        get length() {        return sendCmdRv({from:"localStorage", cmd:"length"});},
+        removeItem: function(k) {sendCmd({msg:"localStorage", cmdMethod:"removeItem", cmdKey:k});},
+        clear:      function()  {sendCmd({msg:"localStorage", cmdMethod:"clear"});},
+        getItem: function(k) {return sendCmdRv({msg:"localStorage", cmdMethod:"getItem", cmdKey:k});},
+        key: function(idx)   {return sendCmdRv({msg:"localStorage", cmdMethod:"key", cmdIndex:idx});},
+        get length()         {return sendCmdRv({msg:"localStorage", cmdMethod:"length"});},
 
         toString: function() { return "[object Storage]"; }
       };
@@ -122,7 +122,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
         get: function(receiver, key) { // var a = localStorage.foo
           return Storage.hasOwnProperty(key)
             ? Storage[key]
-            : sendCmdRv({from:"localStorage", cmd:"getItem", key:key});
+            : sendCmdRv({msg:"localStorage", cmdMethod:"getItem", cmdKey:key});
         },
 
         set: function(receiver, key, val) { // localStorage.foo = 1

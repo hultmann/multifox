@@ -37,62 +37,41 @@
 // Add hooks to documents (cookie, localStorage, ...)
 
 var DocOverlay = {
-  start: function() {
+  _loader: null,
+  _sentByChrome: null,
+  _sentByContent: null,
+
+  init: function() {
     this._loader = new ScriptSourceLoader();
-    Services.obs.addObserver(this, "document-element-inserted", false);
 
     // TODO event names need to be constant (due to session restore or enable/disable/update)
     this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
     this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
   },
 
-  stop: function() {
-    Services.obs.removeObserver(this, "document-element-inserted");
-  },
-
-  get eventNameSentByChrome() {
-    return this._sentByChrome;
-  },
-
-  get eventNameSentByContent() {
-    return this._sentByContent;
-  },
-
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-  observe: function(doc, topic, data) {
-    var win = doc.defaultView;
-    if (win === null) {
-      return; // xsl/xbl
-    }
-
-    var tabUser = TabLoginHelper.getFromDomWindow(win);
-    if (tabUser === null) {
-      return;
-    }
-
+  getNewDocData: function(msgData, tabUser) {
+    var tab = tabUser.tabElement;
     if (tabUser.isLoginInProgress) {
-      tabUser = TabLoginHelper.getLoginInProgress(tabUser.tabElement);
+      tabUser = TabLoginHelper.getLoginInProgress(tab);
     }
 
-    // requestUri=about:neterror?e=dnsNotFound&u=http...
-    var requestUri = doc.documentURIObject;
-
-    if (isTopWindow(win) === false) {
+    // uri=about:neterror?e=dnsNotFound&u=http...
+    if (msgData.top === false) {
       // iframe
-      if (isSupportedScheme(requestUri.scheme)) {
-        var tabLogin = getSubElementLogin(requestUri, tabUser, null);
+      if (isSupportedScheme(msgData.uri.scheme)) {
+        var tabLogin = getSubElementLogin(msgData.uri.host, tabUser, null);
         if ((tabLogin !== null) && tabLogin.isLoggedIn) {
-          this._inject(win);
+          return msgData.initBrowser ? this._initBrowserData() : {};
         }
       }
-      return;
+      return null;
     }
 
     // new top window
-    var tab = tabUser.tabElement;
-    if (isSupportedScheme(requestUri.scheme)) {
+    var rv = null;
+    if (isSupportedScheme(msgData.uri.scheme)) {
       if (tabUser.isLoggedIn) {
-        this._inject(win);
+        rv = msgData.initBrowser ? this._initBrowserData() : {};
       }
     } else { // about, javascript
       tab.removeAttribute("multifox-tab-current-tld");
@@ -101,20 +80,16 @@ var DocOverlay = {
 
     updateUI(tab);
     RedirDetector.resetTab(tab);
+    return rv;
   },
 
-
-  _inject: function(win) {
-    var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-content"});
-    sandbox.window = win.wrappedJSObject;
-    sandbox.document = win.document.wrappedJSObject;
-
-    var src = this._loader.getScript();
-    try {
-      Cu.evalInSandbox(src, sandbox);
-    } catch (ex) {
-      showError(win, "sandbox", win.document.location + " " + "//exception=" + ex);
-    }
+  _initBrowserData: function() {
+    var me = this;
+    return {
+      src:           me._loader.getScript(),
+      sentByChrome:  me._sentByChrome,
+      sentByContent: me._sentByContent
+    };
   }
 };
 
@@ -137,9 +112,7 @@ ScriptSourceLoader.prototype = {
     var me = this;
     var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
     xhr.onload = function() {
-      me._src = xhr.responseText + "initContext(window, document, '" +
-                                   DocOverlay.eventNameSentByChrome + "','" +
-                                   DocOverlay.eventNameSentByContent + "');";
+      me._src = xhr.responseText;
     };
     xhr.open("GET", "${PATH_CONTENT}/content-injection.js", async);
     xhr.overrideMimeType("text/plain");
