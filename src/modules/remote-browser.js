@@ -67,14 +67,32 @@ function customDoc(evt) { // DOMWindowCreated handler
   msgData.initBrowser = true;
   var rv = sendSyncMessage("multifox-remote-msg", msgData)[0];
   if (rv !== null) {
-    m_nameSentByChrome  = rv.sentByChrome;
-    m_nameSentByContent = rv.sentByContent;
-    m_src = rv.src + "initContext(window, document, '" +
-                     m_nameSentByChrome + "','" +
-                     m_nameSentByContent + "');";
-    addEventListener(m_nameSentByContent, onContentCustomEvent, false, true); // untrusted event!
+    startTab(rv);
     initDoc(win);
   }
+}
+
+
+function startTab(msgData) {
+  m_nameSentByChrome  = msgData.sentByChrome;
+  m_nameSentByContent = msgData.sentByContent;
+  m_src = msgData.src + "initContext(window, document, '" +
+                                     m_nameSentByChrome + "','" +
+                                     m_nameSentByContent + "');";
+  addEventListener(m_nameSentByContent, onContentCustomEvent, false, true); // untrusted event!
+}
+
+
+function stopTab() {
+  removeMessageListener("multifox-parent-msg", onParentMessage);
+  removeEventListener("DOMWindowCreated", customDoc, false);
+  if (m_src === null) {
+    return;
+  }
+  removeEventListener(m_nameSentByContent, onContentCustomEvent, false);
+  m_src = null;
+  m_nameSentByChrome = null;
+  m_nameSentByContent = null;
 }
 
 
@@ -115,23 +133,30 @@ function onContentCustomEvent(evt) {
 }
 
 
-function shutdown(data) {
-  removeMessageListener("multifox-shutdown", shutdown);
-  removeEventListener("DOMWindowCreated", customDoc, false);
-  if (m_src === null) {
-    return;
+function onParentMessage(message) {
+  switch (message.json.msg) {
+    case "shutdown":
+      stopTab();
+      break;
+    case "tab-data":
+      startTab(message.json);
+      break;
   }
-  removeEventListener(m_nameSentByContent, onContentCustomEvent, false);
-  m_src = null;
-  m_nameSentByChrome = null;
-  m_nameSentByContent = null;
 }
+
 
 var m_src = null;
 var m_nameSentByChrome = null;
 var m_nameSentByContent = null;
 
-addMessageListener("multifox-shutdown", shutdown);
+addMessageListener("multifox-parent-msg", onParentMessage);
 addEventListener("DOMWindowCreated", customDoc, false);
+
+if (content.document.location.href !== "about:blank") {
+  // is extension being installed/enabled/updated?
+  // we need to initialize tab ASAP to keep current documents working
+  // data will be received by onParentMessage
+  sendAsyncMessage("multifox-remote-msg", {msg: "send-tab-data"});
+}
 
 })(Components.utils);

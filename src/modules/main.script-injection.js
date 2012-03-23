@@ -44,9 +44,20 @@ var DocOverlay = {
   init: function() {
     this._loader = new ScriptSourceLoader();
 
-    // TODO event names need to be constant (due to session restore or enable/disable/update)
+    var branch = Services.prefs.getBranch("extensions.${EXT_ID}.");
+    var prefName = "contentEvents";
+    if (branch.prefHasUserValue(prefName)) {
+      var names = branch.getCharPref(prefName).split(" ");
+      if (names.length === 2) {
+        this._sentByChrome = names[0];
+        this._sentByContent = names[1];
+        return;
+      }
+    }
+
     this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
     this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
+    branch.setCharPref(prefName, this._sentByChrome + " " + this._sentByContent);
   },
 
   getNewDocData: function(msgData, tabUser) {
@@ -61,7 +72,7 @@ var DocOverlay = {
       if (isSupportedScheme(msgData.uri.scheme)) {
         var tabLogin = getSubElementLogin(msgData.uri.host, tabUser, null);
         if ((tabLogin !== null) && tabLogin.isLoggedIn) {
-          return msgData.initBrowser ? this._initBrowserData() : {};
+          return msgData.initBrowser ? this.getInitBrowserData() : {};
         }
       }
       return null;
@@ -71,7 +82,7 @@ var DocOverlay = {
     var rv = null;
     if (isSupportedScheme(msgData.uri.scheme)) {
       if (tabUser.isLoggedIn) {
-        rv = msgData.initBrowser ? this._initBrowserData() : {};
+        rv = msgData.initBrowser ? this.getInitBrowserData() : {};
       }
     } else { // about, javascript
       tab.removeAttribute("multifox-tab-current-tld");
@@ -83,7 +94,7 @@ var DocOverlay = {
     return rv;
   },
 
-  _initBrowserData: function() {
+  getInitBrowserData: function() {
     var me = this;
     return {
       src:           me._loader.getScript(),

@@ -35,14 +35,17 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function onRemoteBrowserEvent(browserData) {
+function onRemoteBrowserMessage(message) {
   // this = nsIChromeFrameMessageManager
-  var msgData = browserData.json;
-  msgData.uri = Services.io.newURI(msgData.url, null, null);
-
-  var tab = findTabByBrowser(browserData.target); // target=<browser>
+  var browser = message.target;
+  var tab = findTabByBrowser(browser);
   console.assert(tab !== null, "tab not found");
   var tabLogin = new TabLogin(tab);
+
+  var msgData = message.json;
+  if (msgData.url) {
+    msgData.uri = Services.io.newURI(msgData.url, null, null);
+  }
 
   switch (msgData.msg) {
     case "cookie":
@@ -57,12 +60,21 @@ function onRemoteBrowserEvent(browserData) {
       return DocOverlay.getNewDocData(msgData, tabLogin);
 
     case "error":
-      console.assert(browserData.sync === false, "use sendAsyncMessage!");
+      console.assert(message.sync === false, "use sendAsyncMessage!");
       enableErrorMsg("sandbox", msgData, tab);
       return null;
 
+    case "send-tab-data":
+      console.assert(message.sync === false, "use sendAsyncMessage!");
+      if (tabLogin.hasUser) {
+        var msgData2 = DocOverlay.getInitBrowserData();
+        msgData2.msg = "tab-data";
+        browser.messageManager.sendAsyncMessage("multifox-parent-msg", msgData2);
+      }
+      return null;
+
     default:
-      throw new Error("onRemoteBrowserEvent: " + JSON.stringify(msgData, null, 2));
+      throw new Error("onRemoteBrowserMessage: " + JSON.stringify(msgData, null, 2));
   }
 }
 

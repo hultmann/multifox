@@ -91,7 +91,7 @@ var BrowserWindow = {
 
     var mm = win.messageManager;
     mm.loadFrameScript("${PATH_MODULE}/remote-browser.js", true);
-    mm.addMessageListener("multifox-remote-msg", onRemoteBrowserEvent);
+    mm.addMessageListener("multifox-remote-msg", onRemoteBrowserMessage);
 
     var container = tabbrowser.tabContainer;
     container.addEventListener("TabSelect", TabContainerEvents, false);
@@ -129,9 +129,9 @@ var BrowserWindow = {
     win.removeEventListener("aftercustomization", afterCustomization, false);
 
     var mm = win.messageManager;
-    mm.removeMessageListener("multifox-remote-msg", onRemoteBrowserEvent);
+    mm.removeMessageListener("multifox-remote-msg", onRemoteBrowserMessage);
     mm.removeDelayedFrameScript("${PATH_MODULE}/remote-browser.js");
-    mm.sendAsyncMessage("multifox-shutdown"); // no effect when closing the window
+    mm.sendAsyncMessage("multifox-parent-msg", {msg: "shutdown"}); // no effect when closing the window
 
     // remove icon - TODO skip when closing the window
     var container = getIconContainer(win.document);
