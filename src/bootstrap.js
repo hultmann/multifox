@@ -50,6 +50,10 @@ function install(data, reason) {
 
 // shutdown() is called first
 function uninstall(data, reason) {
+  if (reason !== ADDON_UNINSTALL) {
+    return; // updating
+  }
+
   registerResourceProtocol(data.resourceURI);
   Components.utils.import("${PATH_MODULE}/main.js");
 
