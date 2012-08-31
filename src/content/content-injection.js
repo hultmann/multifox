@@ -62,6 +62,8 @@ function initContext(win, doc, sentByChrome, sentByContent) {
   }
 
   Object.defineProperty(doc, "cookie", {
+    configurable: true,
+    enumerable: true,
     set: function(jsCookie) {
       sendCmd({from:"cookie", cmd:"set", value:jsCookie});
     },
@@ -70,9 +72,10 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     }
   });
 
-  var realLocalStorage = win.localStorage;
 
   Object.defineProperty(win, "localStorage", {
+    configurable: true,
+    enumerable: true,
     get: function() {
 
       function setItemCore(k, v) {
@@ -136,6 +139,8 @@ function initContext(win, doc, sentByChrome, sentByContent) {
       });
 
       Object.defineProperty(win, "localStorage", {
+        configurable: true,
+        enumerable: true,
         get: function() {
           return proxy;
         }
