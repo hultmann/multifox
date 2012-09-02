@@ -119,7 +119,7 @@ const BrowserOverlay = {
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
     key.setAttribute("id", "key_${BASE_DOM_ID}-new-identity");
-    key.setAttribute("modifiers", "accel,shift");
+    key.setAttribute("modifiers", "accel,alt");
     key.setAttribute("key", "M");
     key.setAttribute("oncommand", "(function dummy(){})()"); // workaround
     key.addEventListener("command", onKey, false);
