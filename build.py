@@ -82,7 +82,7 @@ b.add_text("locale/${locale}/general.properties")
 b.add_text("locale/${locale}/about.properties")
 
 
-b.set_var("EXT_VERSION",     "1.3.4")
+b.set_var("EXT_VERSION",     "1.3.5")
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
