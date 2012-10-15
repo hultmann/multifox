@@ -58,7 +58,7 @@ var Cookies = {
   _prefListener: {
     behavior: -1,
 
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+    // nsIObserver
     // topic=nsPref:changed data=network.cookie.cookieBehavior
     observe: function(subject, topic, data) {
       this.behavior = subject
@@ -69,9 +69,9 @@ var Cookies = {
 
   },
 
-  setCookie: function(tabLogin, originalUri, originalCookie, fromJs) {
-    var uri = tabLogin.formatUri(originalUri);
-    var val = convertCookieDomain(originalCookie, tabLogin);
+  setCookie: function(docUser, originalUri, originalCookie, fromJs) {
+    var uri = docUser.appendLoginToUri(originalUri);
+    var val = convertCookieDomain(originalCookie, docUser);
 
     if (this._prefListener.behavior === 0) {
       this._setCookie(fromJs, uri, val);
@@ -86,8 +86,7 @@ var Cookies = {
     p.addObserver(PREF_COOKIE_BEHAVIOR, this._prefListener, false);
   },
 
-  getCookie: function(fromJs, originalUri, tabLogin) {
-    var uri = tabLogin.formatUri(originalUri);
+  getCookie: function(fromJs, originalUri, uri) {
 
     if (this._prefListener.behavior === 0) {
       return this._getCookie(fromJs, uri);
@@ -132,7 +131,7 @@ var Cookies = {
 };
 
 
-function convertCookieDomain(cookieHeader, tabLogin) {
+function convertCookieDomain(cookieHeader, docUser) {
   var objCookies = new SetCookieParser(cookieHeader, true);
   var len = objCookies.length;
   var newCookies = new Array(len);
@@ -141,7 +140,7 @@ function convertCookieDomain(cookieHeader, tabLogin) {
     var myCookie = objCookies.getCookieByIndex(idx);
     var realDomain = myCookie.getStringProperty("domain");
     if (realDomain.length > 0) {
-      myCookie.defineMeta("domain", tabLogin.formatHost(realDomain));
+      myCookie.defineMeta("domain", docUser.appendLogin(realDomain));
       newCookies[idx] = myCookie.toHeaderLine();
     } else {
       newCookies[idx] = myCookie.raw;

@@ -42,7 +42,7 @@ var AboutOverlay = {
       return;
     }
 
-    var browserWin = Services.wm.getMostRecentWindow("navigator:browser");
+    var browserWin = UIUtils.getMostRecentWindow();
     if (browserWin === null) {
       return;
     }

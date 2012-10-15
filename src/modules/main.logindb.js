@@ -41,17 +41,19 @@ this._tldCookieCounter = {
 }
 
 this._auths = {
-  "google.com": [   // tld
-    "efghijklmnop", // user
+  "google.com": [   // tld (encoded)
+    "efghijklmnop", // user (encoded)
     "abcdefghijkl"
   ],
   "twtter.com": [
     "efghijklmnop",
   ]
 
+// TODO default for top docs e o default para third party iframes
+
 this._loggedInTabs = {
-  "my-app.com": [   // tabTld
-    "google.com",   // _auths[tld]
+  "my-app.com": [   // tabTld (encoded)
+    "google.com",   // _auths[tld] (encoded)
     "facebook.com",
     "twitter.com"
   ],
@@ -62,15 +64,29 @@ this._loggedInTabs = {
 
 
 var LoginDB = {
+
   _auths: null,
   _loggedInTabs: null,
   _tldCookieCounter: null, // invalidateAfterCookieAddition optimization
   _invalidated: true,
 
+
+  init: function() {
+    Services.obs.addObserver(this._onCookieRejected, "cookie-rejected", false);
+    Services.obs.addObserver(this._onCookieChanged, "cookie-changed", false);
+  },
+
+
+  uninit: function() {
+    Services.obs.removeObserver(this._onCookieRejected, "cookie-rejected");
+    Services.obs.removeObserver(this._onCookieChanged, "cookie-changed");
+  },
+
+
   _reset: function() {
-    this._auths = { __proto__: null };
-    this._loggedInTabs = { __proto__: null };
-    this._tldCookieCounter = { __proto__: null };
+    this._auths = Object.create(null);
+    this._loggedInTabs = Object.create(null);
+    this._tldCookieCounter = Object.create(null);
     this._invalidated = false;
   },
 
@@ -86,88 +102,80 @@ var LoginDB = {
     }
   },
 
-  setTabAsDefaultLogin: function(tab) {
-    var tabLogin = new TabLogin(tab);
-    if (tabLogin.hasUser) {
-      this.setDefaultLogin(tabLogin.getEncodedTabTld(), tabLogin.encodedUser, tabLogin.encodedTld);
+  setTabAsDefaultUser: function(tab) { // used by ChromeRelatedEvents.activate
+    var docUser = WinMap.getUserFromTab(getIdFromTab(tab));
+    if (docUser !== null) {
+      this.setDefaultUser(docUser.encodedDocTld, docUser.user);
     }
   },
 
-  setDefaultLogin: function setDefaultLogin(encodedTld, encodedLoginUser, encodedLoginTld) {
-    console.assert(typeof encodedTld       === "string", "encodedTld=" + encodedTld);
-    console.assert(typeof encodedLoginUser === "string", "encodedLoginUser=" + encodedLoginUser);
-    console.assert(typeof encodedLoginTld  === "string", "encodedLoginTld=" + encodedLoginTld);
-
+  setDefaultUser: function(encodedTld, user) { // TODO setDefaultTopLogin
+    console.assert(typeof encodedTld === "string", "encodedTld=" + encodedTld);
     this._ensureValid();
 
     if ((encodedTld in this._loggedInTabs) === false) {
-      console.log("LoginDB.setDefaultLogin", "encodedTld not found", encodedTld);
+      console.log("LoginDB.setDefaultUser", "encodedTld not found", encodedTld);
       return;
     }
 
-    if ((encodedLoginTld in this._auths) === false) {
-      console.log("LoginDB.setDefaultLogin", "encodedLoginTld not found", encodedLoginTld, StringEncoding.decode(encodedLoginTld));
+    if ((user.encodedTld in this._auths) === false) {
+      console.log("LoginDB.setDefaultUser", "user.encodedTld not found", user.encodedTld, user.plainTld);
       return;
     }
 
     var authTlds = this._loggedInTabs[encodedTld]; // usually len=1
-    var idx2 = authTlds.indexOf(encodedLoginTld);
+    var idx2 = authTlds.indexOf(user.encodedTld);
     if (idx2 > 0) { // [0] => already the default
       authTlds.splice(idx2, 1);
-      authTlds.unshift(encodedLoginTld);
-      console.log("LoginDB.setDefaultLogin updated", encodedLoginTld, encodedTld, JSON.stringify(this._loggedInTabs[encodedTld], null, 2));
+      authTlds.unshift(user.encodedTld);
+      console.log("LoginDB.setDefaultUser updated", user.encodedTld, encodedTld, JSON.stringify(this._loggedInTabs[encodedTld], null, 2));
     }
 
 
-    var allUsers = this._auths[encodedLoginTld];
-    var idx1 = allUsers.indexOf(encodedLoginUser);
+    var allUsers = this._auths[user.encodedTld];
+    var idx1 = allUsers.indexOf(user.encodedName);
     switch (idx1) {
       case 0:
         // nop: user is already the default
         break;
       case -1:
         // user not found (cookies cleared?)
-        if (encodedLoginUser === TabLoginHelper.NewAccount) {
-          console.log("LoginDB.setDefaultLogin NewAccount", encodedLoginTld, this._auths[encodedLoginTld].toSource(), allUsers.toSource());
-          allUsers.unshift(TabLoginHelper.NewAccount);
+        if (user.isNewAccount) {
+          console.log("LoginDB.setDefaultUser NewAccount", user.encodedTld, this._auths[user.encodedTld].toSource(), allUsers.toSource());
+          allUsers.unshift(UserUtils.NewAccount);
         }
         break;
       default:
         allUsers.splice(idx1, 1);
-        allUsers.unshift(encodedLoginUser); // [0] => default
-        console.log("LoginDB.setDefaultLogin updated1", StringEncoding.decode(encodedLoginUser), encodedLoginUser, encodedLoginTld, this._auths[encodedLoginTld].toSource());
+        allUsers.unshift(user.encodedName); // [0] => default
+        console.log("LoginDB.setDefaultUser updated1", user.plainName, user.encodedName, user.encodedTld, this._auths[user.encodedTld].toSource());
         break;
     }
   },
 
 
-  getDefaultLogin: function getDefaultLogin(tld, fallbackTabInfo) {
-    this._ensureValid();
-
-    var encTld = StringEncoding.encode(tld);
-    if ((encTld in this._loggedInTabs) === false) {
-      console.log("LoginDB.getDefaultLogin - not a logged in website", StringEncoding.decode(encTld), encTld);
+  getDefaultUser: function(tabId, encTld) {
+    if (this.isLoggedIn(encTld) === false) {
       return null;
     }
 
     // obs: loginUser16/loginTld may be null
     var loginTlds = this._loggedInTabs[encTld];
     var defaultFormTld = loginTlds[0];
-    if (defaultFormTld === fallbackTabInfo.encodedTld) {
-      return fallbackTabInfo; // reuse/don't change current user
-    }
 
+    var tld = StringEncoding.decode(encTld);
     console.assert(defaultFormTld in this._auths, "this._auths " + defaultFormTld + "/" + tld);
     var users = this._auths[defaultFormTld];
     console.assert(users.length > 0, "users.length");
 
     var defaultUser = users[0];
-    return TabLoginHelper.create(fallbackTabInfo.tabElement, defaultUser, defaultFormTld);
+    var myuser = new UserId(defaultUser, defaultFormTld);
+    return new DocumentUser(myuser, tld, tabId);
   },
 
 
   invalidateAfterCookieAddition: function(internalHostname) {
-    var encodedLogin = CookieUtils.getEncodedLogin(internalHostname);
+    var encodedLogin = UserUtils.getEncodedLogin(internalHostname);
     if (encodedLogin === null) {
       return;
     }
@@ -186,7 +194,7 @@ var LoginDB = {
     if (counter === null) {
       return false;
     }
-    var encodedLogin = CookieUtils.getEncodedLogin(internalHostname);
+    var encodedLogin = UserUtils.getEncodedLogin(internalHostname);
     if (encodedLogin === null) {
       return false;
     }
@@ -218,7 +226,7 @@ var LoginDB = {
     var loginTld;
 
     for (var idx = all.length - 1; idx > -1; idx--) {
-      encodedLogin = CookieUtils.getEncodedLogin(all[idx].host);
+      encodedLogin = UserUtils.getEncodedLogin(all[idx].host);
       if (encodedLogin === null) {
         continue; // default/anon cookie
       }
@@ -255,11 +263,11 @@ var LoginDB = {
 
     // keep default users
     var tld;
-    var user;
+    var name;
     for (var tabTld in oldLoggedInTabs) {
       tld = oldLoggedInTabs[tabTld][0];
-      user = oldAuths[tld][0];
-      this.setDefaultLogin(tabTld, user, tld);
+      name = oldAuths[tld][0];
+      this.setDefaultUser(tabTld, new UserId(name, tld));
     }
 
     console.log("_update\nAuths:",          JSON.stringify(this._auths, null, 2),
@@ -268,73 +276,66 @@ var LoginDB = {
     );
   },
 
-  // TODO move to TabLogin.isTldLoggedIn(plainTld)?
-  isTldLoggedIn: function(plainTld, encodedLoginUser, encodedLoginTld) {
-    this._ensureValid();
-    var encodedTld = StringEncoding.encode(plainTld);
-    if (encodedTld in this._loggedInTabs) {
-      var authTlds = this._loggedInTabs[encodedTld];
-      var hasAuthTld = authTlds.indexOf(encodedLoginTld) > -1;
-      if (hasAuthTld) {
-        if (encodedLoginTld in this._auths) {
-          if (this._auths[encodedLoginTld].indexOf(encodedLoginUser) > -1) {
-            return true;
-          }
-        }
+  hasLoggedInHost: function(hosts) {
+    var encTld;
+    for (var idx = hosts.length - 1; idx > -1; idx--) {
+      encTld = StringEncoding.encode(getTldFromHost(hosts[idx]));
+      if (this.isLoggedIn(encTld)) { // TODO perf: keep a plain tld list + getEncodedTld(tld)
+        return true;
       }
     }
     return false;
   },
 
-  isLoggedIn: function(plainTld) {
+  isLoggedIn: function(encTld) {
     this._ensureValid();
-    return StringEncoding.encode(plainTld) in this._loggedInTabs;
+    return encTld in this._loggedInTabs;
   },
 
-  getEncodedTldUsers: function(encodedTabTld) {
-    this._ensureValid();
 
-    if ((encodedTabTld in this._loggedInTabs) === false) {
+  getUsers: function(docUser) {
+    this._ensureValid();
+    var encDocTld = docUser.encodedDocTld;
+    if ((encDocTld in this._loggedInTabs) === false) {
       return [];
     }
-    var authTlds = this._loggedInTabs[encodedTabTld];
+
+    var authTlds = this._loggedInTabs[encDocTld];
+    var tabUsers = [];
+    var usr;
+    var users;
+    var loginTld;
 
     // TODO test multiple sites eg bugzilla + amo
-    var tabUsers = [];
     for (var idx1 = authTlds.length - 1; idx1 > -1; idx1--) {
-      var loginTld = authTlds[idx1];
-      var users = this._auths[loginTld];
+      loginTld = authTlds[idx1];
+      users = this._auths[loginTld];
       for (var idx2 = users.length - 1; idx2 > -1; idx2--) {
-        var encodedUser = users[idx2];
-        if (encodedUser === TabLoginHelper.NewAccount) {
-          continue;
+        usr = new UserId(users[idx2], loginTld);
+        if (usr.isNewAccount === false) {
+          tabUsers.push(usr);
         }
-        tabUsers.push({   plainLoginUser: StringEncoding.decode(encodedUser),
-                        encodedLoginUser: encodedUser,
-                        encodedLoginTld:  loginTld
-        });
       }
     }
 
     // alphabetical sort
     tabUsers.sort(function(userA, userB) {
-      return userB.plainLoginUser.localeCompare(userA.plainLoginUser);
+      return userB.plainName.localeCompare(userA.plainName);
     });
 
     return tabUsers;
   },
 
-  onCookieRejected: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-    observe: function(subject, topic, data) {
+
+  _onCookieRejected: {
+    observe: function(subject, topic, data) { // nsIObserver
       console.log("cookie-rejected 0", subject, topic, data);
       console.log("cookie-rejected 1", subject.QueryInterface(Ci.nsIURI).spec);
     }
   },
 
-  onCookieChanged: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-    observe: function(subject, topic, data) {
+  _onCookieChanged: {
+    observe: function(subject, topic, data) { // nsIObserver
       if (LoginDB._loggedInTabs === null) {
         return;
       }

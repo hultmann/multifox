@@ -48,10 +48,10 @@ var CookieUtils = {
     return getAllCookiesFromHost("${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}");
   },
 
-  getUserCookies: function(encUser, encTld) { // used by removeUser
+  getUserCookies: function(user) { // used by removeUser
     var rv = [];
     // "[*select from all hosts*]-[user@gmail.com]-[google.com]"
-    var hexlogin = "-" + encUser + "-" + encTld;
+    var hexlogin = "-" + user.encodedName + "-" + user.encodedTld;
     this._getUserCookies(rv, hexlogin, "${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}");
     this._getUserCookies(rv, hexlogin, "${INTERNAL_DOMAIN_SUFFIX_ANON}");
     return rv;
@@ -67,47 +67,8 @@ var CookieUtils = {
         rv.push(cookie);
       }
     }
-  },
-
-  _getLabels: function(internalHost) {
-    if (hasRootDomain("${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}", internalHost) === false) {
-      return null;
-    }
-
-    // internalHost = .youtube.com.[youtube.com]-[user@foo]-[google.com].multifox-auth-1
-    // [0] multifox-auth-1
-    // [1] [youtube.com]-[user@gmail.com]-[google.com]
-    // [2] com
-    // [3] youtube
-    // [4] (empty?)
-    var labels = internalHost.split(".").reverse();
-    console.assert(labels[0] === "${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}", "_getLabels " + internalHost);
-    return labels;
-  },
-
-  // returns ".example.com", "example.com" ...
-  getRealHost: function(internalHost) {
-    var labels = this._getLabels(internalHost);
-    return labels === null ? null // normal host
-                           : labels.slice(2).reverse().join(".");
-  },
-
-  getEncodedLogin: function(internalHost) {
-    var labels = this._getLabels(internalHost);
-    if (labels === null) {
-      return null;
-    }
-    var strip = labels[1].split("-");
-    if (strip.length !== 3) {
-      return null;
-    }
-    return {
-      rawData:   labels[1],
-      tabTld:    strip[0],
-      loginUser: strip[1],
-      loginTld:  strip[2]
-    };
   }
+
 };
 
 
@@ -128,25 +89,31 @@ function getAllCookiesFromHost(h) {
     }
   }
 
-  console.log("getAllCookiesFromHost time=" + (new Date().getTime() - _t) + "ms -- len parsed=" + _qty + " -- len rv=" + rv.length);
+  console.log("getAllCookiesFromHost", h, "time=" + (new Date().getTime() - _t) + "ms -- len parsed=" + _qty + " -- len rv=" + rv.length);
   return rv;
 }
 
 
 function removeCookies(all) {
-  var tlds = [];
-  var realHost;
+  console.assert(Array.isArray(all), "all!=array");
 
+  var tlds = [];
+  var realTld;
+  var realHost;
   var mgr = Services.cookies;
   var cookie;
+
   for (var idx = all.length - 1; idx > -1; idx--) {
     cookie = all[idx];
     mgr.remove(cookie.host, cookie.name, cookie.path, false);
 
     // for plugin debug
-    realHost = getTldFromHost(CookieUtils.getRealHost(cookie.host));
-    if ((realHost !== null) && (tlds.indexOf(realHost) === -1)) {
-      tlds.push(realHost);
+    realHost = UserUtils.getRealHost(cookie.host);
+    if (realHost !== null) {
+      realTld = getTldFromHost(realHost);
+      if (tlds.indexOf(realTld) === -1) {
+        tlds.push(realTld);
+      }
     }
   }
   console.log("removeCookies n =", all.length);

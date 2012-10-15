@@ -49,17 +49,19 @@ Cu.import("resource://gre/modules/Services.jsm");
 #include "main.window.js"
 #include "main.network.js"
 #include "main.script-injection.js"
-#include "main.storage.js"
-#include "main.tablogin.js"
+#include "main.ContentRelatedEvents.js"
+#include "main.ChromeRelatedEvents.js"
+#include "main.WinMap.js"
+#include "main.User.js"
+#include "main.CrossTldLogin.js"
 #include "main.logindb.js"
-#include "main.channel-login.js"
 #include "main.utils-storage.js"
 #include "main.login-submit.js"
 #include "main.cookies.js"
 #include "main.util.js"
 #include "main.about.js"
-#include "main.tab-inherit.js"
 #include "main.icon.js"
+#include "main.UIUtils.js"
 
 
 var Main = {
@@ -84,47 +86,37 @@ var Main = {
     }
 
     var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
-    ss.persistTabAttribute("multifox-tab-id-provider-tld-enc");
-    ss.persistTabAttribute("multifox-tab-id-provider-user-enc");
-    ss.persistTabAttribute("multifox-tab-current-tld"); // detect TLD change
-    ss.persistTabAttribute("multifox-tab-previous-tld");
+    try {
+      ss.persistTabAttribute("multifox-tab-logins");
+    } catch (ex) {
+      // exception resource:///modules/sessionstore/SessionStore.jsm :: ssi_writeFile :: line 4358
+      console.log(ex);
+    }
 
     StringEncoding.init();
     registerAbout();
     DocOverlay.init();
     SubmitObserver.start();
     NetworkObserver.start();
-
     Cookies.start();
-    var obs = Services.obs;
-    obs.addObserver(LoginDB.onCookieRejected, "cookie-rejected", false);
-    obs.addObserver(LoginDB.onCookieChanged, "cookie-changed", false);
-
-    WindowWatcher.start();
+    LoginDB.init();
+    ContentRelatedEvents.init();
+    WindowWatcher.init();
     if (isAppStartup === false) {
-      var winEnum = Services.wm.getEnumerator("navigator:browser");
-      while (winEnum.hasMoreElements()) {
-        BrowserWindow.register(winEnum.getNext());
-      }
+      MainWindow.initAll();
     }
 
     LoginDB._ensureValid(); // BUG workaround to display welcome icon
   },
 
   shutdown: function() {
-    WindowWatcher.stop();
+    WindowWatcher.uninit();
     SubmitObserver.stop();
     NetworkObserver.stop();
     Cookies.stop();
+    LoginDB.uninit();
+    ContentRelatedEvents.uninit();
+    MainWindow.uninitAll();
     unregisterAbout();
-
-    var obs = Services.obs;
-    obs.removeObserver(LoginDB.onCookieRejected, "cookie-rejected");
-    obs.removeObserver(LoginDB.onCookieChanged, "cookie-changed");
-
-    var winEnum = Services.wm.getEnumerator("navigator:browser");
-    while (winEnum.hasMoreElements()) {
-      BrowserWindow.unregister(winEnum.getNext());
-    }
   }
 };

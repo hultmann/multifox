@@ -51,6 +51,7 @@ b.add_text("chrome.manifest")
 b.add_text("bootstrap.js")
 
 b.add_text("content/content-injection.js")
+b.add_text("content/content-injection-reset.js")
 b.add_text("content/overlays.js")
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
@@ -74,22 +75,20 @@ b.add_text("locale/${locale}/about.properties")
 b.add_text("locale/${locale}/welcome.properties")
 
 
-b.set_var("EXT_VERSION",     "2.0b5pre")
+b.set_var("EXT_VERSION",     "2.0b7pre")
 b.set_var("EXT_ID",          "multifox@hultmann")
-b.set_var("EXT_NAME",        "Multifox (BETA)")
+b.set_var("EXT_NAME",        "Multifox 2 (BETA)")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
-b.set_var("APP_MIN_VERSION", "10.0")
-b.set_var("APP_MAX_VERSION", "12.*")
+b.set_var("APP_MIN_VERSION", "16.0")
+b.set_var("APP_MAX_VERSION", "19.*")
 b.set_var("CHROME_NAME",     "multifox")
 b.set_var("RESOURCE_NAME",   "multifox-modules")
 b.set_var("PATH_CONTENT",    "chrome://multifox/content")
 b.set_var("PATH_LOCALE",     "chrome://multifox/locale")
 b.set_var("PATH_MODULE",     "resource://multifox-modules")
 
-b.set_var("BASE_DOM_ID",            "multifox-dom")
-
-b.set_var("INTERNAL_DOMAIN_SUFFIX_LOGGEDIN", "multifox-auth-1")
-b.set_var("INTERNAL_DOMAIN_SUFFIX_ANON",     "multifox-anon-1") #external anon 3party
+b.set_var("INTERNAL_DOMAIN_SUFFIX_LOGGEDIN", "multifox-auth-2")
+b.set_var("INTERNAL_DOMAIN_SUFFIX_ANON",     "multifox-anon-2") #external anon 3party
 
 b.set_var("XPCOM_ABOUT_CLASS",      "{347c41b6-1417-411c-b87a-422bcfc1899a}")
 b.set_var("XPCOM_ABOUT_CONTRACT",   "@mozilla.org/network/protocol/about;1?what=multifox")

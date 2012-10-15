@@ -42,52 +42,60 @@ function setWelcomeMode(enable) {
     return;
   }
 
-  m_welcomeMode = enable; // TODO check tabs with login attr
+  m_welcomeMode = enable; // TODO check logged in tabs (attribute)
 
-  var winEnum = Services.wm.getEnumerator("navigator:browser");
-  while (winEnum.hasMoreElements()) {
-    var win = winEnum.getNext();
-    var tab = win.getBrowser().selectedTab;
-    updateUI(tab, true);
+  // update current tab (all windows)
+  var enumWin = UIUtils.getWindowEnumerator();
+  while (enumWin.hasMoreElements()) {
+    var win = enumWin.getNext();
+    var icon = getIconContainer(win.document);
     if (enable) {
-      getIconContainer(win.document).setAttribute("current-error", "welcome"); // force updateStatIcon
+      icon.setAttribute("current-error", "welcome");
+    } else {
+      icon.removeAttribute("current-error");
+      insertIcon(false, null, win.document);
     }
+    updateUIAsync(UIUtils.getSelectedTab(win), true);
   }
 }
 
 
-function updateUI(tab, force) { // force = optional param
-try {
+function updateUIAsync(tab, updateTopLogin) {
+  if (tab.hasAttribute("selected") === false) {
+    return;
+  }
+  if (updateTopLogin === false) {
+    // 3rd-party icon?
+    if (getIconContainer(tab.ownerDocument) !== null) {
+      return;
+    }
+  }
+  tab.linkedBrowser
+     .messageManager
+     .sendAsyncMessage("multifox-parent-msg", {msg: "get-tab-hosts"});
+}
+
+
+function updateUIAsyncCallback(msgData, tab) {
   if (tab.hasAttribute("selected") === false) {
     return;
   }
 
-  if (tab.hasAttribute("multifox-invalidate-icon")) {
-    tab.removeAttribute("multifox-invalidate-icon");
-  } else {
-    if (force !== true) {
-      return;
-    }
-  }
-
+try {
   var doc = tab.ownerDocument;
-  var container = getIconContainer(doc);
-
-  if ((tab.hasAttribute("multifox-tab-id-provider-tld-enc") === false) && (m_welcomeMode === false)) {
-    // remove box
-    if (container !== null) {
-      container.parentNode.removeChild(container);
-    }
+  if ((LoginDB.hasLoggedInHost(msgData.hosts) === false) && (m_welcomeMode === false)) {
+    removeUI(doc);
     return;
   }
 
+  // show button
+  var container = getIconContainer(doc);
   if (container === null) {
     createContainer(doc);
     var win = doc.defaultView;
-    var delay = getTabNodes(win.getBrowser()).length > 1 ? 25 : 200;
+    var delay = UIUtils.getTabList(win).length > 1 ? 25 : 200;
     win.setTimeout(initIcon, delay, doc); // open window => greater delay
   } else {
-    LoginDB.setTabAsDefaultLogin(tab); // TODO it will call _ensureValid, make sure we don't block TabSelect
     if (container.firstChild !== null) { // waiting initIcon?
       updateIconCore(tab, container);
     }
@@ -98,6 +106,13 @@ console.error(ex);
 }
 }
 
+
+function removeUI(xulDoc) {
+  var container = getIconContainer(xulDoc);
+  if (container !== null) {
+    container.parentNode.removeChild(container);
+  }
+}
 
 
 // <hbox align="center" id="multifox-icon">
@@ -184,50 +199,44 @@ function setStyle(mode, containerStyle, iconStyle, labelStyle) {
 }
 
 
-function invalidateUI(tab) {
-  if (tab.hasAttribute("selected")) {
-    tab.setAttribute("multifox-invalidate-icon", "true");
-  }
-}
-
-
 function updateIconCore(tab, container) {
   if (m_welcomeMode) {
     var doc = tab.ownerDocument;
     getIconLabel(doc).setAttribute("value", "${EXT_NAME}");
-    updateStatIcon3(true, getStatIconContainer(doc), "${PATH_CONTENT}/favicon.ico");
+    insertIcon(true, "${PATH_CONTENT}/favicon.ico", doc);
   } else {
-    updateStatIcon(tab, container);
     updateIconUserName(tab);
+    updateIcon(tab, container);
   }
 }
 
 
 function updateIconUserName(tab) {
-  var tabLogin = new TabLogin(tab);
+  var docUser = WinMap.getUserFromTab(getIdFromTab(tab));
   var user;
-  if (tabLogin.isNewUser) {
-    user = util.getText("icon.add-account.label");
+  if (docUser === null) {
+    user = "<IGNOREME>"; // 3rd-party
   } else {
-    user = tabLogin.plainUser; // BUG sometimes is null
+    user = docUser.user.isNewAccount ? util.getText("icon.add-account.label")
+                                     : docUser.user.plainName;
   }
 
   getIconLabel(tab.ownerDocument).setAttribute("value", user);
 }
 
 
-function updateStatIcon(tab, container) {
+function updateIcon(tab, container) {
   var currentError = container.hasAttribute("current-error") ? container.getAttribute("current-error") : "";
   var newError = tab.hasAttribute("multifox-tab-error") ? tab.getAttribute("multifox-tab-error") : "";
   if (currentError !== newError) {
     container.setAttribute("current-error", newError);
-    var statIcon = getStatIconContainer(tab.ownerDocument);
-    updateStatIcon3(newError.length > 0, statIcon, "chrome://global/skin/icons/warning-16.png"); // ubuntu: 22x22
+    insertIcon(newError.length > 0, "chrome://global/skin/icons/warning-16.png", tab.ownerDocument); // ubuntu: 22x22
   }
 }
 
 
-function updateStatIcon3(show, statIcon, url) {
+function insertIcon(show, url, doc) {
+  var statIcon = getStatIconContainer(doc);
   if (statIcon.firstChild) {
     statIcon.removeChild(statIcon.firstChild);
   }
@@ -264,9 +273,6 @@ function getStatIconContainer(doc) {
 
 
 function initIcon(doc) {
-  var tab = doc.defaultView.getBrowser().selectedTab;
-  LoginDB.setTabAsDefaultLogin(tab);
-
   var container = getIconContainer(doc);
   if (container === null) {
     // e.g. user changed tab!
@@ -278,6 +284,7 @@ function initIcon(doc) {
   createBoxDom(container);
   setStyleCore(container.style, doc);
 
+  var tab = UIUtils.getSelectedTab(doc.defaultView);
   if (tab.hasAttribute("multifox-logging-in")) {
     tab.removeAttribute("multifox-logging-in");
     container.style.opacity = "0";
@@ -346,7 +353,7 @@ function onIconHover(evt) {
 
 
 function isMsgPopup(evt) {
-  return evt.target.localName === "image";
+  return m_welcomeMode ? false : evt.target.localName === "image";
 }
 
 
@@ -363,10 +370,9 @@ function showMsgPanel(evt) {
 
   panel.addEventListener("popuphidden", function(evt) {
     initIconNormal(doc);
-    // remove error msg
-    var tab = doc.defaultView.getBrowser().selectedTab;
+    var tab = UIUtils.getSelectedTab(doc.defaultView);
     tab.removeAttribute("multifox-tab-error");
-    updateUI(tab, true);
+    updateUIAsync(tab, true); // remove error msg
   }, false);
 
   panel.openPopup(getStatIconContainer(doc), "bottomcenter topleft", 5, 0); // due to img.style.margin

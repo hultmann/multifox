@@ -76,26 +76,28 @@ function appendErrorToPanel(box, panel) {
 
 
 function moveTabToDefault(button) {
-  var win = button.ownerDocument.defaultView;
-  var tab = win.getBrowser().selectedTab;
-  var tabLogin = new TabLogin(tab);
-  tabLogin.setTabAsAnon();
-  moveData_toDefault(tabLogin.getPlainTabTld(), tabLogin);
+  var tab = UIUtils.getSelectedTab(button.ownerDocument.defaultView);
+  var docUser = WinMap.setTabAsNewAccount(getIdFromTab(tab));
+  updateUIAsync(tab, true); // show new user now (see loadTab function)
+
+  moveData_toDefault(docUser);
   tab.linkedBrowser.loadURIWithFlags(tab.linkedBrowser.contentDocument.documentURI,
                                      Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
 }
 
 
-function moveData_toDefault(tabTld, tabLogin) {
+function moveData_toDefault(docUser) {
+  var tabTld = docUser.ownerTld;
+
   //removeTldData_cookies(tabTld);
 
-  var all = removeTldData_cookies(tabLogin.formatHost(tabTld));
-  console.log("===>moveData_toDefault", tabTld, tabLogin.toString(), "cookies:", all.length);
+  var all = removeTldData_cookies(docUser.appendLogin(tabTld));
+  console.log("===>moveData_toDefault", tabTld, docUser.toString(), "cookies:", all.length);
   var cookie;
   var realHost;
   for (var idx = all.length - 1; idx > -1; idx--) {
     cookie = all[idx];
-    realHost = CookieUtils.getRealHost(cookie.host);
+    realHost = UserUtils.getRealHost(cookie.host);
     if (realHost !== null) {
       copyCookieToNewHost(cookie, realHost);
     }

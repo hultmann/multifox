@@ -36,12 +36,14 @@
 
 
 var NetworkObserver = {
+
   start: function() {
     console.log("NetworkObserver start");
     var obs = Services.obs;
     obs.addObserver(this._request, "http-on-modify-request", false);
     obs.addObserver(this._response, "http-on-examine-response", false);
   },
+
 
   stop: function() {
     console.log("NetworkObserver stop");
@@ -50,9 +52,8 @@ var NetworkObserver = {
     obs.removeObserver(this._response, "http-on-examine-response");
   },
 
-  _request: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
 
+  _request: {
     // nsIObserver
     observe: function HttpListeners_request(subject, topic, data) {
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
@@ -63,20 +64,39 @@ var NetworkObserver = {
         return;
       }
 
+      var docUser;
       var isWin = isWindowChannel(httpChannel);
-      var isXhr = false;
-      if (httpChannel.notificationCallbacks) {
-        isXhr = httpChannel.notificationCallbacks instanceof Ci.nsIXMLHttpRequest;
-        try {
-          isXhr = httpChannel.notificationCallbacks.getInterface(Ci.nsIXMLHttpRequest) != null;
-        } catch (ex) {
+
+      var tab = WindowParents.getTabElement(win);
+      if (tab !== null) {
+        if (isWin) {
+          // window/redir/download
+          var msgData = fillDocReqData(win);
+          docUser = NewDocUser.addDocumentRequest(msgData, httpChannel);
+        } else {
+          // css/js/xhr...
+          var winutils = getDOMUtils(win);
+          docUser = WinMap.getUserForAsset(winutils.currentInnerWindowID, win.location.href, httpChannel.URI);
+        }
+
+      } else {
+        var chromeWin = UIUtils.getChromeWindow(win);
+        if (chromeWin && UIUtils.isSourceWindow(chromeWin)) {
+          // view source window
+          console.log("REQUEST - viewsource", httpChannel.URI.spec);
+          docUser = NewDocUser.viewSourceRequest(win, httpChannel.URI);
+        } else {
+          console.log("REQUEST - TAB NOT FOUND", httpChannel.URI.spec);
+          return; // tab not found: request from chrome (favicon, updates, <link rel="next"...)
         }
       }
 
 
-      var tabLogin = getLoginForRequest(httpChannel, win);
-      if ((tabLogin === null) || (tabLogin.isLoggedIn === false)) {
-        return; // use default session
+      if (UserUtils.isAnon(docUser)) {
+        if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
+          console.log("REQ ERR - login found but not used!", isWin, httpChannel.URI.spec, win.location.href);
+        }
+        return; // send default cookies
       }
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
@@ -85,30 +105,56 @@ var NetworkObserver = {
         return;
       }
 
-      RequestLogin.save(tabLogin, httpChannel);
-
-      var cookie = Cookies.getCookie(false, httpChannel.URI, tabLogin);
+      var cookie = Cookies.getCookie(false, httpChannel.URI, docUser.appendLoginToUri(httpChannel.URI));
       httpChannel.setRequestHeader("Cookie", cookie, false);
-
     }
   },
 
   _response: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-
     // nsIObserver
     observe: function HttpListeners_response(subject, topic, data) {
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
-      var tabLogin = RequestLogin.get(httpChannel);
+      var win = getChannelWindow(httpChannel);
+      if (win === null) {
+        return;
+      }
 
-      if (tabLogin === null) {
-        // RequestLogin.findSavedLoginByUrl(httpChannel.URI.spec);
-        return; // use original Set-Cookie
+      var tab = WindowParents.getTabElement(win);
+      if (tab === null) {
+        return;
+      }
+
+      var isWin = isWindowChannel(httpChannel);
+      var winutils = getDOMUtils(win);
+
+      var docUser;
+      if (isWin) {
+        // window/redir/download
+        docUser = NewDocUser.addDocumentResponse(httpChannel,
+                                                 winutils.currentInnerWindowID,
+                                                 winutils.outerWindowID);
+      } else {
+        docUser = WinMap.getUserForAsset(winutils.currentInnerWindowID,
+                                         win.location.href,
+                                         httpChannel.URI);
+      }
+
+
+      if (UserUtils.isAnon(docUser)) {
+        if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
+          console.log("RESPONSE ERR - login found but not used!", isWin, httpChannel.URI.spec, win.location.href);
+        }
+        return;
       }
 
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
+
+      var setCookies = myHeaders["set-cookie"];
+      if (setCookies === null) {
+        return;
+      }
+
       if (myHeaders["www-authenticate"] !== null) {
-        var win = getChannelWindow(httpChannel);
         if (win === null) {
           return;
         }
@@ -116,84 +162,15 @@ var NetworkObserver = {
         return;
       }
 
-      var setCookies = myHeaders["set-cookie"];
-      if (setCookies === null) {
-        return;
-      }
-
-      // replace "Set-Cookie"
+      // remove "Set-Cookie"
       httpChannel.setResponseHeader("Set-Cookie", null, false);
-      Cookies.setCookie(tabLogin, httpChannel.URI, setCookies, false);
+
+      Cookies.setCookie(docUser, httpChannel.URI, setCookies, false);
     }
   }
 };
 
 
-var RequestLogin = {
-  _logins:   [],
-  _channels: [],
-
-  save: function(tabLogin, request) {
-    this._logins.push(tabLogin);
-    this._channels.push(Cu.getWeakReference(request));
-  },
-
-  get: function(response) {
-    var chann = this._channels;
-    for (var idx = chann.length - 1; idx > -1; idx--) {
-      var request = chann[idx].get();
-      if (request !== null) {
-        if (request === response) {
-          chann.splice(idx, 1);
-          return this._logins.splice(idx, 1)[0];
-        }
-      } else {
-        // remove requests without response (from cache)?
-        chann.splice(idx, 1);
-        this._logins.splice(idx, 1);
-      }
-    }
-    return null;
-  }
-
-};
-
-
-// pageshow event => call updateUI for non http/https protocols and cached pages
-function updateNonNetworkDocuments(evt) {
-  var doc = evt.target;
-  var uri = doc.documentURIObject; // TODO use doc.location?
-  if (isTopWindow(doc.defaultView) === false) {
-    return;
-  }
-
-  if (isSupportedScheme(uri.scheme)) {
-    // BUG rightclick>show image ==> evt.persisted=false
-    // BUG google => br.mozdev=>back=>fw fica login do goog
-    if (evt.persisted) {
-      // http top doc from cache
-      var tabLogin = TabLoginHelper.getFromDomWindow(doc.defaultView);
-      if (tabLogin !== null) {
-        var tab = tabLogin.tabElement;
-        RedirDetector.invalidateTab(tab); // invalidate redir before calling defineTopWindowLogin
-        var dummy = defineTopWindowLogin(uri, tabLogin);
-        updateUI(tab);
-      }
-    }
-
-  } else { // about: etc
-    // request listener was not called
-    var tabLogin = TabLoginHelper.getFromDomWindow(doc.defaultView);
-    if (tabLogin !== null) {
-      console.log("updateNonNetworkDocuments del", uri.scheme);
-      var tab = tabLogin.tabElement;
-      tab.removeAttribute("multifox-tab-current-tld");
-      RedirDetector.resetTab(tab);
-      tabLogin.setTabAsAnon();
-      updateUI(tab);
-    }
-  }
-}
 
 
 var HttpHeaders = {
@@ -227,6 +204,52 @@ var HttpHeaders = {
     return nameValues;
   }
 };
+
+
+function fillDocReqData(win) {
+  var utils = getDOMUtils(win);
+
+  if (isTopWindow(win) === false) {
+    console.assert(win.opener === null, "is an iframe supposed to have an opener?");
+    var utilsParent = getDOMUtils(win.parent);
+    return {
+      __proto__ :  null,
+      outer:       utils.outerWindowID,
+      inner:       utils.currentInnerWindowID,
+      parentOuter: utilsParent.outerWindowID,
+      parentInner: utilsParent.currentInnerWindowID,
+      parentUrl:   win.parent.location.href
+    };
+  }
+
+  if (win.opener) {
+    var msgData = {
+      __proto__ :  null,
+      outer:       utils.outerWindowID,
+      inner:       utils.currentInnerWindowID,
+      parentOuter: WinMap.TopWindowFlag,
+      parentInner: WinMap.TopWindowFlag
+    };
+    var utilsOpener = getDOMUtils(win.opener);
+    msgData.openerOuter = utilsOpener.outerWindowID;
+    msgData.openerInner = utilsOpener.currentInnerWindowID;
+    msgData.openerUrl   = win.opener.location.href;
+    return msgData;
+  }
+
+  return {
+    __proto__ :  null,
+    outer:       utils.outerWindowID,
+    inner:       utils.currentInnerWindowID,
+    parentOuter: WinMap.TopWindowFlag,
+    parentInner: WinMap.TopWindowFlag
+  };
+}
+
+
+function isWindowChannel(channel) {
+  return (channel.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI) !== 0;
+}
 
 
 function getChannelWindow(channel) {

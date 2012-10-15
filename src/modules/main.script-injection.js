@@ -60,39 +60,6 @@ var DocOverlay = {
     branch.setCharPref(prefName, this._sentByChrome + " " + this._sentByContent);
   },
 
-  getNewDocData: function(msgData, tabUser) {
-    var tab = tabUser.tabElement;
-    if (tabUser.isLoginInProgress) {
-      tabUser = TabLoginHelper.getLoginInProgress(tab);
-    }
-
-    // uri=about:neterror?e=dnsNotFound&u=http...
-    if (msgData.top === false) {
-      // iframe
-      if (isSupportedScheme(msgData.uri.scheme)) {
-        var tabLogin = getSubElementLogin(msgData.uri.host, tabUser, null);
-        if ((tabLogin !== null) && tabLogin.isLoggedIn) {
-          return msgData.initBrowser ? this.getInitBrowserData() : {};
-        }
-      }
-      return null;
-    }
-
-    // new top window
-    var rv = null;
-    if (isSupportedScheme(msgData.uri.scheme)) {
-      if (tabUser.isLoggedIn) {
-        rv = msgData.initBrowser ? this.getInitBrowserData() : {};
-      }
-    } else { // about, javascript
-      tab.removeAttribute("multifox-tab-current-tld");
-      tabUser.setTabAsAnon();
-    }
-
-    updateUI(tab);
-    RedirDetector.resetTab(tab);
-    return rv;
-  },
 
   getInitBrowserData: function() {
     var me = this;
@@ -105,7 +72,7 @@ var DocOverlay = {
 };
 
 
-function ScriptSourceLoader() {
+function ScriptSourceLoader() { // TODO move to DocOverlay
   this._src = null;
   this._load(true);
 }

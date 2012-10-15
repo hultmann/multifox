@@ -42,7 +42,7 @@ function welcomePopup(doc) {
   if (panel) {
     //bug
     panel.hidePopup();
-    return panel;
+    return null; // panel is now invalid
   }
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
@@ -89,18 +89,4 @@ function appendContent(container, panel) {
   desc = container.appendChild(doc.createElement("description"))
   desc.style.marginTop = "1ch";
   desc.appendChild(doc.createTextNode(util.getTextFrom("welcome.properties", "welcome.p3", util.getText("icon.user.new.label"))));
-
-  // Multifox 1
-  header = container.appendChild(doc.createElement("label"));
-  header.value = util.getTextFrom("welcome.properties", "welcome.p4.h");
-  header.className = "header";
-  header.style.marginTop = "1ch";
-
-  desc = container.appendChild(doc.createElement("description"))
-  desc.style.marginTop = "1ch";
-  desc.appendChild(doc.createTextNode(util.getTextFrom("welcome.properties", "welcome.p4.p1", "${EXT_NAME}")));
-
-  desc = container.appendChild(doc.createElement("description"))
-  desc.style.marginTop = "1ch";
-  desc.appendChild(doc.createTextNode(util.getTextFrom("welcome.properties", "welcome.p4.p2")));
 }

@@ -54,13 +54,13 @@ function install() {
 
 function uninstall() {
   removePrefs();
-  removeCookies();
+  removeExtCookies();
   removeTabAttributes();
 }
 
 
 function migrate() {
-  // TODO ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
+  // TODO ss.deleteWindowValue(doc.defaultView, "*-identity-id");
 
   // remove Multifox 1.x cookies
   var profileId = 2;
@@ -92,7 +92,7 @@ function removePrefs() {
 }
 
 
-function removeCookies() {
+function removeExtCookies() {
   removeTldData_cookies("${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}");
   removeTldData_cookies("${INTERNAL_DOMAIN_SUFFIX_ANON}");
 }
@@ -100,6 +100,7 @@ function removeCookies() {
 
 function removeTabAttributes() {
   var attrs = [
+    "multifox-tab-logins",
     "multifox-tab-id-provider-tld-enc",
     "multifox-tab-id-provider-user-enc",
     "multifox-tab-current-tld",
@@ -114,14 +115,14 @@ function removeTabAttributes() {
     "multifox-redir-invalidate"
   ];
 
-  var winEnum = Services.wm.getEnumerator("navigator:browser");
-  while (winEnum.hasMoreElements()) {
-    var win = winEnum.getNext();
+  var enumWin = UIUtils.getWindowEnumerator();
+  while (enumWin.hasMoreElements()) {
+    var win = enumWin.getNext();
     win.document.documentElement.removeAttribute("multifox-window-uninitialized");
 
-    var all = getTabNodes(win.getBrowser());
-    for (var idxTab = all.length - 1; idxTab > -1; idxTab--) {
-      var tab = all[idxTab];
+    var tabList = UIUtils.getTabList(win);
+    for (var idxTab = tabList.length - 1; idxTab > -1; idxTab--) {
+      var tab = tabList[idxTab];
       for (var idxAttr = attrs.length - 1; idxAttr > -1; idxAttr--) {
         tab.removeAttribute(attrs[idxAttr]);
       }

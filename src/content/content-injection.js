@@ -63,6 +63,8 @@ function initContext(win, doc, sentByChrome, sentByContent) {
   }
 
   Object.defineProperty(doc, "cookie", {
+    configurable: true,
+    enumerable: true,
     set: function(jsCookie) {
       sendCmd({msg:"cookie", cmdMethod:"set", cmdValue:jsCookie});
     },
@@ -71,9 +73,9 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     }
   });
 
-  var realLocalStorage = win.localStorage;
-
   Object.defineProperty(win, "localStorage", {
+    configurable: true,
+    enumerable: true,
     get: function() {
 
       function setItemCore(k, v) {
@@ -137,6 +139,8 @@ function initContext(win, doc, sentByChrome, sentByContent) {
       });
 
       Object.defineProperty(win, "localStorage", {
+        configurable: true,
+        enumerable: true,
         get: function() {
           return proxy;
         }
@@ -148,11 +152,6 @@ function initContext(win, doc, sentByChrome, sentByContent) {
 
 
   // remove unsupported features
-
-  if (win.globalStorage) {
-    delete win.globalStorage; // globalStorage will be removed by bug 687579
-  }
-
   if (win.mozIndexedDB) {     // TODO
     delete win.mozIndexedDB;
   } else if (win.indexedDB) {

@@ -57,9 +57,7 @@ var SubmitObserver = {
       return;
     }
 
-    var locWin = win.document.location;
-    var schWin = locWin.protocol.substr(0, locWin.protocol.length - 1);
-    if (isSupportedScheme(schWin) === false) {
+    if (isSupportedScheme(win.location.protocol) === false) {
       return;
     }
 
@@ -75,87 +73,44 @@ var SubmitObserver = {
     var username = findUserName(form);
     if (username === null) {
       console.log("SubmitObserver: NOP, username not found, confirm pw form?");
+      WinMap.loginSubmitted(win, "pw");
       return; // TODO username = "random" or error message (icon);
     }
 
-    // keep tab identity, request will need to copy its cookies
-    TabLoginHelper.setLoginInProgress(username, locWin.hostname, tab);
-    tab.linkedBrowser.addEventListener("DOMContentLoaded", SubmitObserver._detectSubmitLandPage, false);
-  },
+    var tldDoc = getTldFromHost(win.location.hostname);
+    var tabId = getDOMUtils(win.top).outerWindowID;
+    var currentDocUser = WinMap.getUserFromDocument(Services.io.newURI(win.location.href, null, null), tabId, false);
 
+    var userId = new UserId(StringEncoding.encode(username), StringEncoding.encode(tldDoc));
+    var docUser = new DocumentUser(userId, tldDoc, tabId);
+    WinMap.setUserForTab(docUser, tabId);
+    WinMap.loginSubmitted(win, "login");
 
-  _detectSubmitLandPage: function(evt) { // DOMContentLoaded
-    var contentDoc = evt.target;
-    if (isEmptyPage(contentDoc)) {
-      return;
-    }
-
-    // land page found!
-    var tab = WindowParents.getTabElement(contentDoc.defaultView);
-    tab.linkedBrowser.removeEventListener("DOMContentLoaded", SubmitObserver._detectSubmitLandPage, false);
-
-
-    var newLogin = TabLoginHelper.getLoginInProgress(tab);
-    var moveMode = TabLoginHelper.removeLoginInProgress(tab);
-    console.assert(newLogin.plainTld  !== null, "multifox-login-submit-domain");
-    console.assert(newLogin.plainUser !== null, "multifox-login-submit-user");
-
-
-    if (hasLoginForm(contentDoc)) {
-      console.log("submitLandPageFound", "login error detected", contentDoc.documentURI);
-      // cancel login
-      if (moveMode === "user") {
-        moveMultifoxDomainDataToAnotherUser_cancel_login(newLogin);
-      } else {
-        SubmitObserver._moveDomainDataToDefault_cancel_login(newLogin);
-      }
-
+    if (UserUtils.isAnon(currentDocUser)) {
+      // TODO apply sandbox right now (all iframes)
+      // TODO clear 3rd party?
+      copyData_fromDefault(tldDoc, docUser);
     } else {
-      // commit login!
-      console.log("submitLandPageFound", "login successful detected", contentDoc.documentURI);
-      newLogin.saveToTab();
-      updateUI(tab, true);
+      copyDataToAnotherUser(tldDoc, docUser, currentDocUser);
     }
-  },
-
-  // TODO moveDomainDataTo ... ***previous domain***
-  _moveDomainDataToDefault_cancel_login: function(tabLogin) { // restoreDataDomain
-    var srcHost = tabLogin.formatHost(tabLogin.plainTld);
-    var all = removeTldData_cookies(srcHost);
-
-    console.log("===>_moveDomainDataToDefault_cancel_login", tabLogin.toString(), "=", srcHost, "_", all.length);
-
-    var cookie;
-    var realHost;
-    for (var idx = all.length - 1; idx > -1; idx--) {
-      cookie = all[idx];
-      realHost = CookieUtils.getRealHost(cookie.host);
-      if (realHost !== null) {
-        copyCookieToNewHost(cookie, realHost);
-      }
-    }
-
-    var all2 = removeTldData_LS(srcHost);
+    updateUIAsync(tab, true); // TODO remove current ID now, new doc will update it // BUG doesn't it load a new doc? eg: l10n dashboard
+    tab.setAttribute("multifox-logging-in", "true"); // activate transition
   }
 
 };
 
 
-function moveMultifoxDomainDataToAnotherUser_cancel_login(tabLogin) { // TODO
-}
-
-
-
 function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
-  console.assert(prevLogin.plainTld === newLogin.plainTld, "copyDataToAnotherUser tld");
-  if (prevLogin.equals(newLogin)) {
+  console.assert(prevLogin.user.encodedTld === newLogin.user.encodedTld, "copyDataToAnotherUser tld");
+  console.assert(tabTld === prevLogin._ownerDocTld, "anon");
+  if (prevLogin.equals(newLogin)) { // TODO do not test tabId
     return; // same user, do nothing
   }
 
-  var tld = prevLogin.formatHost(tabTld);
+  var tld = prevLogin.appendLogin(tabTld);
   // don't remove data from current user, it may contain data used by other apps
   // some cookies may be unrelated to this login
-  var all = getAllCookiesFromHost(tld);
+  var all = getAllCookiesFromHost(tld); // BUG ignore anon cookies?
   //var all = removeTldData_cookies(tld);
 
   console.log("copyDataToAnotherUser", tabTld, all.length, "cookies.", prevLogin.toString(), newLogin.toString());
@@ -163,9 +118,9 @@ function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
   var realHost;
   for (var idx = all.length - 1; idx > -1; idx--) {
     cookie = all[idx];
-    realHost = CookieUtils.getRealHost(cookie.host);
+    realHost = UserUtils.getRealHost(cookie.host);
     if (realHost !== null) {
-      copyCookieToNewHost(cookie, newLogin.formatHost(realHost));
+      copyCookieToNewHost(cookie, newLogin.appendLogin(realHost));
     }
   }
 
@@ -174,16 +129,15 @@ function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
 
 
 // isolate cookies from domain
-function copyData_fromDefault(domain, tabLogin) { // BUG se tabLogin.plainUser="" vai pensar NewAccount
+function copyData_fromDefault(domain, docUser) { // BUG if tabLogin.plainUser="" -> NewAccount // TODO domain=>tld
   var all = getAllCookiesFromHost(domain);
   //var all = removeTldData_cookies(domain);
 
-  console.log("copyData_fromDefault 1", domain, tabLogin.toString(), "cookies:", all.length);
+  console.log("copyData_fromDefault 1", domain, docUser, "cookies:", all.length);
   var cookie;
   for (var idx = all.length - 1; idx > -1; idx--) {
     cookie = all[idx];
-    console.log("copyData_fromDefault 2", cookie.host, tabLogin, tabLogin.formatHost(cookie.host));
-    copyCookieToNewHost(cookie, tabLogin.formatHost(cookie.host));
+    copyCookieToNewHost(cookie, docUser.appendLogin(cookie.host));
   }
 
   console.log("copyData_fromDefault 3");
@@ -192,20 +146,22 @@ function copyData_fromDefault(domain, tabLogin) { // BUG se tabLogin.plainUser="
 }
 
 
-function hasLoginForm(doc) { // TODO check frames
-  if ("forms" in doc === false) {
-    return false; // xml
-  }
-
-  var all = doc.forms;
+function countPasswordFields(form, populatedOnly) {
+  var qty = 0;
+  var all = form.elements;
+  var INPUT = Ci.nsIDOMHTMLInputElement;
   for (var idx = all.length - 1; idx > -1; idx--) {
-    var qty = countPasswordFields(all[idx], false);
-    if (qty > 0) {
-      return true;
+    var elem = all[idx];
+    if ((elem instanceof INPUT) && (elem.type === "password")) {
+      if (isElementVisible(elem)) {
+        if (populatedOnly && (elem.value.trim().length === 0)) {
+          continue;
+        }
+        qty++;
+      }
     }
   }
-
-  return false;
+  return qty;
 }
 
 
@@ -258,35 +214,4 @@ function isElementVisible(elem) {
   console.log("isElementVisible", "getBoundingClientRect().width " + elem.getBoundingClientRect().width, typeof elem.getBoundingClientRect().width, elem.tagName, elem.type, " name:" + elem.name);
 
   return elem.getBoundingClientRect().width > 0;
-}
-
-
-function onNewDoc_moveData_loginSubmitted(newLogin) {
-  if (newLogin.hasLoginInProgressMoveData) {
-    return;
-  }
-
-  console.log("onNewDoc_moveData_loginSubmitted");
-  var currentLogin = new TabLogin(newLogin.tabElement); // TODO currentLogin is tabLogin?
-  currentLogin.setTabAsAnon();
-
-  // new login from a logged in tab
-  if (currentLogin.isLoggedIn) {
-    // tab is marked as logged in, but it is currently logged out (there is a login form...)
-    currentLogin.setLoginInProgressMoveData("user");
-    console.log("copyDataToAnotherUser logged=", currentLogin.toString(), newLogin.toString());
-    copyDataToAnotherUser(newLogin.plainTld, newLogin, currentLogin);
-
-  // "New Account" tab
-  } else if (currentLogin.isNewUser) {
-    currentLogin.setLoginInProgressMoveData("default");
-    console.log("copyData_fromDefault logged=NewAccount");
-    copyData_fromDefault(newLogin.plainTld, newLogin);
-
-  // anonymous tab
-  } else {
-    currentLogin.setLoginInProgressMoveData("default");
-    console.log("copyData_fromDefault logged=anon");
-    copyData_fromDefault(newLogin.plainTld, newLogin);
-  }
 }

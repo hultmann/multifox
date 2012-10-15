@@ -89,104 +89,33 @@ var StringEncoding = {
 };
 
 
-var WindowParents = {
-  getTabElement: function(contentWin) {
-    var chromeWin = this.getChromeWindow(contentWin);
-    if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
-      var elem = chromeWin.getBrowser(); // BUG elem=null for sidebar browsing
-      switch (elem.tagName) {
-        case "tabbrowser":
-          var topDoc = contentWin.top.document;
-          var idx = elem.getBrowserIndexForDocument(topDoc);
-          if (idx > -1) {
-            return getTabNodes(elem)[idx];
-          }
-          break;
-        default: // view-source => tagName="browser"
-          // Note that this file uses document.documentURI to get
-          // the URL (with the format from above). This is because
-          // document.location.href gets the current URI off the docshell,
-          // which is the URL displayed in the location bar, i.e.
-          // the URI that the user attempted to load.
-          console.log("getTabElement=" + elem.tagName + "\n" +
-                       contentWin.document.documentURI+ " " +chromeWin.document.location +"\n"+
-                       contentWin.document.location   + " " +chromeWin.document.documentURI);
-          break;
-      }
-    }
-    return null;
-  },
-
-  getChromeWindow: function(contentWin) { // getTopWindowElement
-    if (!contentWin) console.trace('contentWin='+contentWin);
-    var qi = contentWin.QueryInterface;
-    if (!qi) {
-      return null;
-    }
-
-    if (contentWin instanceof Ci.nsIDOMChromeWindow) {
-      // extensions.xul, updates.xul ...
-      return contentWin;
-    }
-
-    var win = qi(Ci.nsIInterfaceRequestor)
-                .getInterface(Ci.nsIWebNavigation)
-                .QueryInterface(Ci.nsIDocShell)
-                .chromeEventHandler
-                .ownerDocument
-                .defaultView;
-    // wrappedJSObject allows access to gBrowser etc
-    // wrappedJSObject=undefined sometimes. e.g. contentWin=about:multifox
-    var unwrapped = win.wrappedJSObject; // TODO XPCNativeWrapper.unwrap?
-    return unwrapped ? unwrapped : win;
-  }
-};
-
-
-function isEmptyPage(contentDoc) {
-  //var a = contentDoc.getElementsByTagName("head")[0].getElementsByTagName("*").length;
-  var body = contentDoc.getElementsByTagName("body");
-  var tags = body.length > 0 ? body[0].getElementsByTagName("*").length : 0;
-
-  // TODO
-  /*
-  var all = contentDoc.forms;
-  var qty = 0;
-  for (var idx = all.length - 1; idx > -1; idx--) {
-    qty += countPasswordFields(all[idx], ???);
-  }
-  */
-  console.log("isEmptyPage", tags < 15, contentDoc.location);
-  return tags < 15;
-}
-
-
-function countPasswordFields(form, populatedOnly) {
-  var qty = 0;
-  var all = form.elements;
-  var INPUT = Ci.nsIDOMHTMLInputElement;
-  for (var idx = all.length - 1; idx > -1; idx--) {
-    var elem = all[idx];
-    if ((elem instanceof INPUT) && (elem.type === "password")) {
-      if (isElementVisible(elem)) {
-        if (populatedOnly && (elem.value.trim().length === 0)) {
-          continue;
-        }
-        qty++;
+function findTabById(tabId) { // TODO keep a weakref list of tabs
+  var winEnum = UIUtils.getWindowEnumerator();
+  while (winEnum.hasMoreElements()) {
+    var tabList = UIUtils.getTabList(winEnum.getNext());
+    for (var idx = tabList.length - 1; idx > -1; idx--) {
+      if (getIdFromTab(tabList[idx]) === tabId) {
+        return tabList[idx];
       }
     }
   }
-  return qty;
+  return null;
 }
 
 
-function isSupportedScheme(scheme) {
-  return (scheme === "http") || (scheme === "https");
+function getIdFromTab(tab) {
+  var win = tab.linkedBrowser.contentWindow;
+  return getDOMUtils(win).outerWindowID;
 }
 
 
-function isWindowChannel(channel) {
-  return (channel.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI) !== 0;
+function isSupportedScheme(scheme) { // TODO check nsIStandardURL
+  return (scheme === "http") || (scheme === "https") || (scheme === "http:") || (scheme === "https:");
+}
+
+
+function getDOMUtils(win) {
+  return win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 }
 
 
@@ -195,12 +124,14 @@ function isTopWindow(win) {
 }
 
 
-function getTabNodes(tabbrowser) {
-  return tabbrowser.mTabContainer.childNodes; // <tab>
+function getTldFromUri(uri) {
+  return isSupportedScheme(uri.scheme) ? getTldFromHost(uri.host) : null;
 }
 
 
 function getTldFromHost(hostname) {
+  console.assert(typeof hostname === "string", "invalid hostname argument");
+  console.assert(hostname.length > 0, "empty hostname");
   try {
     return Services.eTLD.getBaseDomainFromHost(hostname);
   } catch (ex) {
@@ -237,7 +168,7 @@ function getTldFromHost(hostname) {
 }
 
 
-function endsWith(sufix, str) {
+function endsWith(sufix, str) { // TODO Fx17 str.endsWith(sufix)
   var idx = str.lastIndexOf(sufix);
   if (idx === -1) {
     return false;
@@ -272,11 +203,28 @@ function enableErrorMsg(notSupportedFeature, msgData, tab) {
   if (msgData.topUrl) {
     msg.push("Top:  " + msgData.topUrl);
   }
+
+  if (notSupportedFeature === "sandbox") {
+    msg.push("Inner ID: " + msgData.innerId);
+    var innerObj = WinMap.getInnerEntry(msgData.innerId);
+    var entry = {
+      __proto__: null,
+      type: "sandbox-error",
+      "inner-id": msgData.innerId,
+      "error": msgData.err
+    };
+    if (WinMap.isFrameId(innerObj.parentInnerId)) {
+      entry.isFrame = true;
+    }
+    WinMap.addToOuterHistory(entry, innerObj.outerId);
+    return;
+  }
+
   msg.push("Desc: " + msgData.err);
   console.log(msg.join("\n"));
 
   tab.setAttribute("multifox-tab-error", notSupportedFeature);
-  updateUI(tab, true);
+  updateUIAsync(tab, true);
 }
 
 

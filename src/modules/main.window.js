@@ -36,33 +36,33 @@
 
 
 var WindowWatcher = {
-  start: function() {
-    Services.ww.registerNotification(this);
+
+  init: function() {
+    Services.obs.addObserver(this, "chrome-document-global-created", false);
   },
 
-  stop: function() {
-    Services.ww.unregisterNotification(this);
+
+  uninit: function() {
+    Services.obs.removeObserver(this, "chrome-document-global-created");
   },
 
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+
   observe: function(win, topic, data) {
-    if (topic === "domwindowopened") {
+    if (isTopWindow(win)) { // this works also as a workaround for bug 795961
       win.addEventListener("DOMContentLoaded", WindowWatcher._onLoad, false);
     }
   },
 
+
   _onLoad: function(evt) {
     var win = evt.currentTarget;
-    var doc = win.document;
-    if (doc !== evt.target) {
-      return; // avoid bubbled DOMContentLoaded events
-    }
+    console.assert(win === evt.target.defaultView, "bubbled DOMContentLoaded event " + win.location.href);
     win.removeEventListener("DOMContentLoaded", WindowWatcher._onLoad, false);
 
-    switch (doc.location.href) {
+    switch (win.location.href) {
       case "chrome://browser/content/browser.xul":
         //if ((win.document instanceof Ci.nsIDOMDocument) === false) {
-        BrowserWindow.register(win);
+        MainWindow.initWindow(win);
         break;
       case "chrome://mozapps/content/extensions/about.xul":
         // make "About" menuitem open about:multifox tab
@@ -71,145 +71,64 @@ var WindowWatcher = {
         break;
     }
   }
+
 };
 
 
-var BrowserWindow = {
-  register: function(win) {
-    console.log("BrowserWindow.register");
 
-    // some MultifoxContentEvent_* listeners are not called when
-    // there are "unload" listeners with useCapture=true. o_O
-    // But they are called if event listener is an anonymous function.
-    win.addEventListener("unload", ChromeWindowEvents, false);
-    win.addEventListener("activate", ChromeWindowEvents, false);
-    win.addEventListener("mousedown", RedirDetector.onMouseDown, false); // command/click listeners can be called after network request
-    win.addEventListener("keydown", RedirDetector.onKeyDown, false);
+var MainWindow = {
 
-    var tabbrowser = win.getBrowser();
-    tabbrowser.addEventListener("pageshow", updateNonNetworkDocuments, false);
-
-    var mm = win.messageManager;
-    mm.loadFrameScript("${PATH_MODULE}/remote-browser.js", true);
-    mm.addMessageListener("multifox-remote-msg", onRemoteBrowserMessage);
-
-    var container = tabbrowser.tabContainer;
-    container.addEventListener("TabSelect", TabContainerEvents, false);
-    container.addEventListener("TabClose", TabContainerEvents, false);
-    container.addEventListener("SSTabRestoring", TabContainerEvents, false);
-
-    // hide icon during toolbar customization
-    win.addEventListener("beforecustomization", beforeCustomization, false);
-    win.addEventListener("aftercustomization", afterCustomization, false);
-
-    win.document.documentElement.setAttribute("multifox-window-uninitialized", "true");
-
-    // show icon
-    updateUI(tabbrowser.selectedTab, true); // BUG at startup(), LoginDB is still empty
+  initAll: function() {
+    var enumWin = UIUtils.getWindowEnumerator();
+    while (enumWin.hasMoreElements()) {
+      this.initWindow(enumWin.getNext());
+    }
   },
 
 
-  unregister: function(win) {
-    console.log("BrowserWindow.unregister");
+  uninitAll: function() {
+    var enumWin = UIUtils.getWindowEnumerator();
+    while (enumWin.hasMoreElements()) {
+      this.uninitWindow(enumWin.getNext(), "disabling extension");
+    }
+  },
 
-    win.removeEventListener("unload", ChromeWindowEvents, false);
-    win.removeEventListener("activate", ChromeWindowEvents, false);
-    win.removeEventListener("mousedown", RedirDetector.onMouseDown, false);
-    win.removeEventListener("keydown", RedirDetector.onKeyDown, false);
 
-    var tabbrowser = win.getBrowser();
-    tabbrowser.removeEventListener("pageshow", updateNonNetworkDocuments, false);
+  initWindow: function(win) {
+    ChromeRelatedEvents.initWindow(win);
+    ContentRelatedEvents.initWindow(win);
 
-    var container = tabbrowser.tabContainer;
-    container.removeEventListener("TabSelect", TabContainerEvents, false);
-    container.removeEventListener("TabClose", TabContainerEvents, false);
-    container.removeEventListener("SSTabRestoring", TabContainerEvents, false);
+    // debug key
+    var doc = win.document;
+    var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
+    key.setAttribute("id", "multifox2-debug-key");
+    key.setAttribute("keycode", "VK_F4");
+    key.setAttribute("oncommand", "(function(){})()"); // it doesn't work without that
+    key.addEventListener("command", function() {
+      console.log("\n" + DebugWinMap.toString() + "\n\n\n" +
 
-    win.removeEventListener("beforecustomization", beforeCustomization, false);
-    win.removeEventListener("aftercustomization", afterCustomization, false);
+                  "\n-----------\nOuter Windows, len", Object.keys(WinMap._outer).length, "\n",
+                  JSON.stringify(WinMap._outer, null, 2),
 
-    var mm = win.messageManager;
-    mm.removeMessageListener("multifox-remote-msg", onRemoteBrowserMessage);
-    mm.removeDelayedFrameScript("${PATH_MODULE}/remote-browser.js");
-    mm.sendAsyncMessage("multifox-parent-msg", {msg: "shutdown"}); // no effect when closing the window
+                  "\n=========================\nInner Windows, len", Object.keys(WinMap._inner).length, "\n",
+                  JSON.stringify(WinMap._inner, null, 2));
+    }, false);
+  },
 
-    // remove icon - TODO skip when closing the window
+
+  uninitWindow: function(win, reason) {
+    var key = win.document.getElementById("multifox2-debug-key");
+    key.parentNode.removeChild(key);
+
+    ChromeRelatedEvents.uninitWindow(win);
+    ContentRelatedEvents.uninitWindow(win, reason);
+    if (reason === "closing window") {
+      return;
+    }
+    // remove icon
     var container = getIconContainer(win.document);
     if (container !== null) {
       container.parentNode.removeChild(container);
     }
   }
 };
-
-
-var ChromeWindowEvents = {
-  handleEvent: function(evt) {
-    try {
-      this[evt.type](evt);
-    } catch (ex) {
-      Cu.reportError(ex);
-      throw new Error("ChromeWindowEvents exception " + ex);
-    }
-  },
-
-  unload: function(evt) {
-    var win = evt.currentTarget;
-    BrowserWindow.unregister(win);
-  },
-
-  activate: function(evt) {
-    var win = evt.currentTarget;
-    var tab = win.getBrowser().selectedTab;
-    LoginDB.setTabAsDefaultLogin(tab); // BUG init m_welcomeMode, attr current-tld missing
-
-    LoginDB._ensureValid(); // BUG workaround to display welcome icon
-    if (m_welcomeMode) {
-      updateUI(tab, true);
-    }
-  }
-};
-
-
-var TabContainerEvents = {
-  handleEvent: function(evt) {
-    try {
-      this[evt.type](evt);
-    } catch (ex) {
-      Cu.reportError(ex);
-      throw new Error("TabContainerEvents exception " + ex);
-    }
-  },
-
-  TabClose: function(evt) {
-    var tab = evt.originalTarget;
-    MoveTabWindows.tabCloseSaveId(tab);
-  },
-
-  TabSelect: function(evt) {
-    var tab = evt.originalTarget;
-    MoveTabWindows.tabSelectDetectMove(tab); // moved tab: set id
-    updateUI(tab, true);
-  },
-
-  SSTabRestoring: function(evt) {
-    var tab = evt.originalTarget;
-    updateUI(tab, true);
-  }
-};
-
-
-function beforeCustomization(evt) {
-  var toolbox = evt.target;
-  var container = getIconContainer(toolbox.ownerDocument);
-  if (container !== null) {
-    // remove icon - BUG changing tabs will make it appear again
-    container.parentNode.removeChild(container);
-  }
-}
-
-
-function afterCustomization(evt) {
-  var toolbox = evt.target;
-  var tab = toolbox.ownerDocument.defaultView.getBrowser().selectedTab;
-  updateUI(tab, true);
-}

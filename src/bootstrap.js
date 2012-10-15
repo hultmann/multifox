@@ -78,13 +78,13 @@ function shutdown(data, reason) {
 
   Main.shutdown();
   Components.utils.unload("${PATH_MODULE}/main.js");
-  registerResourceProtocol(null); // unregister resource://...
+  registerResourceProtocol(null);
 }
 
 
 // chrome.manifest line:
 // resource ext-modules modules/
-function registerResourceProtocol(uri) {
+function registerResourceProtocol(uri) { // null to unregister
   var io = Services.io;
   var module = uri ? io.newURI(uri.resolve("modules/"), null, null) : null;
   io.getProtocolHandler("resource")
