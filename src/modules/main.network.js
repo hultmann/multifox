@@ -51,10 +51,10 @@ var NetworkObserver = {
         var chromeWin = UIUtils.getChromeWindow(win);
         if (chromeWin && UIUtils.isSourceWindow(chromeWin)) {
           // view source window
-          console.log("REQUEST - viewsource", httpChannel.URI.spec);
+          console.log("REQUEST - viewsource", httpChannel.URI);
           docUser = NewDocUser.viewSourceRequest(win, httpChannel.URI);
         } else {
-          console.log("REQUEST - TAB NOT FOUND", httpChannel.URI.spec);
+          console.log("REQUEST - TAB NOT FOUND", httpChannel.URI);
           return; // tab not found: request from chrome (favicon, updates, <link rel="next"...)
         }
       }
@@ -62,7 +62,7 @@ var NetworkObserver = {
 
       if (UserUtils.isAnon(docUser)) {
         if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
-          console.log("REQ ERR - login found but not used!", isWin, httpChannel.URI.spec, win.location.href);
+          console.log("REQ ERR - login found but not used!", isWin, httpChannel.URI, win.location.href);
         }
         return; // send default cookies
       }
@@ -110,7 +110,7 @@ var NetworkObserver = {
 
       if (UserUtils.isAnon(docUser)) {
         if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
-          console.log("RESPONSE ERR - login found but not used!", isWin, httpChannel.URI.spec, win.location.href);
+          console.log("RESPONSE ERR - login found but not used!", isWin, httpChannel.URI, win.location.href);
         }
         return;
       }
@@ -228,7 +228,7 @@ function getChannelWindow(channel) {
               .getInterface(Ci.nsILoadContext)
               .associatedWindow;
     } catch (ex) {
-      //console.trace("channel.notificationCallbacks " + "/" + channel.notificationCallbacks + "/" + channel.URI.spec + "/" + ex);
+      //console.trace("channel.notificationCallbacks " + "/" + channel.notificationCallbacks + "/" + channel.URI + "/" + ex);
     }
   }
 
@@ -246,6 +246,6 @@ function getChannelWindow(channel) {
 
   //var isChrome = context.associatedWindow instanceof Ci.nsIDOMChromeWindow;
   //return context.isContent ? context.associatedWindow : null;
-  //console.log("LOAD CONTEXT FAIL " + channel.URI.spec);
+  //console.log("LOAD CONTEXT FAIL " + channel.URI);
   return null; // e.g. <link rel=prefetch> <link rel=next> ...
 }

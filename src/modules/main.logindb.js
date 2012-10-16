@@ -298,7 +298,7 @@ var LoginDB = {
   _onCookieRejected: {
     observe: function(subject, topic, data) { // nsIObserver
       console.log("cookie-rejected 0", subject, topic, data);
-      console.log("cookie-rejected 1", subject.QueryInterface(Ci.nsIURI).spec);
+      console.log("cookie-rejected 1", subject.QueryInterface(Ci.nsIURI));
     }
   },
 

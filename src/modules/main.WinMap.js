@@ -143,7 +143,7 @@ var NewDocUser = {
       }
     }
     // BUG null for anon iframes (we would need to know its parent). find focused frame?
-    console.log("viewSourceRequest null", sourceWin, uri.spec);
+    console.log("viewSourceRequest null", sourceWin, uri);
     return null;
   }
 
@@ -340,7 +340,7 @@ var WinMap = { // stores all current outer/inner windows
       return docUser;
     }
 
-    console.log("getUserFromDocument null", tld, aDocUri.spec);
+    console.log("getUserFromDocument null", tld, aDocUri);
     return null; // aDocUri is anon
   },
 

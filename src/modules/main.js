@@ -30,6 +30,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 #include "main.about.js"
 #include "main.icon.js"
 #include "main.UIUtils.js"
+#include "console.js"
 
 
 var Main = {

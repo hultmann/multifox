@@ -13,6 +13,8 @@ Object.defineProperty(this, "initMultifox", {
 
 Cu.import("resource://gre/modules/Services.jsm");
 
+#include "console.js"
+  console.setAsRemote();
 
 function onNewDocument(evt) { // DOMWindowCreated handler
   var doc = evt.target;
@@ -205,35 +207,6 @@ function getSupportedUniqueHosts(win) {
   _getSupportedUniqueHosts(win, hosts);
   return hosts;
 }
-
-
-var console = {
-  log: function(msg) {
-    var now = new Date();
-    var ms = now.getMilliseconds();
-    var ms2;
-    if (ms < 100) {
-      ms2 = ms < 10 ? "00" + ms : "0" + ms;
-    } else {
-      ms2 = ms.toString();
-    }
-    var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
-
-    var len = arguments.length;
-    var msg = len > 1 ? Array.prototype.slice.call(arguments, 0, len).join(" ")
-                      : arguments[0];
-    Services.console.logStringMessage(p + msg);
-  },
-
-  assert: function(test, msg) {
-    if (test !== true) {
-      var ex =  new Error("console.assert - " + msg + " - " + test);
-      Cu.reportError(ex); // workaround - sometimes exception doesn't show up in console
-      console.trace("console.assert()");
-      throw ex;
-    }
-  }
-};
 
 
 function checkState() {

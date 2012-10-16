@@ -51,7 +51,7 @@ var CrossTldLogin = {
     if (("prev-2" in prevTls) === false) {
       return null;
     }
-    console.log("_crossTldLogin?", prevTls, reqUri.spec);
+    console.log("_crossTldLogin?", prevTls, reqUri);
 
     if (prevTls["prev-2"] !== reqTld) { // BUG with bfcache? // TODO does newtld exist in *.multifox-anon-2? use as a condition
       return null;
