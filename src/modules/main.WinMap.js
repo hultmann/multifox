@@ -135,7 +135,7 @@ var NewDocUser = {
 
 
   viewSourceRequest: function(sourceWin, uri) { // sourceWin = viewSource.xul
-    var chromeWin = UIUtils.getChromeWindow(sourceWin);
+    var chromeWin = UIUtils.getTopLevelWindow(sourceWin);
     if (chromeWin && chromeWin.opener) {
       if (UIUtils.isMainWindow(chromeWin.opener)) {
         var selTab = UIUtils.getSelectedTab(chromeWin.opener);

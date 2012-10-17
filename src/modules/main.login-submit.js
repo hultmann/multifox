@@ -29,7 +29,7 @@ var SubmitObserver = {
       return;
     }
 
-    var tab = WindowParents.getTabElement(win);
+    var tab = UIUtils.getLinkedTab(win);
     if (tab === null) {
       return null; // chrome form?
     }

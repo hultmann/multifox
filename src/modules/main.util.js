@@ -57,7 +57,7 @@ var StringEncoding = {
 };
 
 
-function findTabById(tabId) { // TODO keep a weakref list of tabs
+function findTabById(tabId) { // TODO keep a weakref list of tabs tabList[tabId]
   var winEnum = UIUtils.getWindowEnumerator();
   while (winEnum.hasMoreElements()) {
     var tabList = UIUtils.getTabList(winEnum.getNext());
@@ -199,7 +199,7 @@ function enableErrorMsg(notSupportedFeature, msgData, tab) {
 function enableErrorMsgLocal(notSupportedFeature, win) {
   var msgData = {url: win.document.location.href, err: ""};
   msgData.topUrl = win !== win.top ? win.top.document.location.href : "";
-  enableErrorMsg(notSupportedFeature, msgData, WindowParents.getTabElement(win));
+  enableErrorMsg(notSupportedFeature, msgData, UIUtils.getLinkedTab(win));
 }
 
 

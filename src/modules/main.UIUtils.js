@@ -31,81 +31,70 @@ var UIUtils = {
 
 
   getContentContainer: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
     return chromeWin.gBrowser; // <tabbrowser>
   },
 
 
   getTabStripContainer: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
     return chromeWin.gBrowser.tabContainer; // <tabs>
   },
 
 
   getTabList: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
     return chromeWin.gBrowser.tabs; // <tab> NodeList
   },
 
 
   getSelectedTab: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
     return chromeWin.gBrowser.selectedTab; // <tab>
   },
 
 
-  getLinkedTab: function(browser) {
-    var tabList = this.getTabList(browser.ownerDocument.defaultView);
-    for (var idx = tabList.length - 1; idx > -1; idx--) {
-      if (tabList[idx].linkedBrowser === browser) {
-        return tabList[idx]; // <tab>
+  getLinkedTabFromBrowser: function(browser) { // TODO tabList[getDOMUtils(browser.contentWindow).outerWindowID]
+    var win = this.getTopLevelWindow(browser.ownerDocument.defaultView);
+    if (UIUtils.isMainWindow(win)) {
+      var tabList = this.getTabList(win);
+      for (var idx = tabList.length - 1; idx > -1; idx--) {
+        if (tabList[idx].linkedBrowser === browser) {
+          return tabList[idx]; // <tab>
+        }
       }
     }
     return null; // browser.xul has browser elements all over the place
   },
 
 
-  getChromeWindow: function(contentWin) {
-    if ((!contentWin) || (!contentWin.QueryInterface)) {
-      console.trace("getChromeWindow contentWin=" + contentWin);
+  getLinkedTab: function(win) {
+    var browser = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                     .getInterface(Ci.nsIWebNavigation)
+                     .QueryInterface(Ci.nsIDocShell)
+                     .chromeEventHandler;
+    return browser === null ? null : this.getLinkedTabFromBrowser(browser); // TODO tabList[getDOMUtils(win.top).outerWindowID]
+  },
+
+
+  getTopLevelWindow: function(win) { // content or chrome windows
+    if ((!win) || (!win.QueryInterface)) {
+      console.trace("getTopLevelWindow win=" + win);
       return null;
     }
 
-    if (contentWin instanceof Ci.nsIDOMChromeWindow) {
-      return contentWin; // extensions.xul, updates.xul ...
-    }
+    var topwin = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIWebNavigation)
+                    .QueryInterface(Ci.nsIDocShellTreeItem)
+                    .rootTreeItem
+                    .QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIDOMWindow);
 
-    var win = contentWin
-                .QueryInterface(Ci.nsIInterfaceRequestor)
-                .getInterface(Ci.nsIWebNavigation)
-                .QueryInterface(Ci.nsIDocShell)
-                .chromeEventHandler.ownerDocument.defaultView;
-    console.assert(win !== null, "getChromeWindow null", contentWin);
-    console.assert(win !== undefined, "getChromeWindow undefined", contentWin);
+    console.assert(topwin !== null, "getTopLevelWindow null", win);
+    console.assert(topwin !== undefined, "getTopLevelWindow undefined", win);
+    console.assert(topwin === topwin.top, "getTopLevelWindow should return a top window");
     // unwrapped object allows access to gBrowser etc
-    return XPCNativeWrapper.unwrap(win);
+    return XPCNativeWrapper.unwrap(topwin);
   }
 
-};
-
-
-
-var WindowParents = {
-  getTabElement: function(contentWin) {
-    var chromeWin = UIUtils.getChromeWindow(contentWin);
-    if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
-      var elem = chromeWin.gBrowser; // BUG elem=null for sidebar browsing
-      switch (elem.tagName) {
-        case "tabbrowser":
-          var topDoc = contentWin.top.document;
-          var idx = elem.getBrowserIndexForDocument(topDoc);
-          if (idx > -1) {
-            return elem.tabs[idx];
-          }
-          break;
-        default: // view-source => tagName="browser"
-          console.log("getTabElement=" + elem.tagName + "\n" +
-                       contentWin.document.documentURI+ " " +chromeWin.location +"\n"+
-                       contentWin.location + " " +chromeWin.document.documentURI);
-          break;
-      }
-    }
-    return null;
-  }
 };

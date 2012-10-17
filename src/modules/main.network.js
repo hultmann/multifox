@@ -35,7 +35,7 @@ var NetworkObserver = {
       var docUser;
       var isWin = isWindowChannel(httpChannel);
 
-      var tab = WindowParents.getTabElement(win);
+      var tab = UIUtils.getLinkedTab(win);
       if (tab !== null) {
         if (isWin) {
           // window/redir/download
@@ -48,7 +48,7 @@ var NetworkObserver = {
         }
 
       } else {
-        var chromeWin = UIUtils.getChromeWindow(win);
+        var chromeWin = UIUtils.getTopLevelWindow(win);
         if (chromeWin && UIUtils.isSourceWindow(chromeWin)) {
           // view source window
           console.log("REQUEST - viewsource", httpChannel.URI);
@@ -87,7 +87,7 @@ var NetworkObserver = {
         return;
       }
 
-      var tab = WindowParents.getTabElement(win);
+      var tab = UIUtils.getLinkedTab(win);
       if (tab === null) {
         return;
       }

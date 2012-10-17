@@ -78,7 +78,7 @@ var ContentRelatedEvents = {
     // this = nsIChromeFrameMessageManager
     try {
       var browser = message.target;
-      var tab = UIUtils.getLinkedTab(browser);
+      var tab = UIUtils.getLinkedTabFromBrowser(browser);
       if (tab === null) { // social-sidebar-browser etc
         return null; // TODO assert "new-doc"?
       }
@@ -128,7 +128,7 @@ var ContentRelatedEvents = {
         var fromCache = evt.persisted;
         if (fromCache) {
           // http top doc from cache: update icon
-          var tab = WindowParents.getTabElement(win);
+          var tab = UIUtils.getLinkedTab(win);
           if (tab !== null) {
             WinMap.setWindowAsUserForTab(getDOMUtils(win).currentInnerWindowID);
             updateUIAsync(tab, isTopWindow(win));
@@ -136,7 +136,7 @@ var ContentRelatedEvents = {
         }
 
       } else { // ftp:, about:, chrome: etc. request/response listener may not be called
-        var tab = WindowParents.getTabElement(win);
+        var tab = UIUtils.getLinkedTab(win);
         if (tab !== null) {
           updateUIAsync(tab, isTopWindow(win));
         }
