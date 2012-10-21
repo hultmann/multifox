@@ -122,11 +122,6 @@ var CrossTldLogin = {
 
 
   _getPrevResponses: function(tabId) {
-    if (WinMap.hasOuterWindow(tabId) === false) {
-      console.log("_getPrevResponses null");
-      return null;
-    }
-
     var data = WinMap.getOuterEntry(tabId).outerHistory;
     var rv = {
       __proto__: null,

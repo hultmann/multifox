@@ -69,32 +69,7 @@ var ChromeRelatedEvents = {
 
   SSTabRestoring: function(evt) {
     var tab = evt.originalTarget;
-    if (tab.hasAttribute("multifox-tab-logins") === false) {
-      return;
-    }
-    console.log("SSTabRestoring", tab.getAttribute("multifox-tab-logins"));
-
-    var tabLogins;
-    try {
-      // TODO delay until tab is actually loaded (@ getUserFromDocument?)
-      tabLogins = JSON.parse(tab.getAttribute("multifox-tab-logins"));
-    } catch (ex) {
-      console.warn("SSTabRestoring - buggy json: " + tab.getAttribute("multifox-tab-logins"));
-      return;
-    }
-
-    if (("firstParty" in tabLogins) === false) {
-      return;
-    }
-
-    var logins = tabLogins.firstParty;
-    var tabId = getIdFromTab(tab);
-    for (var tld in logins) {
-      var obj = logins[tld];
-      var userId = new UserId(obj.encodedUser, obj.encodedTld);
-      var docUser = new DocumentUser(userId, tld, tabId);
-      WinMap.setUserForTab(docUser, tabId);
-    }
+    WinMap.restoreTabDefaultUsers(tab);
   },
 
 

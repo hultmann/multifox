@@ -182,18 +182,73 @@ var WinMap = { // stores all current outer/inner windows
   },
 
 
-  hasOuterWindow: function(outerId) {
-    return outerId in this._outer;
+  _addWindow: function(win) { // called recursively by _update for all tabs in a window
+    var parentOuterId;
+    var parentInnerId;
+    if (isTopWindow(win)) {
+      parentOuterId = WinMap.TopWindowFlag;
+      parentInnerId = WinMap.TopWindowFlag;
+    } else {
+      var parent = getDOMUtils(win.parent);
+      parentOuterId = parent.outerWindowID;
+      parentInnerId = parent.currentInnerWindowID;
+    }
+
+    var utils = getDOMUtils(win);
+    var outerId = utils.outerWindowID;
+    var innerId = utils.currentInnerWindowID;
+
+    if (outerId in WinMap._outer === false) {
+      WinMap.addToOuterHistory({
+        __proto__: null,
+        type: "enable/update"
+      }, outerId, parentOuterId);
+    }
+
+    if (innerId in WinMap._inner === false) {
+      WinMap.addInner({
+        url: win.location.href,
+        inner: innerId,
+        outer: outerId,
+        parentInner:parentInnerId
+      });
+    }
+  },
+
+
+  _update: function() {
+    function forEachWindow(fn, win) {
+      fn(win);
+      for (var idx = win.length - 1; idx > -1; idx--) {
+        forEachWindow(fn, win[idx]);
+      }
+    }
+
+    var enumWin = UIUtils.getWindowEnumerator();
+    while (enumWin.hasMoreElements()) {
+      var tabList = UIUtils.getTabList(enumWin.getNext());
+      for (var idx = tabList.length - 1; idx > -1; idx--) {
+        forEachWindow(WinMap._addWindow, tabList[idx].linkedBrowser.contentWindow);
+      }
+    }
   },
 
 
   getOuterEntry: function(id) {
+    if (id in this._outer) {
+      return this._outer[id];
+    }
+    this._update();
     console.assert(id in this._outer, "getOuterEntry - outerId not found " + id);
     return this._outer[id];
   },
 
 
   getInnerEntry: function(id) {
+    if (id in this._inner) {
+      return this._inner[id];
+    }
+    this._update();
     console.assert(id in this._inner, "getInnerEntry - innerId not found " + id);
     return this._inner[id];
   },
@@ -225,7 +280,7 @@ var WinMap = { // stores all current outer/inner windows
   },
 
 
-  addToOuterHistory: function(newHistObj, outerId, parentId) { // TODO add all docs for just installed ext?
+  addToOuterHistory: function(newHistObj, outerId, parentId) {
     var outerData;
     if (outerId in this._outer) {
       outerData = this._outer[outerId];
@@ -268,6 +323,9 @@ var WinMap = { // stores all current outer/inner windows
   getTabId: function(outerId) { // TODO findTabIdtab id = outer id from a top window
     console.assert(typeof outerId === "number", "getTabId param")
     var all = this._outer;
+    if ((outerId in all) === false) {
+      this._update();
+    }
     console.assert(outerId in all, "getTabId not found");
     var win = all[outerId];
     while (WinMap.isFrameId(win.parentOuter)) {
@@ -279,6 +337,7 @@ var WinMap = { // stores all current outer/inner windows
 
 
   getUserFromTab: function(tabId) { // tab=top window
+    console.assert(WinMap.isTabId(this.getOuterEntry(tabId).parentOuter), "not a top window"); // BUG assert may call _update
     var uri = findTabById(tabId).linkedBrowser.currentURI;
     return this.getUserFromDocument(uri, tabId, true);
   },
@@ -315,7 +374,7 @@ var WinMap = { // stores all current outer/inner windows
       return null;
     }
 
-    var tabData = this._outer[tabId];
+    var tabData = this.getOuterEntry(tabId);
     console.assert(WinMap.isTabId(tabData.parentOuter), "getUserFromDocument - tabId is not a top window: " + tabId);
 
     var docUser = null;
@@ -377,8 +436,40 @@ var WinMap = { // stores all current outer/inner windows
   },
 
 
+  restoreTabDefaultUsers: function(tab) {
+    if (tab.hasAttribute("multifox-tab-logins") === false) {
+      return;
+    }
+    console.log("restoreDefaultLogins", tab.getAttribute("multifox-tab-logins"));
+
+    var tabLogins;
+    try {
+      // TODO delay until tab is actually loaded (@ getUserFromDocument?)
+      tabLogins = JSON.parse(tab.getAttribute("multifox-tab-logins"));
+    } catch (ex) {
+      console.error(ex, "restoreTabDefaultUsers - buggy json", tab.getAttribute("multifox-tab-logins"));
+      return;
+    }
+
+    if (("firstParty" in tabLogins) === false) {
+      return;
+    }
+
+    var logins = tabLogins.firstParty;
+    var tabId = getIdFromTab(tab);
+    var obj;
+    var userId;
+    var docUser;
+    for (var tld in logins) {
+      obj = logins[tld];
+      userId = new UserId(obj.encodedUser, obj.encodedTld);
+      docUser = new DocumentUser(userId, tld, tabId);
+      this.setUserForTab(docUser, tabId);
+    }
+  },
+
+
   setTabAsNewAccount: function(tabId) {
-    console.assert(WinMap.isTabId(this._outer[tabId].parentOuter), "not a top window");
     var docUser = this.getUserFromTab(tabId);
     var user = new UserId(UserUtils.NewAccount, docUser.user.encodedTld);
     var docUser2 = new DocumentUser(user, docUser.ownerTld, tabId);
@@ -388,7 +479,7 @@ var WinMap = { // stores all current outer/inner windows
 
 
   setWindowAsUserForTab: function(innerId) {
-    var data = this._inner[innerId];
+    var data = this.getInnerEntry(innerId);
     if ("docUserObj" in data) {
       console.log('setWindowAsUserForTab FOUND', innerId, data.docUserObj);
       var tabId = this.getTabId(data.outerId);
@@ -402,12 +493,7 @@ var WinMap = { // stores all current outer/inner windows
 
   // save currently used login by a tld in a given tab
   setUserForTab: function(docUser, tabId) {
-    if (this.hasOuterWindow(tabId) === false) {
-      console.trace();
-      throw new Error("setUserForTab tab not found " + tabId);
-    }
-
-    var tabData = this._outer[tabId];
+    var tabData = this.getOuterEntry(tabId);
     console.assert(WinMap.isTabId(tabData.parentOuter), "0 not a top window " + tabId + ". Caller should send tabId instead of an outerId/iframe - caller would probably need tabId anyway.");
 
 
@@ -441,7 +527,7 @@ var WinMap = { // stores all current outer/inner windows
 
 
     // for session restore
-    console.log("setUserForTab multifox-tab-logins saved tab", tabId); // BUG check if it works for new bg tabs
+    console.log("setUserForTab multifox-tab-logins saved tab", tabId, docUser); // BUG check if it works for new bg tabs
     var tab = findTabById(tabId);
     tab.setAttribute("multifox-tab-logins", JSON.stringify(tabData.tabLogins)); // TODO tabId is useless // TODO add versioning // TODO check if empty
     if (tab.hasAttribute("multifox-tab-error")) {

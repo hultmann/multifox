@@ -47,9 +47,20 @@ var WindowWatcher = {
 var MainWindow = {
 
   initAll: function() {
+    var win;
     var enumWin = UIUtils.getWindowEnumerator();
     while (enumWin.hasMoreElements()) {
-      this.initWindow(enumWin.getNext());
+      win = enumWin.getNext();
+      this.initWindow(win);
+      this._initTabs(win);
+    }
+  },
+
+
+  _initTabs: function(win) {
+    var tabList = UIUtils.getTabList(win);
+    for (var idx = tabList.length - 1; idx > -1; idx--) {
+      WinMap.restoreTabDefaultUsers(tabList[idx]);
     }
   },
 
