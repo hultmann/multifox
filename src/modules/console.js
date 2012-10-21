@@ -6,15 +6,36 @@
 // shared between main.js and remote-browser.js
 var console = {
 
-  _prefix: "${CHROME_NAME}",
+  _prefix: "${CHROME_NAME} ",
 
 
   setAsRemote: function() {
-    this._prefix = "${CHROME_NAME}[remote]";
+    this._prefix = "${CHROME_NAME}[remote] ";
   },
 
 
-  warn: function(msg) {
+  assert: function console_assert(test) {
+    if (test === true) {
+      return;
+    }
+    var msg = this._format(test === false
+                           ? Array.prototype.slice.call(arguments, 1)
+                           : arguments);
+    this._print("ASSERT ", msg + "\n" + this._stackToString(Components.stack));
+    var ex =  new Error("[console.assert] " + msg);
+    Cu.reportError(ex); // workaround - sometimes an exception doesn't show up in console
+    throw ex;
+  },
+
+
+  error: function console_error(ex) {
+    Cu.reportError("console.error:");
+    Cu.reportError(ex);
+    this._print("ERROR ", this._format(arguments)); // ex includes stacktrace
+  },
+
+
+  warn: function console_warn(msg) {
     var message = Cc["@mozilla.org/scripterror;1"].createInstance(Ci.nsIScriptError);
     message.init(msg,
                  null, // sourceName
@@ -23,40 +44,33 @@ var console = {
                  Ci.nsIScriptError.warningFlag,
                  "component javascript");
     Services.console.logMessage(message);
-    this.trace(msg); // TODO trace volta uma string
+    this._print("warn ", this._format(msg));
   },
 
 
-  error: function(ex) {
-    Cu.reportError(ex);
-    this.console("console.error");
-    this.trace(ex.toString());
+  trace: function console_trace() {
+    this._print("trace ", this._format(arguments) + "\n" +
+                this._stackToString(Components.stack));
   },
 
 
-  assert: function(test, msg) {
-    if (test !== true) {
-      var ex =  new Error("console.assert - " + msg + " - " + test);
-      Cu.reportError(ex); // workaround - sometimes exception doesn't show up in console
-      console.trace("console.assert()");
-      throw ex;
-    }
+  log: function console_log() {
+    this._print("", this._format(arguments));
   },
 
 
-  trace: function console_trace(desc) {
-    if (!desc) {
-      desc = "console.trace()";
-    }
-    console.log(desc, "\n" + this._stackToString(Components.stack));
+  _print: function(name, content) {
+    dump("\n-- " + this._prefix + name + this._now() +
+         " -------------------------------------------------------\n" +
+         content + "\n");
   },
 
 
-  log: function() {
-    var len = arguments.length;
+  _format: function(args) {
+    var len = args.length;
     var output = new Array(len);
     for (var idx = 0; idx < len; idx++) {
-      var arg = arguments[idx];
+      var arg = args[idx];
       switch (typeof arg) {
         case "string":
           output[idx] = arg.length > 0 ? arg : "<empty>";
@@ -79,9 +93,7 @@ var console = {
           break;
       }
     }
-    Services.console.logStringMessage(this._prefix +
-                                      "[" + this._now() + "] " +
-                                      output.join(" "));
+    return output.join(" ");
   },
 
 
@@ -107,6 +119,15 @@ var console = {
 
     } else if (obj instanceof Ci.nsIURI) {
       return "[nsIURI: " + obj.spec + "]";
+
+    } else if (obj instanceof Ci.nsISimpleEnumerator) {
+      var name = "";
+      var qty = 0;
+      while (obj.hasMoreElements()) {
+        name += obj.getNext();
+        qty++;
+      }
+      return "[" + obj.toString() + " " + qty + " " + name + "]";
 
     } else if (obj instanceof Ci.nsIDOMWindow) {
       return "[" + obj.toString() + " " + obj.location.href + "]";
