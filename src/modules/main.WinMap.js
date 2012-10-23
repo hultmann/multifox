@@ -182,7 +182,7 @@ var WinMap = { // stores all current outer/inner windows
   },
 
 
-  _addWindow: function(win) { // called recursively by _update for all tabs in a window
+  _addWindow: function(win) { // called recursively by _update for all documents in a tab
     var parentOuterId;
     var parentInnerId;
     if (isTopWindow(win)) {
@@ -239,7 +239,7 @@ var WinMap = { // stores all current outer/inner windows
       return this._outer[id];
     }
     this._update();
-    console.assert(id in this._outer, "getOuterEntry - outerId not found " + id);
+    console.assert(id in this._outer, "getOuterEntry - outerId not found", id);
     return this._outer[id];
   },
 
@@ -249,7 +249,7 @@ var WinMap = { // stores all current outer/inner windows
       return this._inner[id];
     }
     this._update();
-    console.assert(id in this._inner, "getInnerEntry - innerId not found " + id);
+    console.assert(id in this._inner, "getInnerEntry - innerId not found", id);
     return this._inner[id];
   },
 
@@ -263,7 +263,7 @@ var WinMap = { // stores all current outer/inner windows
     };
 
     // all inner windons should be preserved to allow a page from bfcache to use its original login
-    console.assert((msgData.inner in this._inner) === false, "WinMap.addInner " + msgData.inner);
+    console.assert((msgData.inner in this._inner) === false, "WinMap.addInner", msgData.inner);
     this._inner[msgData.inner] = innerObj;
     return innerObj;
   },
@@ -375,7 +375,7 @@ var WinMap = { // stores all current outer/inner windows
     }
 
     var tabData = this.getOuterEntry(tabId);
-    console.assert(WinMap.isTabId(tabData.parentOuter), "getUserFromDocument - tabId is not a top window: " + tabId);
+    console.assert(WinMap.isTabId(tabData.parentOuter), "getUserFromDocument - tabId is not a top window:", tabId);
 
     var docUser = null;
     if ("tabLogins" in tabData) {
@@ -481,7 +481,7 @@ var WinMap = { // stores all current outer/inner windows
   setWindowAsUserForTab: function(innerId) {
     var data = this.getInnerEntry(innerId);
     if ("docUserObj" in data) {
-      console.log('setWindowAsUserForTab FOUND', innerId, data.docUserObj);
+      console.log("setWindowAsUserForTab FOUND", innerId, data.docUserObj);
       var tabId = this.getTabId(data.outerId);
       this.setUserForTab(data.docUserObj, tabId); // BUG [?] a 3rd party iframe may become the default
     }
@@ -494,7 +494,7 @@ var WinMap = { // stores all current outer/inner windows
   // save currently used login by a tld in a given tab
   setUserForTab: function(docUser, tabId) {
     var tabData = this.getOuterEntry(tabId);
-    console.assert(WinMap.isTabId(tabData.parentOuter), "0 not a top window " + tabId + ". Caller should send tabId instead of an outerId/iframe - caller would probably need tabId anyway.");
+    console.assert(WinMap.isTabId(tabData.parentOuter), "0 not a top window ", tabId, "- Caller should send tabId instead of an outerId/iframe - caller would probably need tabId anyway.");
 
 
     var myTld = docUser.ownerTld;
@@ -687,7 +687,7 @@ var PendingUsersLogins = {
 
 
   _copyLogins: function(targetTabId, sourceTabId) {
-    console.assert(targetTabId !== sourceTabId, "_copyLogins same tab " + sourceTabId);
+    console.assert(targetTabId !== sourceTabId, "_copyLogins same tab", sourceTabId);
     var sourceTabData = WinMap.getOuterEntry(sourceTabId);
     if (("tabLogins" in sourceTabData) === false) {
       return; // nothing to copy

@@ -6,7 +6,6 @@
 var NetworkObserver = {
 
   start: function() {
-    console.log("NetworkObserver start");
     var obs = Services.obs;
     obs.addObserver(this._request, "http-on-modify-request", false);
     obs.addObserver(this._response, "http-on-examine-response", false);
@@ -14,7 +13,6 @@ var NetworkObserver = {
 
 
   stop: function() {
-    console.log("NetworkObserver stop");
     var obs = Services.obs;
     obs.removeObserver(this._request, "http-on-modify-request");
     obs.removeObserver(this._response, "http-on-examine-response");

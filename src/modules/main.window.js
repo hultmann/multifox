@@ -24,7 +24,7 @@ var WindowWatcher = {
 
   _onLoad: function(evt) {
     var win = evt.currentTarget;
-    console.assert(win === evt.target.defaultView, "bubbled DOMContentLoaded event " + win.location.href);
+    console.assert(win === evt.target.defaultView, "bubbled DOMContentLoaded event", win);
     win.removeEventListener("DOMContentLoaded", WindowWatcher._onLoad, false);
 
     switch (win.location.href) {
@@ -79,18 +79,20 @@ var MainWindow = {
 
     // debug key
     var doc = win.document;
+    console.assert(doc.getElementById("multifox2-debug-key") === null, "key dupe id");
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
-    key.setAttribute("id", "multifox2-debug-key");
+    key.setAttribute("id", "multifox2-debug-key"); // BUG it doesn't work after disable/enable
     key.setAttribute("keycode", "VK_F4");
     key.setAttribute("oncommand", "(function(){})()"); // it doesn't work without that
     key.addEventListener("command", function() {
-      console.log("\n" + DebugWinMap.toString() + "\n\n\n" +
+      Services.console.logStringMessage(
+        DebugWinMap.toString() + "\n\n\n" +
 
-                  "\n-----------\nOuter Windows, len", Object.keys(WinMap._outer).length, "\n",
-                  JSON.stringify(WinMap._outer, null, 2),
+        "\n-----------\nOuter Windows, len", Object.keys(WinMap._outer).length, "\n",
+        JSON.stringify(WinMap._outer, null, 2),
 
-                  "\n=========================\nInner Windows, len", Object.keys(WinMap._inner).length, "\n",
-                  JSON.stringify(WinMap._inner, null, 2));
+        "\n=========================\nInner Windows, len", Object.keys(WinMap._inner).length, "\n",
+        JSON.stringify(WinMap._inner, null, 2));
     }, false);
   },
 
@@ -109,5 +111,7 @@ var MainWindow = {
     if (container !== null) {
       container.parentNode.removeChild(container);
     }
+
+    console.log("/MainWindow.uninitWindow", reason);
   }
 };

@@ -31,25 +31,25 @@ var UIUtils = {
 
 
   getContentContainer: function(chromeWin) {
-    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
     return chromeWin.gBrowser; // <tabbrowser>
   },
 
 
   getTabStripContainer: function(chromeWin) {
-    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
     return chromeWin.gBrowser.tabContainer; // <tabs>
   },
 
 
   getTabList: function(chromeWin) {
-    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
     return chromeWin.gBrowser.tabs; // <tab> NodeList
   },
 
 
   getSelectedTab: function(chromeWin) {
-    console.assert(this.isMainWindow(chromeWin), "Not a browser window " + chromeWin.location.href);
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
     return chromeWin.gBrowser.selectedTab; // <tab>
   },
 

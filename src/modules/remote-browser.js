@@ -69,7 +69,7 @@ function onNewDocument(evt) { // DOMWindowCreated handler
 }
 
 
-function startTab(msgData) {
+function startTab(msgData) { // BUG it's being called by a non-tab browser
   m_nameSentByChrome  = msgData.sentByChrome;
   m_nameSentByContent = msgData.sentByContent;
   m_src = msgData.src + "initContext(window, document, '" +
@@ -95,7 +95,7 @@ function stopTab(src) {
   console.assert("initMultifox" in m_global, "stopTab fail m_global")
   var removed = delete m_global["initMultifox"];
   console.assert(removed, "stopTab fail")
-  console.log("stopTab OK");
+  console.log("stopTab OK", getDOMUtils(content).currentInnerWindowID, content);
 }
 
 
@@ -163,22 +163,26 @@ function onContentCustomEvent(evt) {
 
 
 function onParentMessage(message) {
-  switch (message.json.msg) {
-    case "disable-extension":
-      stopTab(message.json.src);
-      break;
-    case "tab-data":
-      startTab(message.json);
-      break;
-    case "get-tab-hosts":
-      var msgData = {
-        msg:   "all-tab-hosts",
-        hosts: getSupportedUniqueHosts(content)
-      };
-      sendAsyncMessage("multifox-remote-msg", msgData);
-      break;
-    default:
-      throw new Error("onParentMessage " + message.json.msg);
+  try { // detect silent exceptions
+    switch (message.json.msg) {
+      case "disable-extension":
+        stopTab(message.json.src);
+        break;
+      case "tab-data":
+        startTab(message.json);
+        break;
+      case "get-tab-hosts":
+        var msgData = {
+          msg:   "all-tab-hosts",
+          hosts: getSupportedUniqueHosts(content)
+        };
+        sendAsyncMessage("multifox-remote-msg", msgData);
+        break;
+      default:
+        throw new Error("onParentMessage " + message.json.msg);
+    }
+  } catch(ex) {
+    console.error(ex);
   }
 }
 

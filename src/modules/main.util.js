@@ -34,13 +34,13 @@ var StringEncoding = {
 
 
   decode: function(hex) {
-    console.assert(typeof hex === "string", "StringEncoding.decode val=" + hex);
+    console.assert(typeof hex === "string", "StringEncoding.decode val =", hex);
     var len = hex.length / 2;
     if (len === 0) {
       return "";
     }
 
-    console.assert((len % 1) === 0, "invalid hex string: " + hex);
+    console.assert((len % 1) === 0, "invalid hex string:", hex);
     var bin = new Array(len);
 
     var j = 0;

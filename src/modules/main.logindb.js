@@ -78,7 +78,7 @@ var LoginDB = {
   },
 
   setDefaultUser: function(encodedTld, user) { // TODO setDefaultTopLogin
-    console.assert(typeof encodedTld === "string", "encodedTld=" + encodedTld);
+    console.assert(typeof encodedTld === "string", "encodedTld =", encodedTld);
     this._ensureValid();
 
     if ((encodedTld in this._loggedInTabs) === false) {
@@ -132,7 +132,7 @@ var LoginDB = {
     var defaultFormTld = loginTlds[0];
 
     var tld = StringEncoding.decode(encTld);
-    console.assert(defaultFormTld in this._auths, "this._auths " + defaultFormTld + "/" + tld);
+    console.assert(defaultFormTld in this._auths, "this._auths", defaultFormTld, "/", tld);
     var users = this._auths[defaultFormTld];
     console.assert(users.length > 0, "users.length");
 
@@ -167,7 +167,7 @@ var LoginDB = {
       return false;
     }
     var encodedData = encodedLogin.rawData;
-    console.assert(encodedData in counter, "!encodedData in this._tldCookieCounter " + encodedData);
+    console.assert(encodedData in counter, "!encodedData in this._tldCookieCounter", encodedData);
     counter[encodedData]--;
     if (counter[encodedData] > 0) {
       return false;
@@ -304,6 +304,14 @@ var LoginDB = {
 
   _onCookieChanged: {
     observe: function(subject, topic, data) { // nsIObserver
+      try { // detect silent exceptions
+        this._observe(subject, topic, data);
+      } catch(ex) {
+        console.error(ex);
+      }
+    },
+
+    _observe: function(subject, topic, data) {
       if (LoginDB._loggedInTabs === null) {
         return;
       }
@@ -320,7 +328,7 @@ var LoginDB = {
           break;
         case "batch-deleted":
           var all = subject.QueryInterface(Ci.nsIArray).enumerate();
-          console.trace("cookie BATCH-DELETED!" + data + all);
+          console.log("cookie BATCH-DELETED!", data, all);
           while (all.hasMoreElements()) {
             var cookie = all.getNext().QueryInterface(Ci.nsICookie2);
             if (LoginDB.invalidateAfterCookieDeletion(cookie.host)) {

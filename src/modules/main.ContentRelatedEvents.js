@@ -74,7 +74,7 @@ var ContentRelatedEvents = {
   },
 
 
-  _onRemoteBrowserMessage: function(message) {
+  _onRemoteBrowserMessage: function Content_onRemoteBrowserMessage(message) {
     // this = nsIChromeFrameMessageManager
     try {
       var browser = message.target;

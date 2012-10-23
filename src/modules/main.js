@@ -37,17 +37,35 @@ var Main = {
   _install: false,
 
   install: function() {
-    this._install = true;
-    var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
-    ns.install();
+    try { // detect silent exceptions
+      console.log("Main.install");
+      this._install = true;
+      var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
+      ns.install();
+    } catch(ex) {
+      console.error(ex);
+    }
   },
 
   uninstall: function() {
-    var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
-    ns.uninstall();
+    try { // detect silent exceptions
+      console.log("Main.uninstall");
+      var ns = util.loadSubScript("${PATH_MODULE}/maintenance.js");
+      ns.uninstall();
+    } catch(ex) {
+      console.error(ex);
+    }
   },
 
   startup: function(isAppStartup) {
+    try { // detect silent exceptions
+      this._startup(isAppStartup);
+    } catch(ex) {
+      console.error(ex);
+    }
+  },
+
+  _startup: function(isAppStartup) {
     if (this._install) {
       // set localized description (install cannot read locale files)
       var desc = util.getTextFrom("about.properties", "extensions.${EXT_ID}.description");
@@ -59,7 +77,7 @@ var Main = {
       ss.persistTabAttribute("multifox-tab-logins");
     } catch (ex) {
       // exception resource:///modules/sessionstore/SessionStore.jsm :: ssi_writeFile :: line 4358
-      console.log(ex);
+      console.error(ex);
     }
 
     StringEncoding.init();
@@ -79,13 +97,18 @@ var Main = {
   },
 
   shutdown: function() {
-    WindowWatcher.uninit();
-    SubmitObserver.stop();
-    NetworkObserver.stop();
-    Cookies.stop();
-    LoginDB.uninit();
-    ContentRelatedEvents.uninit();
-    MainWindow.uninitAll();
-    unregisterAbout();
+    try { // detect silent exceptions
+      console.log("Main.shutdown");
+      WindowWatcher.uninit();
+      SubmitObserver.stop();
+      NetworkObserver.stop();
+      Cookies.stop();
+      LoginDB.uninit();
+      ContentRelatedEvents.uninit();
+      MainWindow.uninitAll();
+      unregisterAbout();
+    } catch(ex) {
+      console.error(ex);
+    }
   }
 };

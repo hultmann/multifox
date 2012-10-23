@@ -4,8 +4,8 @@
 
 
 function UserId(encUser, encTld) {
-  console.assert(typeof encUser === "string", "invalid user=" + encUser);
-  console.assert(typeof encTld  === "string", "invalid loginTld=" + encTld);
+  console.assert(typeof encUser === "string", "invalid user =", encUser);
+  console.assert(typeof encTld  === "string", "invalid loginTld =", encTld);
   this._encName = encUser;
   this._encTld = encTld;
 }
@@ -54,9 +54,9 @@ UserId.prototype = {
 
 function DocumentUser(user, plainDocTld, tabId) {
   console.assert(user !== null, "null user");
-  console.assert(typeof user        === "object", "invalid user=" + user);
-  console.assert(typeof plainDocTld === "string", "invalid plainDocTld=" + plainDocTld);
-  console.assert(typeof tabId       === "number", "invalid tabId=" + tabId);
+  console.assert(typeof user        === "object", "invalid user =", user);
+  console.assert(typeof plainDocTld === "string", "invalid plainDocTld =", plainDocTld);
+  console.assert(typeof tabId       === "number", "invalid tabId =", tabId);
   this._user = user;
   this._tabId = tabId;
   this._ownerDocTld = plainDocTld;
@@ -142,7 +142,7 @@ DocumentUser.prototype = {
 
 
   appendLogin: function(assetDomain) {
-    console.assert(typeof assetDomain === "string", "invalid appendLogin =" + assetDomain);
+    console.assert(typeof assetDomain === "string", "invalid appendLogin =", assetDomain);
     var user = this.user;
     if (user.isNewAccount) {
       return assetDomain;
@@ -184,7 +184,7 @@ var UserUtils = {
     // [3] youtube
     // [4] (empty?)
     var labels = internalHost.split(".").reverse();
-    console.assert(labels[0] === "${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}", "_getLabels " + internalHost);
+    console.assert(labels[0] === "${INTERNAL_DOMAIN_SUFFIX_LOGGEDIN}", "_getLabels", internalHost);
     return labels;
   },
 
