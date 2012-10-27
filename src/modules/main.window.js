@@ -88,10 +88,10 @@ var MainWindow = {
       Services.console.logStringMessage(
         DebugWinMap.toString() + "\n\n\n" +
 
-        "\n-----------\nOuter Windows, len", Object.keys(WinMap._outer).length, "\n",
-        JSON.stringify(WinMap._outer, null, 2),
+        "\n-----------\nOuter Windows, len=" + Object.keys(WinMap._outer).length + "\n" +
+        JSON.stringify(WinMap._outer, null, 2) +
 
-        "\n=========================\nInner Windows, len", Object.keys(WinMap._inner).length, "\n",
+        "\n=========================\nInner Windows, len=" + Object.keys(WinMap._inner).length + "\n" +
         JSON.stringify(WinMap._inner, null, 2));
     }, false);
   },
