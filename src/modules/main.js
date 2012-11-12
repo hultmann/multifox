@@ -20,6 +20,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 #include "main.ContentRelatedEvents.js"
 #include "main.ChromeRelatedEvents.js"
 #include "main.WinMap.js"
+#include "main.UserState.js"
 #include "main.User.js"
 #include "main.CrossTldLogin.js"
 #include "main.logindb.js"

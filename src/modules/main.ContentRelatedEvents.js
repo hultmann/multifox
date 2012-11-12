@@ -255,12 +255,6 @@ var RemoteBrowserMethod = {
          .sendAsyncMessage("multifox-parent-msg", msgData2);
     }
     return null;
-  },
-
-
-  "all-tab-hosts": function(msgData, tab) {
-    updateUIAsyncCallback(msgData, tab);
-    return null;
   }
 
 };

@@ -13,8 +13,26 @@ function UserId(encUser, encTld) {
 
 UserId.prototype = {
 
+  toString: function() {
+    return JSON.stringify(this);
+  },
+
+
+  toJSON: function() { // indirectly called by toString
+    return {
+      "encodedUser":this.encodedName, "encodedTld":this.encodedTld,
+      "x-user": this.plainName + " " + this.plainTld
+    };
+  },
+
+
   equals: function(user) {
     return (user._encName === this._encName) && (user._encTld  === this._encTld);
+  },
+
+
+  toNewAccount: function() {
+    return new UserId(UserUtils.NewAccount, this._encTld);
   },
 
 
@@ -52,39 +70,32 @@ UserId.prototype = {
 
 
 
-function DocumentUser(user, plainDocTld, tabId) {
+function DocumentUser(user, plainDocTld, topInnerId) {
   console.assert(user !== null, "null user");
   console.assert(typeof user        === "object", "invalid user =", user);
   console.assert(typeof plainDocTld === "string", "invalid plainDocTld =", plainDocTld);
-  console.assert(typeof tabId       === "number", "invalid tabId =", tabId);
+  console.assert(typeof topInnerId  === "number", "invalid topInnerId =", topInnerId);
+  console.assert(WinMap.isTabId(WinMap.getInnerEntry(topInnerId).parentInnerId), "not a top id", user, plainDocTld, topInnerId);
   this._user = user;
-  this._tabId = tabId;
+  this._topInnerId = topInnerId;
   this._ownerDocTld = plainDocTld;
+  this._ownerEncodedDocTld = StringEncoding.encode(plainDocTld);
 }
 
 
 DocumentUser.prototype = {
 
   toJSON: function() {
-    var user = this.user;
     return {
-      "owner": this._ownerDocTld,
-      "tabId": this._tabId, // BUG useless for ssrestore
-      "encodedUser":user.encodedName, "encodedTld":user.encodedTld,
-      "x-user": user.plainName + " " + user.plainTld
+      "x-ownerTld": this._ownerDocTld,
+      "topInnerId": this._topInnerId,
+      "x-user": this.user.plainName + " " + this.user.plainTld
     };
   },
 
 
   toString: function() {
     return JSON.stringify(this);
-  },
-
-
-  equals: function(id) {
-    return (id._tabId       === this._tabId)       &&
-           (id._ownerDocTld === this._ownerDocTld) &&
-           this.user.equals(id.user);
   },
 
 
@@ -99,22 +110,12 @@ DocumentUser.prototype = {
 
 
   get encodedDocTld() {
-    return StringEncoding.encode(this._ownerDocTld);
+    return this._ownerEncodedDocTld;
   },
 
 
-  toNewDoc: function(plainDocTld) {
-    return new DocumentUser(this._user, plainDocTld, this._tabId);
-  },
-
-
-  toNewTab: function(tabId) {
-    return new DocumentUser(this._user, this._ownerDocTld, tabId);
-  },
-
-
-  isFormTld: function() {
-    return this._ownerDocTld === this.user.encodedTld;
+  equalsToLoggedInTld: function(assetTld) {
+    return assetTld === this._ownerDocTld;
   },
 
 
@@ -124,12 +125,12 @@ DocumentUser.prototype = {
     }
     // assetTld is a different tld (and host) from document
     var assetUri = Services.io.newURI("http://" + assetTld, null, null); // TODO remove assetTld=>uri workaround
-    var docUser = WinMap.getUserFromDocument(assetUri, this._tabId, false);
+    var docUser = WinMap.getUserFromDocument(assetUri, this._topInnerId, false);
     if (docUser === null) {
       return true;
     }
     // is assetTld logged in? e.g. facebook.com
-    WinMap.setUserForTab(docUser, this._tabId);
+    WinMap.setUserForTab(WinMap.getTopOuterIdFromInnerId(this._topInnerId), docUser.ownerTld, docUser.user);
     return false;
   },
 

@@ -32,42 +32,42 @@ function updateUIAsync(tab, updateTopLogin) {
   if (tab.hasAttribute("selected") === false) {
     return;
   }
+  var doc = tab.ownerDocument;
   if (updateTopLogin === false) {
     // 3rd-party icon?
-    if (getIconContainer(tab.ownerDocument) !== null) {
+    if (getIconContainer(doc) !== null) {
       return;
     }
   }
-  tab.linkedBrowser
-     .messageManager
-     .sendAsyncMessage("multifox-parent-msg", {msg: "get-tab-hosts"});
+  // workaround to make it non-blocking
+  doc.defaultView.mozRequestAnimationFrame(function() {
+    updateUIAsyncCore(tab);
+  });
 }
 
 
-function updateUIAsyncCallback(msgData, tab) {
+function updateUIAsyncCore(tab) {
   if (tab.hasAttribute("selected") === false) {
     return;
   }
 
 try {
-  var doc = tab.ownerDocument;
-  if ((LoginDB.hasLoggedInHost(msgData.hosts) === false) && (m_welcomeMode === false)) {
-    removeUI(doc);
-    return;
+  var topInnerId = getCurrentTopInnerId(tab);
+  if (UserState.hasUsers(topInnerId) === false) {
+    if (m_welcomeMode === false) {
+      removeUI(tab.ownerDocument);
+      return;
+    }
   }
 
   // show button
+  var doc = tab.ownerDocument;
   var container = getIconContainer(doc);
   if (container === null) {
-    createContainer(doc);
-    var win = doc.defaultView;
-    var delay = UIUtils.getTabList(win).length > 1 ? 25 : 200;
-    win.setTimeout(initIcon, delay, doc); // open window => greater delay
-  } else {
-    if (container.firstChild !== null) { // waiting initIcon?
-      updateIconCore(tab, container);
-    }
+    container = createContainer(doc);
+    initIcon(doc, container, topInnerId);
   }
+  updateIconCore(doc, container, topInnerId, tab);
 
 } catch (ex) {
 console.error(ex);
@@ -100,7 +100,6 @@ function createContainer(doc) {
   if (container === null) {
     var ref = doc.getElementById("urlbar-icons");
     container = ref.insertBefore(doc.createElement("hbox"), ref.firstChild);
-    container.setAttribute("hidden", "true");
     container.setAttribute("id", "multifox-icon");
     container.setAttribute("align", "center");
   }
@@ -167,29 +166,26 @@ function setStyle(mode, containerStyle, iconStyle, labelStyle) {
 }
 
 
-function updateIconCore(tab, container) {
+function updateIconCore(doc, container, topInnerId, tab) {
   if (m_welcomeMode) {
-    var doc = tab.ownerDocument;
     getIconLabel(doc).setAttribute("value", "${EXT_NAME}");
     insertIcon(true, "${PATH_CONTENT}/favicon.ico", doc);
-  } else {
-    updateIconUserName(tab);
-    updateIcon(tab, container);
-  }
-}
-
-
-function updateIconUserName(tab) {
-  var docUser = WinMap.getUserFromTab(getIdFromTab(tab));
-  var user;
-  if (docUser === null) {
-    user = "<IGNOREME>"; // 3rd-party
-  } else {
-    user = docUser.user.isNewAccount ? util.getText("icon.add-account.label")
-                                     : docUser.user.plainName;
+    return;
   }
 
-  getIconLabel(tab.ownerDocument).setAttribute("value", user);
+  var tabDocData = WinMap.getInnerEntry(topInnerId);
+  var username;
+  if ("docUserObj" in tabDocData) {
+    // tab has an user
+    var u = tabDocData.docUserObj.user;
+    username = u.isNewAccount ? util.getText("icon.add-account.label")
+                              : u.plainName;
+  } else {
+    // 3rd-party users only
+    username = "@";
+  }
+  getIconLabel(doc).setAttribute("value", username);
+  updateIcon(tab, container);
 }
 
 
@@ -240,14 +236,7 @@ function getStatIconContainer(doc) {
 }
 
 
-function initIcon(doc) {
-  var container = getIconContainer(doc);
-  if (container === null) {
-    // e.g. user changed tab!
-    console.log("initIcon ignored! " + container);
-    return;
-  }
-
+function initIcon(doc, container, topInnerId) {
   console.assert(container.children.length === 0, "container has children");
   createBoxDom(container);
   setStyleCore(container.style, doc);
@@ -263,8 +252,6 @@ function initIcon(doc) {
   }
 
   initIconNormal(doc);
-  updateIconCore(tab, container);
-  container.removeAttribute("hidden");
 }
 
 

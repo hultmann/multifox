@@ -171,13 +171,6 @@ function onParentMessage(message) {
       case "tab-data":
         startTab(message.json);
         break;
-      case "get-tab-hosts":
-        var msgData = {
-          msg:   "all-tab-hosts",
-          hosts: getSupportedUniqueHosts(content)
-        };
-        sendAsyncMessage("multifox-remote-msg", msgData);
-        break;
       default:
         throw new Error("onParentMessage " + message.json.msg);
     }

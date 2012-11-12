@@ -71,7 +71,7 @@ var LoginDB = {
   },
 
   setTabAsDefaultUser: function(tab) { // used by ChromeRelatedEvents.activate
-    var docUser = WinMap.getUserFromTab(getIdFromTab(tab));
+    var docUser = WinMap.getUserFromTab(getCurrentTopInnerId(tab));
     if (docUser !== null) {
       this.setDefaultUser(docUser.encodedDocTld, docUser.user);
     }
@@ -122,7 +122,7 @@ var LoginDB = {
   },
 
 
-  getDefaultUser: function(tabId, encTld) {
+  getDefaultUser: function(topInnerId, encTld) {
     if (this.isLoggedIn(encTld) === false) {
       return null;
     }
@@ -138,7 +138,7 @@ var LoginDB = {
 
     var defaultUser = users[0];
     var myuser = new UserId(defaultUser, defaultFormTld);
-    return new DocumentUser(myuser, tld, tabId);
+    return new DocumentUser(myuser, tld, topInnerId);
   },
 
 
@@ -261,9 +261,8 @@ var LoginDB = {
   },
 
 
-  getUsers: function(docUser) {
+  getUsers: function(encDocTld) {
     this._ensureValid();
-    var encDocTld = docUser.encodedDocTld;
     if ((encDocTld in this._loggedInTabs) === false) {
       return [];
     }

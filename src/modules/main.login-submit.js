@@ -41,18 +41,19 @@ var SubmitObserver = {
     var username = findUserName(form);
     if (username === null) {
       console.log("SubmitObserver: NOP, username not found, confirm pw form?");
-      WinMap.loginSubmitted(win, "pw");
+      WinMap.loginSubmitted(win, "pw", null);
       return; // TODO username = "random" or error message (icon);
     }
 
     var tldDoc = getTldFromHost(win.location.hostname);
-    var tabId = getDOMUtils(win.top).outerWindowID;
-    var currentDocUser = WinMap.getUserFromDocument(Services.io.newURI(win.location.href, null, null), tabId, false);
+    var innerId = getDOMUtils(win).currentInnerWindowID;
+    var currentDocUser = WinMap.getUserFromDocument(Services.io.newURI(win.location.href, null, null), innerId, false);
 
+    var topInnerId = WinMap.getTopInnerId(innerId);
     var userId = new UserId(StringEncoding.encode(username), StringEncoding.encode(tldDoc));
-    var docUser = new DocumentUser(userId, tldDoc, tabId);
-    WinMap.setUserForTab(docUser, tabId);
-    WinMap.loginSubmitted(win, "login");
+
+    var docUser = new DocumentUser(userId, tldDoc, topInnerId);
+    WinMap.loginSubmitted(win, "login", docUser);
 
     if (UserUtils.isAnon(currentDocUser)) {
       // TODO apply sandbox right now (all iframes)
@@ -61,7 +62,6 @@ var SubmitObserver = {
     } else {
       copyDataToAnotherUser(tldDoc, docUser, currentDocUser);
     }
-    updateUIAsync(tab, true); // TODO remove current ID now, new doc will update it // BUG doesn't it load a new doc? eg: l10n dashboard
     tab.setAttribute("multifox-logging-in", "true"); // activate transition
   }
 
@@ -71,12 +71,13 @@ var SubmitObserver = {
 function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
   console.assert(prevLogin.user.encodedTld === newLogin.user.encodedTld, "copyDataToAnotherUser tld");
   console.assert(tabTld === prevLogin._ownerDocTld, "anon");
-  if (prevLogin.equals(newLogin)) { // TODO do not test tabId
+  if (prevLogin.user.equals(newLogin.user)) {
     return; // same user, do nothing
   }
 
   var tld = prevLogin.appendLogin(tabTld);
   // don't remove data from current user, it may contain data used by other apps
+  // or by the same app in a different tab
   // some cookies may be unrelated to this login
   var all = getAllCookiesFromHost(tld); // BUG ignore anon cookies?
   //var all = removeTldData_cookies(tld);

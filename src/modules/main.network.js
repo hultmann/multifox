@@ -57,6 +57,7 @@ var NetworkObserver = {
         }
       }
 
+      UserState.addRequest(httpChannel.URI, win, isWin, docUser);
 
       if (UserUtils.isAnon(docUser)) {
         if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {

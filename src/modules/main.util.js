@@ -77,6 +77,12 @@ function getIdFromTab(tab) {
 }
 
 
+function getCurrentTopInnerId(tab) {
+  var win = tab.linkedBrowser.contentWindow;
+  return getDOMUtils(win).currentInnerWindowID;
+}
+
+
 function isSupportedScheme(scheme) { // TODO check nsIStandardURL
   return (scheme === "http") || (scheme === "https") || (scheme === "http:") || (scheme === "https:");
 }

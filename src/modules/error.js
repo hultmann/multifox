@@ -45,7 +45,7 @@ function appendErrorToPanel(box, panel) {
 
 function moveTabToDefault(button) {
   var tab = UIUtils.getSelectedTab(button.ownerDocument.defaultView);
-  var docUser = WinMap.setTabAsNewAccount(getIdFromTab(tab));
+  var docUser = WinMap.setTabAsNewAccount(tab);
   updateUIAsync(tab, true); // show new user now (see loadTab function)
 
   moveData_toDefault(docUser);

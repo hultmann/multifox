@@ -60,10 +60,11 @@ function createLoginsMenu(menupopup, onHidden) {
 
 
   var doc = menupopup.ownerDocument;
-  var tabId = getIdFromTab(UIUtils.getSelectedTab(doc.defaultView));
-  var docUser = WinMap.getUserFromTab(tabId);
+  var topInnerId = getCurrentTopInnerId(UIUtils.getSelectedTab(doc.defaultView));
+  var topInnerData = WinMap.getInnerEntry(topInnerId);
 
   // list all accounts
+  var docUser = "docUserObj" in topInnerData ? topInnerData.docUserObj : null;
   if (docUser !== null) {
     populateUsers(docUser, menupopup);
   }
@@ -80,6 +81,9 @@ function createLoginsMenu(menupopup, onHidden) {
     newAccount.className = "menuitem-iconic";
   }
 
+  // list 3rd-party users
+  populate3rdPartyUsers(topInnerData.thirdPartyUsers, menupopup);
+
   // about
   menupopup.appendChild(doc.createElement("menuseparator"));
   var item4 = menupopup.appendChild(doc.createElement("menuitem"));
@@ -90,7 +94,7 @@ function createLoginsMenu(menupopup, onHidden) {
 
 
 function populateUsers(docUser, menupopup) {
-  var users = LoginDB.getUsers(docUser);
+  var users = LoginDB.getUsers(docUser.encodedDocTld);
   if (users.length === 0) {
     return;
   }
@@ -132,6 +136,40 @@ function populateUsers(docUser, menupopup) {
   }
 
   menupopup.appendChild(doc.createElement("menuseparator"));
+}
+
+
+function populate3rdPartyUsers(thirdParty, menupopup) {
+  var users = [];
+  for (var tld in thirdParty) {
+    var encTld = StringEncoding.encode(tld);
+    // tld may be anon, nut now there is logged in
+    if (LoginDB.isLoggedIn(encTld)) {
+      users.push(tld);
+    }
+  }
+  if (users.length === 0) {
+    return;
+  }
+
+  users.sort(function(a, b) {
+    return b.localeCompare(a);
+  });
+
+  var doc = menupopup.ownerDocument;
+  menupopup.appendChild(doc.createElement("menuseparator"));
+  var username;
+  var tld;
+  var user;
+  for (var idx = 0, len = users.length; idx < len; idx++) {
+    tld = users[idx];
+    user = thirdParty[tld];
+    username = user.isNewAccount ? util.getText("icon.3rd-party.anon.label")
+                                 : user.plainName;
+    var item = menupopup.appendChild(doc.createElement("menuitem"));
+    item.setAttribute("disabled", "true");
+    item.setAttribute("label", tld + " (" + username + ")");
+  }
 }
 
 
@@ -182,8 +220,8 @@ function loginCommandCore(menuItem, newTab) {
       console.log("removeTldData_cookies", tabTld);
       removeTldData_cookies(tabTld);
       removeTldData_LS(tabTld);
-      var docUser = WinMap.getUserFromTab(getIdFromTab(tab));
-      loadTab(newTab, tab, new UserId(UserUtils.NewAccount, docUser.user.encodedTld));
+      var docUser = WinMap.getUserFromTab(getCurrentTopInnerId(tab));
+      loadTab(newTab, tab, docUser.user.toNewAccount());
       break;
 
     case "switch user":
@@ -193,10 +231,11 @@ function loginCommandCore(menuItem, newTab) {
       break;
 
     case "del user":
-      var encUser = menuItem.getAttribute("login-user16");
-      var encTld = menuItem.getAttribute("login-tld");
-      removeCookies(CookieUtils.getUserCookies(new UserId(encUser, encTld)));
-      loadTab(newTab, tab, new UserId(UserUtils.NewAccount, encTld));
+      var userId = new UserId(menuItem.getAttribute("login-user16"),
+                              menuItem.getAttribute("login-tld"));
+      removeCookies(CookieUtils.getUserCookies(userId));
+      UserState.removeUserFromCurrentDocuments(getTldFromHost(uri.host), userId);
+      loadTab(newTab, tab, userId.toNewAccount());
       break;
 
     case "about":
@@ -213,15 +252,14 @@ function loginCommandCore(menuItem, newTab) {
 function loadTab(newTab, tab, user) {
   var browser = tab.linkedBrowser;
   var uri = browser.currentURI;
-  var currentTabId = getIdFromTab(tab);
-  var docUser = new DocumentUser(user, getTldFromHost(uri.host), currentTabId);
+  var tldDoc = getTldFromHost(uri.host);
 
   if (newTab) {
-    LoginDB.setDefaultUser(docUser.encodedDocTld, docUser.user); // BUG should twitpic set twitter as well?
+    LoginDB.setDefaultUser(StringEncoding.encode(tldDoc), user); // BUG should twitpic set twitter as well?
     openNewTab(uri.spec, tab.ownerDocument.defaultView);
   } else {
-    WinMap.setUserForTab(docUser, currentTabId);
-    updateUIAsync(tab, true); // show new user now, don't wait for new dom
+    WinMap.setUserForTab(getIdFromTab(tab), tldDoc, user);
+    updateUIAsync(tab, true); // show new user now, don't wait for new dom // BUG it doesn't working
     // don't use browser.reload(), it would reload POST requests
     browser.loadURIWithFlags(uri.spec, Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
   }
