@@ -44,7 +44,7 @@ var console = {
                  Ci.nsIScriptError.warningFlag,
                  "component javascript");
     Services.console.logMessage(message);
-    this._print("warn ", this._format(msg));
+    this._print("warn ", this._format(arguments));
   },
 
 

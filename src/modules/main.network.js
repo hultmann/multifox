@@ -37,8 +37,7 @@ var NetworkObserver = {
       if (tab !== null) {
         if (isWin) {
           // window/redir/download
-          var msgData = fillDocReqData(win);
-          docUser = NewDocUser.addDocumentRequest(msgData, httpChannel);
+          docUser = NewDocUser.addDocumentRequest(fillDocReqData(win), httpChannel);
         } else {
           // css/js/xhr...
           var winutils = getDOMUtils(win);
@@ -182,7 +181,7 @@ function fillDocReqData(win) {
     return {
       __proto__ :  null,
       outer:       utils.outerWindowID,
-      inner:       utils.currentInnerWindowID,
+      visibleInner:utils.currentInnerWindowID,
       parentOuter: utilsParent.outerWindowID,
       parentInner: utilsParent.currentInnerWindowID,
       parentUrl:   win.parent.location.href
@@ -193,7 +192,7 @@ function fillDocReqData(win) {
     var msgData = {
       __proto__ :  null,
       outer:       utils.outerWindowID,
-      inner:       utils.currentInnerWindowID,
+      visibleInner:utils.currentInnerWindowID,
       parentOuter: WinMap.TopWindowFlag,
       parentInner: WinMap.TopWindowFlag
     };
@@ -207,7 +206,7 @@ function fillDocReqData(win) {
   return {
     __proto__ :  null,
     outer:       utils.outerWindowID,
-    inner:       utils.currentInnerWindowID,
+    visibleInner:utils.currentInnerWindowID,
     parentOuter: WinMap.TopWindowFlag,
     parentInner: WinMap.TopWindowFlag
   };

@@ -71,7 +71,7 @@ var LoginDB = {
   },
 
   setTabAsDefaultUser: function(tab) { // used by ChromeRelatedEvents.activate
-    var docUser = WinMap.getUserFromTab(getCurrentTopInnerId(tab));
+    var docUser = WinMap.getFirstPartyUser(getCurrentTopInnerId(tab));
     if (docUser !== null) {
       this.setDefaultUser(docUser.encodedDocTld, docUser.user);
     }

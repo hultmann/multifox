@@ -157,7 +157,7 @@ var RemoteBrowserMethod = {
   cookie: function(msgData) {
     var docUser = WinMap.getUserForAsset(msgData.inner, msgData.url, null); // TODO send .uri instead of .url
     if (docUser === null) {
-      console.warn("docUser null " + msgData.inner + msgData.url);
+      console.warn("cookie docUser=null", msgData);
       return null; // TODO docUser=null for unnecessarily customized docs
     }
 
@@ -184,8 +184,12 @@ var RemoteBrowserMethod = {
 
   localStorage: function(msgData) {
     var docUser = WinMap.getUserForAsset(msgData.inner, msgData.url, null);
-    var uri = docUser.appendLoginToUri(msgData.uri);
+    if (docUser === null) {
+      console.warn("localStorage docUser=null", msgData);
+      return null; // BUG should return the actual data
+    }
 
+    var uri = docUser.appendLoginToUri(msgData.uri);
     var ssm = Cc["@mozilla.org/scriptsecuritymanager;1"].getService(Ci.nsIScriptSecurityManager);
     var principal = "getNoAppCodebasePrincipal" in ssm
                   ? ssm.getNoAppCodebasePrincipal(uri)

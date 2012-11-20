@@ -18,12 +18,12 @@ var CrossTldLogin = {
   },
 
 
-  parse: function(tldPrev, uriReq, outerId, innerId) {
+  parse: function(tldPrev, uriReq, outerId, topInnerId) {
     if (tldPrev !== null) {
       var tldReq = getTldFromUri(uriReq);
       if (tldReq !== null) {
         if (tldPrev !== tldReq) {
-          return this._crossTldLogin(uriReq, outerId, innerId);
+          return this._crossTldLogin(uriReq, outerId, topInnerId);
         }
       }
     }
@@ -31,7 +31,7 @@ var CrossTldLogin = {
   },
 
 
-  _crossTldLogin: function(reqUri, tabId, innerId) {
+  _crossTldLogin: function(reqUri, tabId, topInnerId) {
     // tld-0 === tld-2?
     //   tld-1 logged in?
     //     a) tld-2 ==redir==> tld-1                ==redir==> tld-0 OK!
@@ -58,7 +58,7 @@ var CrossTldLogin = {
     }
 
     var uri = Services.io.newURI("http://" + prevTls["prev-1"], null, null);
-    var docUser = WinMap.getUserFromDocument(uri, innerId, true);
+    var docUser = WinMap.findUserInTab(uri, topInnerId);
     if (docUser === null) {
       console.log("_crossTldLogin nop docUser=null");
       return null;
@@ -91,7 +91,7 @@ var CrossTldLogin = {
       */
     }
 
-    var newDocUser = new DocumentUser(docUser.user, reqTld, innerId);
+    var newDocUser = new DocumentUser(docUser.user, reqTld, topInnerId);
     console.log("_crossTldLogin ok", docUser, newDocUser);
 
     var obj = {

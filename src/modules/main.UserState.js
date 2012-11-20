@@ -35,7 +35,7 @@ var UserState = {
   //
   // thirdPartyUsers["facebook.com"]=UserId
   //   User will be displayed in the Multifox menu.
-  //   It is just a log, it is not used by getUserFromDocument
+  //   It is just a log, it is not used by findUser
   //
   addRequest: function(uri, channelWindow, isWinChannel, docUser) {
     if (isWinChannel && isTopWindow(channelWindow)) {
@@ -59,9 +59,9 @@ var UserState = {
     if ("thirdPartyUsers" in topData) {
       if (tldRequest in topData.thirdPartyUsers) {
         var current = topData.thirdPartyUsers[tldRequest];
-        var sameUser = ((current !== null) && (usr !== null)) && current.equals(usr);
-        if (sameUser) {
+        if (UserUtils.equalsUser(current, usr) === false) {
           // TODO previous user removed. usr is probably NewAccount. how to handle it?
+          console.warn("replacing user?", current, usr);
         }
       } else {
         topData.thirdPartyUsers[tldRequest] = usr;
@@ -95,7 +95,8 @@ var UserState = {
     var updated = false;
 
     for (var id in WinMap._inner) {
-      var docData = WinMap._inner[id];
+      var intId = parseInt(id, 10);
+      var docData = WinMap._inner[intId];
       var topOuterId = WinMap.getTabId(docData.outerId);
 
       var isAnon = (("pending_login" in docData) === false)
@@ -109,7 +110,7 @@ var UserState = {
           var userId = sameTab ? newDocUser.user : newAccount;
           WinMap.setUserForTab(topOuterId, tldDoc, userId);
 
-          var topInnerId = WinMap.getTopInnerId(parseInt(id, 10));
+          var topInnerId = WinMap.getTopInnerId(intId);
           docData.docUserObj = new DocumentUser(userId, tldDoc, topInnerId);
         }
       }
@@ -145,7 +146,8 @@ var UserState = {
     var isTldEmpty = LoginDB.getUsers(StringEncoding.encode(tldDoc)).length === 0;
 
     for (var id in WinMap._inner) {
-      docData = WinMap._inner[id];
+      var intId = parseInt(id, 10);
+      docData = WinMap._inner[intId];
       if (("docUserObj" in docData) === false) {
         continue;
       }
@@ -165,7 +167,7 @@ var UserState = {
           updated = true;
           userId = delUserId.toNewAccount();
           // replace current users by NewAccount
-          var topInnerId = WinMap.getTopInnerId(parseInt(id, 10));
+          var topInnerId = WinMap.getTopInnerId(intId);
           docData.docUserObj = new DocumentUser(userId, tldDoc, topInnerId);
           WinMap.setUserForTab(docData.outerId, tldDoc, userId);
         }

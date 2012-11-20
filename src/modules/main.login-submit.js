@@ -46,11 +46,10 @@ var SubmitObserver = {
     }
 
     var tldDoc = getTldFromHost(win.location.hostname);
-    var innerId = getDOMUtils(win).currentInnerWindowID;
-    var currentDocUser = WinMap.getUserFromDocument(Services.io.newURI(win.location.href, null, null), innerId, false);
-
-    var topInnerId = WinMap.getTopInnerId(innerId);
     var userId = new UserId(StringEncoding.encode(username), StringEncoding.encode(tldDoc));
+
+    var topInnerId = WinMap.getTopInnerId(getDOMUtils(win).currentInnerWindowID);
+    var currentDocUser = WinMap.findUser(Services.io.newURI(win.location.href, null, null), topInnerId);
 
     var docUser = new DocumentUser(userId, tldDoc, topInnerId);
     WinMap.loginSubmitted(win, "login", docUser);

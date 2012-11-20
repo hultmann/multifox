@@ -125,7 +125,7 @@ DocumentUser.prototype = {
     }
     // assetTld is a different tld (and host) from document
     var assetUri = Services.io.newURI("http://" + assetTld, null, null); // TODO remove assetTld=>uri workaround
-    var docUser = WinMap.getUserFromDocument(assetUri, this._topInnerId, false);
+    var docUser = WinMap.findUser(assetUri, this._topInnerId);
     if (docUser === null) {
       return true;
     }
@@ -166,6 +166,16 @@ DocumentUser.prototype = {
 var UserUtils = {
 
   NewAccount: "",
+
+  equalsUser: function(user1, user2) {
+    if ((user1 === null) && (user2 === null)) {
+      return true;
+    }
+    if ((user1 !== null) && (user2 !== null)) {
+      return user1.equals(user2);
+    }
+    return false;
+  },
 
 
   isAnon: function(docUser) {

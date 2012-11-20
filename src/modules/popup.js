@@ -220,7 +220,7 @@ function loginCommandCore(menuItem, newTab) {
       console.log("removeTldData_cookies", tabTld);
       removeTldData_cookies(tabTld);
       removeTldData_LS(tabTld);
-      var docUser = WinMap.getUserFromTab(getCurrentTopInnerId(tab));
+      var docUser = WinMap.getFirstPartyUser(getCurrentTopInnerId(tab));
       loadTab(newTab, tab, docUser.user.toNewAccount());
       break;
 
