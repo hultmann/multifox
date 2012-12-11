@@ -24,7 +24,7 @@ function onNewDocument(evt) { // DOMWindowCreated handler
   var msgData = {
     msg: "new-doc",
     // TODO host: win.location.hostname,
-    url: doc.location.href,
+    url: win.location.href,
     inner:       utils.currentInnerWindowID,
     outer:       utils.outerWindowID,
     parentOuter: -1,
@@ -111,9 +111,9 @@ function initDoc(win) {
       msg: "error",
       err: ex.toString(),
       innerId: getDOMUtils(win).currentInnerWindowID,
-      url: win.document.location.href
+      url: win.location.href
     };
-    msgData.topUrl = win !== win.top ? win.top.document.location.href : "";
+    msgData.topUrl = win !== win.top ? win.top.location.href : "";
     sendAsyncMessage("multifox-remote-msg", msgData);
   }
 }
@@ -146,7 +146,7 @@ function onContentCustomEvent(evt) {
   var msgData = evt.detail;
   msgData.top = win === win.top; // TODO not used anymore?
   msgData.parent = win === win.top ? null : win.parent.location.href;
-  msgData.url = doc.location.href;
+  msgData.url = win.location.href;
 
   var winutils = getDOMUtils(win);
   msgData.outer = winutils.outerWindowID; // TODO useless, inner is enough
