@@ -17,7 +17,6 @@ this._auths = {
     "efghijklmnop",
   ]
 
-// TODO default for top docs e o default para third party iframes
 
 this._loggedInTabs = {
   "my-app.com": [   // tabTld (encoded)
@@ -35,7 +34,7 @@ var LoginDB = {
 
   _auths: null,
   _loggedInTabs: null,
-  _tldCookieCounter: null, // invalidateAfterCookieAddition optimization
+  _tldCookieCounter: null, // invalidateAfterCookieAddition (optimizes _invalidate calls)
   _invalidated: true,
 
 
@@ -70,12 +69,6 @@ var LoginDB = {
     }
   },
 
-  setTabAsDefaultUser: function(tab) { // used by ChromeRelatedEvents.activate
-    var docUser = WinMap.getFirstPartyUser(getCurrentTopInnerId(tab));
-    if (docUser !== null) {
-      this.setDefaultUser(docUser.encodedDocTld, docUser.user);
-    }
-  },
 
   setDefaultUser: function(encodedTld, user) { // TODO setDefaultTopLogin
     console.assert(typeof encodedTld === "string", "encodedTld =", encodedTld);
@@ -122,7 +115,7 @@ var LoginDB = {
   },
 
 
-  getDefaultUser: function(topInnerId, encTld) {
+  getDefaultUser: function(encTld) {
     if (this.isLoggedIn(encTld) === false) {
       return null;
     }
@@ -131,14 +124,12 @@ var LoginDB = {
     var loginTlds = this._loggedInTabs[encTld];
     var defaultFormTld = loginTlds[0];
 
-    var tld = StringEncoding.decode(encTld);
-    console.assert(defaultFormTld in this._auths, "this._auths", defaultFormTld, "/", tld);
+    console.assert(defaultFormTld in this._auths, "this._auths", defaultFormTld, "/", encTld);
     var users = this._auths[defaultFormTld];
     console.assert(users.length > 0, "users.length");
 
     var defaultUser = users[0];
-    var myuser = new UserId(defaultUser, defaultFormTld);
-    return new DocumentUser(myuser, tld, topInnerId);
+    return new UserId(defaultUser, defaultFormTld);
   },
 
 
@@ -167,7 +158,7 @@ var LoginDB = {
       return false;
     }
     var encodedData = encodedLogin.rawData;
-    console.assert(encodedData in counter, "!encodedData in this._tldCookieCounter", encodedData);
+    console.assert(encodedData in counter, "!encodedData in this._tldCookieCounter", encodedData, counter);
     counter[encodedData]--;
     if (counter[encodedData] > 0) {
       return false;
@@ -196,7 +187,7 @@ var LoginDB = {
     for (var idx = all.length - 1; idx > -1; idx--) {
       encodedLogin = UserUtils.getEncodedLogin(all[idx].host);
       if (encodedLogin === null) {
-        continue; // default/anon cookie
+        continue; // default cookie
       }
 
       encodedData = encodedLogin.rawData;
@@ -211,7 +202,11 @@ var LoginDB = {
       if (loginTld in this._auths) {
         var authUsers = this._auths[loginTld];
         if (authUsers.indexOf(loginUser) === -1) {
-          authUsers.push(loginUser);
+          if (authUsers[0] === UserUtils.NewAccount) {
+            authUsers.unshift(loginUser); // avoid NewAccount to be the default
+          } else {
+            authUsers.push(loginUser);
+          }
         }
       } else {
         this._auths[loginTld] = [loginUser];
@@ -237,11 +232,6 @@ var LoginDB = {
       name = oldAuths[tld][0];
       this.setDefaultUser(tabTld, new UserId(name, tld));
     }
-
-    console.log("_update\nAuths:",          JSON.stringify(this._auths, null, 2),
-                "\n=======\nLoggedInTabs:", JSON.stringify(this._loggedInTabs, null, 2),
-                "\n=======\nTLD counter:",  JSON.stringify(this._tldCookieCounter, null, 2)
-    );
   },
 
   hasLoggedInHost: function(hosts) {
@@ -261,7 +251,7 @@ var LoginDB = {
   },
 
 
-  getUsers: function(encDocTld) {
+  getUsers: function(encDocTld) { // (ignoring NewAccount)
     this._ensureValid();
     if ((encDocTld in this._loggedInTabs) === false) {
       return [];

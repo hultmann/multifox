@@ -83,6 +83,11 @@ function getCurrentTopInnerId(tab) {
 }
 
 
+function getTldForUnsupportedScheme(uri) {
+  return uri.prePath;
+}
+
+
 function isSupportedScheme(scheme) { // TODO check nsIStandardURL
   return (scheme === "http") || (scheme === "https") || (scheme === "http:") || (scheme === "https:");
 }
@@ -216,6 +221,23 @@ var util = {
     return ns;
   },
 
+  reloadTab: function(browser) {
+    if (isSupportedScheme(browser.currentURI.scheme) === false) {
+      browser.reload(); // about:
+      return;
+    }
+
+    var channel = browser.contentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIWebNavigation).QueryInterface(Ci.nsIDocShell)
+                    .currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel);
+
+    if (channel.requestMethod === "POST") {
+      browser.loadURI(browser.currentURI.spec); // avoid POST prompt
+    } else {
+      browser.reload();
+    }
+  },
+
   getText: function(name) {
     return this._getTextCore("general.properties", name, arguments, 1);
   },
@@ -236,3 +258,43 @@ var util = {
     }
   }
 };
+
+
+
+function debugData() {
+  var logins = Object.create(null);
+  var enumWin = UIUtils.getWindowEnumerator();
+  while (enumWin.hasMoreElements()) {
+    var tabList = UIUtils.getTabList(enumWin.getNext());
+    for (var idx = tabList.length - 1; idx > -1; idx--) {
+      var tab = tabList[idx];
+      if (tab.hasAttribute("multifox-tab-logins")) {
+        logins[getIdFromTab(tab)] = JSON.parse(tab.getAttribute("multifox-tab-logins"));
+      }
+    }
+  }
+
+  var sep = "\n--------------------";
+  Services.console.logStringMessage(
+    "\nLoginDB._auths: " + JSON.stringify(LoginDB._auths, null, 2) +
+    sep +
+    "\nLoginDB._loggedInTabs: " + JSON.stringify(LoginDB._loggedInTabs, null, 2) +
+    sep +
+    "\nLoginDB._tldCookieCounter: " +
+    JSON.stringify(LoginDB._tldCookieCounter, null, 2) +
+    sep +
+    "\nPersisted Logins: " +
+    JSON.stringify(logins, null, 2) +
+    sep +
+    "\nUserState._thirdPartyGlobalDefault: " +
+    JSON.stringify(UserState._thirdPartyGlobalDefault, null, 2) +
+    sep +
+    "\nWinMap: " +
+    DebugWinMap.toString() + "\n\n\n" +
+    sep +
+    "\nWinMap._outer, len=" + Object.keys(WinMap._outer).length + "\n" +
+    JSON.stringify(WinMap._outer, null, 2) +
+    sep +
+    "\nWinMap._inner, len=" + Object.keys(WinMap._inner).length + "\n" +
+    JSON.stringify(WinMap._inner, null, 2));
+}

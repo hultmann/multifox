@@ -53,16 +53,15 @@ var ChromeRelatedEvents = {
   activate: function(evt) {
     var win = evt.currentTarget;
     var tab = UIUtils.getSelectedTab(win);
-    LoginDB.setTabAsDefaultUser(tab); // TODO mark all tlds as default
+    UserState.setGlobalDefault(tab);
     //LoginDB._ensureValid(); // BUG workaround to display welcome icon
-    if (m_welcomeMode) {
-      updateUIAsync(tab, true);
-    }
+    updateUIAsync(tab, true);
   },
 
 
   TabSelect: function(evt) {
     var tab = evt.originalTarget;
+    UserState.setGlobalDefault(tab);
     updateUIAsync(tab, true);
   },
 

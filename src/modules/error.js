@@ -49,8 +49,7 @@ function moveTabToDefault(button) {
   updateUIAsync(tab, true); // show new user now (see loadTab function)
 
   moveData_toDefault(docUser);
-  tab.linkedBrowser.loadURIWithFlags(tab.linkedBrowser.contentDocument.documentURI,
-                                     Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
+  util.reloadTab(tab.linkedBrowser);
 }
 
 

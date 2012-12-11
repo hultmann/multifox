@@ -41,7 +41,7 @@ var NetworkObserver = {
         } else {
           // css/js/xhr...
           var winutils = getDOMUtils(win);
-          docUser = WinMap.getUserForAsset(winutils.currentInnerWindowID, win.location.href, httpChannel.URI);
+          docUser = WinMap.getUserForAssetUri(winutils.currentInnerWindowID, win.location.href, httpChannel.URI);
         }
 
       } else {
@@ -56,14 +56,20 @@ var NetworkObserver = {
         }
       }
 
-      UserState.addRequest(httpChannel.URI, win, isWin, docUser);
 
-      if (UserUtils.isAnon(docUser)) {
+      if (docUser === null) {
+        // log to topData.thirdPartyUsers
+        UserState.addRequest(httpChannel.URI, win, isWin, null);
         if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
           console.log("REQ ERR - login found but not used!", isWin, httpChannel.URI, win.location.href);
         }
         return; // send default cookies
       }
+
+
+      // log to topData.thirdPartyUsers
+      var userHost = docUser.getHost(httpChannel.URI.host);
+      UserState.addRequest(httpChannel.URI, win, isWin, userHost.user);
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
@@ -71,7 +77,9 @@ var NetworkObserver = {
         return;
       }
 
-      var cookie = Cookies.getCookie(false, httpChannel.URI, docUser.appendLoginToUri(httpChannel.URI));
+      var userUri = httpChannel.URI.clone();
+      userUri.host = userHost.toJar();
+      var cookie = Cookies.getCookie(false, userUri);
       httpChannel.setRequestHeader("Cookie", cookie, false);
     }
   },
@@ -100,13 +108,13 @@ var NetworkObserver = {
                                                  winutils.currentInnerWindowID,
                                                  winutils.outerWindowID);
       } else {
-        docUser = WinMap.getUserForAsset(winutils.currentInnerWindowID,
-                                         win.location.href,
-                                         httpChannel.URI);
+        docUser = WinMap.getUserForAssetUri(winutils.currentInnerWindowID,
+                                            win.location.href,
+                                            httpChannel.URI);
       }
 
 
-      if (UserUtils.isAnon(docUser)) {
+      if (docUser === null) {
         if ((docUser === null) && LoginDB.isLoggedIn(StringEncoding.encode(getTldFromHost(httpChannel.URI.host)))) {
           console.log("RESPONSE ERR - login found but not used!", isWin, httpChannel.URI, win.location.href);
         }

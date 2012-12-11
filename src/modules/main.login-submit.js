@@ -41,7 +41,7 @@ var SubmitObserver = {
     var username = findUserName(form);
     if (username === null) {
       console.log("SubmitObserver: NOP, username not found, confirm pw form?");
-      WinMap.loginSubmitted(win, "pw", null);
+      WinMap.loginSubmitted(win, "pw", null); // just add to outer history
       return; // TODO username = "random" or error message (icon);
     }
 
@@ -54,10 +54,13 @@ var SubmitObserver = {
     var docUser = new DocumentUser(userId, tldDoc, topInnerId);
     WinMap.loginSubmitted(win, "login", docUser);
 
-    if (UserUtils.isAnon(currentDocUser)) {
+    if (currentDocUser === null) {
       // TODO apply sandbox right now (all iframes)
       // TODO clear 3rd party?
-      copyData_fromDefault(tldDoc, docUser);
+      // Two new users: NewAccount & userId
+      var newUser = new DocumentUser(docUser.user.toNewAccount(), tldDoc, topInnerId);
+      copyData_fromDefault(tldDoc, docUser); // copy current cookies to new user
+      copyData_fromDefault(tldDoc, newUser); // copy current cookies to NewAccount
     } else {
       copyDataToAnotherUser(tldDoc, docUser, currentDocUser);
     }
@@ -68,7 +71,7 @@ var SubmitObserver = {
 
 
 function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
-  console.assert(prevLogin.user.encodedTld === newLogin.user.encodedTld, "copyDataToAnotherUser tld");
+  console.assert(prevLogin.user.encodedTld === newLogin.user.encodedTld, "copyDataToAnotherUser tld"); // BUG encodedTld actually could be different
   console.assert(tabTld === prevLogin._ownerDocTld, "anon");
   if (prevLogin.user.equals(newLogin.user)) {
     return; // same user, do nothing
@@ -81,7 +84,7 @@ function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
   var all = getAllCookiesFromHost(tld); // BUG ignore anon cookies?
   //var all = removeTldData_cookies(tld);
 
-  console.log("copyDataToAnotherUser", tabTld, all.length, "cookies.", prevLogin.toString(), newLogin.toString());
+  console.log("copyDataToAnotherUser", tld, tabTld, all.length, "cookies.", prevLogin.toString(), newLogin.toString());
   var cookie;
   var realHost;
   for (var idx = all.length - 1; idx > -1; idx--) {

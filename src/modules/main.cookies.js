@@ -54,7 +54,7 @@ var Cookies = {
     p.addObserver(PREF_COOKIE_BEHAVIOR, this._prefListener, false);
   },
 
-  getCookie: function(fromJs, originalUri, uri) {
+  getCookie: function(fromJs, uri) {
 
     if (this._prefListener.behavior === 0) {
       return this._getCookie(fromJs, uri);

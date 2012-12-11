@@ -130,7 +130,13 @@ var ContentRelatedEvents = {
           // http top doc from cache: update icon
           var tab = UIUtils.getLinkedTab(win);
           if (tab !== null) {
-            WinMap.setWindowAsUserForTab(getDOMUtils(win).currentInnerWindowID);
+            var innerId = getDOMUtils(win).currentInnerWindowID;
+            var data = WinMap.getInnerEntry(innerId);
+            if ("docUserObj" in data) {
+              var tabId = WinMap.getTabId(data.outerId);
+              var docUser = data.docUserObj;
+              UserState.setTabDefaultFirstParty(docUser.ownerTld, tabId, docUser.user); // BUG [?] a 3rd party iframe may become the default
+            }
             updateUIAsync(tab, isTopWindow(win));
           }
         }
@@ -155,7 +161,7 @@ var ContentRelatedEvents = {
 var RemoteBrowserMethod = {
 
   cookie: function(msgData) {
-    var docUser = WinMap.getUserForAsset(msgData.inner, msgData.url, null); // TODO send .uri instead of .url
+    var docUser = WinMap.getSavedUser(msgData.inner, msgData.url); // TODO send .uri instead of .url
     if (docUser === null) {
       console.warn("cookie docUser=null", msgData);
       return null; // TODO docUser=null for unnecessarily customized docs
@@ -169,7 +175,7 @@ var RemoteBrowserMethod = {
       case "get":
         var val = "foo@documentCookie";
         try {
-          var cookie = Cookies.getCookie(true, msgData.uri, docUser.appendLoginToUri(msgData.uri));
+          var cookie = Cookies.getCookie(true, docUser.appendLoginToUri(msgData.uri));
           val = cookie === null ? "" : cookie;
         } catch (ex) {
           console.trace(ex);
@@ -183,7 +189,7 @@ var RemoteBrowserMethod = {
 
 
   localStorage: function(msgData) {
-    var docUser = WinMap.getUserForAsset(msgData.inner, msgData.url, null);
+    var docUser = WinMap.getSavedUser(msgData.inner, msgData.url);
     if (docUser === null) {
       console.warn("localStorage docUser=null", msgData);
       return null; // BUG should return the actual data

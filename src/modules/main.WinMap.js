@@ -40,17 +40,17 @@ var NewDocUser = {
       return true;
     }
 
-    var docUser = WinMap.findUser(msgData.uri, WinMap.getTopInnerId(msgData.inner));
+    var docUser = WinMap.findUser(msgData.uri, WinMap.getTopInnerId(msgData.inner)); // TODO reuse it from req/resp
     if (docUser !== null) {
       // logged in tld
       innerObj.docUserObj = docUser; // used by assets/iframes
       outerEntry.x_login = docUser;
     } else {
       // anon tld: inherit it from a parent
-      docUser = WinMap.getNextCachedUser(msgData.parentInner);
+      docUser = WinMap.getNextSavedUser(msgData.parentInner);
     }
 
-    if (UserUtils.isAnon(docUser)) {
+    if (docUser === null) {
       return false; // anon tab (docUser=null or NewAccount) => don't customize
     }
 
@@ -73,11 +73,22 @@ var NewDocUser = {
     var outerData = WinMap.addToOuterHistory(entry, msgData.outer);
 
     PendingUsersLogins.check(msgData, outerData, "request");
-    var topInnerId = WinMap.getTopInnerId(msgData.visibleInner);
-    var docUser = WinMap.findUser(channel.URI, topInnerId);
+
+    var topInnerId;
+    var docUser;
+    if (WinMap.isTabId(msgData.parentInner)) {
+      // topInnerId is not valid, it doesn't exist (yet)
+      // channel is the new top document (or a download/redir, it is undefined)
+      topInnerId = WinMap.TopWindowFlag;
+      docUser = WinMap.findUser(channel.URI, topInnerId, msgData.outer);
+    } else {
+      topInnerId = WinMap.getTopInnerId(msgData.visibleInner);
+      docUser = WinMap.findUser(channel.URI, topInnerId);
+    }
+
     if (docUser === null) {
       // anon request: inherit it from a parent
-      docUser = WinMap.getNextCachedUser(msgData.parentInner);
+      docUser = WinMap.getNextSavedUser(msgData.parentInner);
     }
 
 
@@ -97,7 +108,7 @@ var NewDocUser = {
 
 
   // getLoginForDocumentResponse
-  // currentInnerId (possibly) is going to be replace by a new document
+  // currentInnerId (possibly) is going to be replaced by a new document
   addDocumentResponse: function(channel, currentInnerId, outerId) {
     var stat = channel.responseStatus;
     var entry = {
@@ -150,7 +161,7 @@ var NewDocUser = {
     if (chromeWin && chromeWin.opener) {
       if (UIUtils.isMainWindow(chromeWin.opener)) {
         var selTab = UIUtils.getSelectedTab(chromeWin.opener);
-        return WinMap.findUserInTab(uri, getCurrentTopInnerId(selTab));
+        return WinMap.findUser(uri, getCurrentTopInnerId(selTab), getIdFromTab(selTab));
       }
     }
     // BUG null for anon iframes (we would need to know its parent). find focused frame?
@@ -291,7 +302,9 @@ var WinMap = { // stores all current outer/inner windows
     };
     var outerId = getDOMUtils(win).outerWindowID;
     WinMap.addToOuterHistory(entry, outerId);
-    UserState.addUserToMappedDocuments(docUser, outerId);
+    if (docUser !== null) {
+      UserChange.add(docUser, outerId);
+    }
   },
 
 
@@ -301,7 +314,7 @@ var WinMap = { // stores all current outer/inner windows
       outerData = this._outer[outerId];
       outerData["x-history-length"]++;
     } else {
-      console.assert(typeof parentId !== undefined, "missing parentId");
+      console.assert(typeof parentId !== "undefined", "missing parentId");
       outerData = {
         __proto__: null,
         parentOuter: parentId, // TODO parentId
@@ -332,6 +345,11 @@ var WinMap = { // stores all current outer/inner windows
 
   isTabId: function(parentId) {
     return parentId === WinMap.TopWindowFlag;
+  },
+
+
+  isInvalidTopInnerId: function(innerId) {
+    return innerId === WinMap.TopWindowFlag;
   },
 
 
@@ -373,63 +391,43 @@ var WinMap = { // stores all current outer/inner windows
   },
 
 
-  getFirstPartyUser: function(topInnerId) {
-    console.assert(WinMap.isTabId(this.getInnerEntry(topInnerId).parentInnerId), "not a top window"); // BUG assert may call _update
-     // TODO wait for DOMWindowCreated removal: return this.getNextCachedUser(topInnerId);
-    var uri = Services.io.newURI(this.getInnerEntry(topInnerId).url, null, null); // TODO remove uri workaround
-    return this.findUserInTab(uri, topInnerId);
-  },
-
-
-  findUser: function(aDocUri, topInnerId) {
-    var docUser = this.findUserInTab(aDocUri, topInnerId);
-    if (docUser !== null) {
-      return docUser;
-    }
-
-    // is the first time tld is used in this tab?
-    var tld = getTldFromUri(aDocUri);
-    var encTld = StringEncoding.encode(tld);
-    var docUser = LoginDB.getDefaultUser(topInnerId, encTld);
-    if (docUser === null) {
-      return null; // aDocUri is anon
-    }
-
-    var tabId = this.getInnerEntry(topInnerId).outerId;
-    this.setUserForTab(tabId, tld, docUser.user);
-    return docUser;
-  },
-
-
-  findUserInTab: function(aDocUri, topInnerId) { // TODO only tld is necessary
-    var tld = getTldFromUri(aDocUri);
+  findUser: function(uriDoc, topInnerId, tabId) { // TODO only tld is necessary
+    var tld = getTldFromUri(uriDoc);
     if (tld === null) {
       return null;
     }
 
-    // check if this top document (or its elements) has made requests to tld
-    if (UserState.isThirdPartyTldAnon(tld, topInnerId)) {
-      return null;
-    }
-
-    var tabId = this.getInnerEntry(topInnerId).outerId;
-    var tabData = this.getOuterEntry(tabId);
-
-    if ("tabLogins" in tabData) {
-      if (tld in tabData.tabLogins.firstParty) {
-        return new DocumentUser(tabData.tabLogins.firstParty[tld], tld, topInnerId);
+    // check if this top document (or its elements) has previous requests to tld
+    var userId;
+    if (WinMap.isInvalidTopInnerId(topInnerId)) {
+      // assume uriDoc as a top document
+      console.assert(typeof tabId !== "undefined", "topInnerId invalid; tabId not defined");
+      userId = UserState.getTabDefaultFirstPartyUser(tld, tabId);
+    } else {
+      var topData = WinMap.getInnerEntry(topInnerId);
+      var tldFirstParty = getTldFromUri(Services.io.newURI(topData.url, null, null));
+      if (tldFirstParty === tld) {
+        userId = UserState.getTabDefaultFirstPartyUser(tld, topData.outerId);
+      } else {
+        userId = UserState.getTabDefaultThirdPartyUser(tld, topInnerId);
       }
     }
 
-    return null;
+    if (userId === null) {
+      // is the first time tld is used in this tab?
+      userId = LoginDB.getDefaultUser(StringEncoding.encode(tld)); // 1st/3rd-party
+    }
+
+    return userId === null ? null
+                           : new DocumentUser(userId, tld, topInnerId);
   },
 
 
-  getNextCachedUser: function(innerId) {
+  getNextSavedUser: function(innerId) {
     var entry;
     while (innerId !== WinMap.TopWindowFlag) {
       entry = this.getInnerEntry(innerId);
-      console.assert(("pending_login" in entry) === false, "pending_login in getNextCachedUser", innerId, entry);
+      console.assert(("pending_login" in entry) === false, "pending_login in getNextSavedUser", innerId, entry);
       if ("docUserObj" in entry) {
         return entry.docUserObj;
       }
@@ -440,34 +438,46 @@ var WinMap = { // stores all current outer/inner windows
 
 
   // called by request/response: <img>, <script>, <style>, XHR... (but not <iframe>)
-  // called by JS: cookie/localStorage/...
-  getUserForAsset: function(innerId, realDocUrl, resUri) {
-    if (resUri !== null) {
-      // resUri != null ==> request/response
-      // resUri could be a logged in tld (different from doc)
-      var docUser = this.findUser(resUri, WinMap.getTopInnerId(innerId));
-      if (docUser !== null) {
-        return docUser;
-      }
+  getUserForAssetUri: function(innerId, realDocUrl, resUri) {
+    // parent window docUser
+    var docUser = this.getSavedUser(innerId, realDocUrl);
+    if (docUser !== null) {
+      return docUser;
     }
 
-    // TODO realDocUrl and entry.url should share the hostname
+    // resUri could be a logged in tld (different from anonymous innerId)
+    var topInnerId = WinMap.getTopInnerId(innerId);
+    var assetUser = this.findUser(resUri, topInnerId);
+    if (assetUser === null) {
+      return null;
+    }
 
-    // called by JS or anon resUri
+    // fake a docUser
+    var tld = getTldFromUri(Services.io.newURI(realDocUrl, null, null));
+    if (tld === null) {
+      // "about:"
+      tld = getTldForUnsupportedScheme(Services.io.newURI(realDocUrl, null, null));
+    }
+    return new DocumentUser(null, tld, topInnerId);
+  },
+
+
+  getSavedUser: function(innerId, realDocUrl) {
+    // TODO realDocUrl and entry.url should share the hostname
     var entry = this.getInnerEntry(innerId);
     if ("docUserObj" in entry) {
       return entry.docUserObj; // identity used by document
     }
 
     if ("pending_login" in entry) {
-      console.assert(realDocUrl.length > 0, "getUserForAsset empty");
+      console.assert(realDocUrl.length > 0, "getSavedUser empty");
       PendingUsersLogins.fixUserForInnerEntry(innerId, realDocUrl);
       if ("docUserObj" in entry) {
         return entry.docUserObj; // identity used by document
       }
     }
 
-    return this.getNextCachedUser(entry.parentInnerId);
+    return this.getNextSavedUser(entry.parentInnerId);
   },
 
 
@@ -535,75 +545,20 @@ var WinMap = { // stores all current outer/inner windows
     for (var tld in logins) {
       obj = logins[tld];
       userId = new UserId(obj.encodedUser, obj.encodedTld);
-      this.setUserForTab(tabId, tld, userId);
+      UserState.setTabDefaultFirstParty(tld, tabId, userId);
     }
   },
 
 
   setTabAsNewAccount: function(tab) { // used by moveTabToDefault
     var topInnerId = getCurrentTopInnerId(tab);
-    var docUser = this.getFirstPartyUser(topInnerId);
+    var topData = WinMap.getInnerEntry(topInnerId);
+    console.assert("docUserObj" in topData, "setTabAsNewAccount docUser missing", topInnerId, topData);
+    var docUser = topData.docUserObj;
     var user = docUser.user.toNewAccount();
     var tabId = this.getTopOuterIdFromInnerId(topInnerId);
-    this.setUserForTab(tabId, docUser.ownerTld, user);
+    UserState.setTabDefaultFirstParty(docUser.ownerTld, tabId, user);
     return new DocumentUser(user, docUser.ownerTld, topInnerId);
-  },
-
-
-  setWindowAsUserForTab: function(innerId) {
-    var data = this.getInnerEntry(innerId);
-    if ("docUserObj" in data) {
-      console.log("setWindowAsUserForTab FOUND", innerId, data.docUserObj);
-      var tabId = this.getTabId(data.outerId);
-      this.setUserForTab(tabId, data.docUserObj.ownerTld, data.docUserObj.user); // BUG [?] a 3rd party iframe may become the default
-    }
-  },
-
-
-
-  // TODO set the same default for all tlds with the docUser user@tld
-
-  // save currently used login by a tld in a given tab
-  setUserForTab: function(tabId, tldDoc, userId) {
-    console.log('setUserForTab',tabId, tldDoc, userId);
-    var tabData = this.getOuterEntry(tabId);
-    console.assert(WinMap.isTabId(tabData.parentOuter), "0 not a top window ", tabId, "- Caller should send tabId instead of an outerId/iframe - caller would probably need tabId anyway.");
-    var replace = true;
-    if ("tabLogins" in tabData) {
-      if (tldDoc in tabData.tabLogins.firstParty) {
-        // replace?
-        if (userId.equals(tabData.tabLogins.firstParty[tldDoc])) {
-          replace = false;
-        }
-      }
-    } else {
-      tabData.tabLogins = {firstParty: Object.create(null)}; // TODO thirdParty:{}
-    }
-
-    if (replace) {
-      tabData.tabLogins.firstParty[tldDoc] = userId;
-    }
-
-
-    var encTldDoc = StringEncoding.encode(tldDoc);
-    if (encTldDoc !== userId.encodedTld) {
-      // docUser=twitpic/youtube? make twitter.com/google.com default as well
-      tabData.tabLogins.firstParty[userId.plainTld] = userId;
-    }
-
-
-    // update default for new tabs/occurrences - current tabs will keep their internal defaults
-    LoginDB.setDefaultUser(encTldDoc, userId);
-
-
-    // for session restore
-    console.log("setUserForTab multifox-tab-logins saved tab", tabId, userId); // BUG check if it works for new bg tabs
-    var tab = findTabById(tabId);
-    tab.setAttribute("multifox-tab-logins", JSON.stringify(tabData.tabLogins)); // TODO tabId is useless // TODO add versioning // TODO check if empty
-    if (tab.hasAttribute("multifox-tab-error")) {
-      // reset error icon
-      tab.removeAttribute("multifox-tab-error");
-    }
   }
 
 };
@@ -651,12 +606,12 @@ var DebugWinMap = {
     var ok = false;
 
     for (var id in WinMap._inner) {
-      var innerId = parseInt(id, 10);
-      var obj = WinMap.getInnerEntry(innerId);
+      var obj = WinMap._inner[id];
       if (obj.outerId !== intOuterId) {
         continue;
       }
       ok = true;
+      var innerId = parseInt(id, 10);
       usedInners.push(innerId);
       var s = padding;
       s += "x-deleted"        in obj ? "-" : "*";
@@ -787,7 +742,7 @@ var PendingUsersLogins = {
   },
 
 
-  // used by check and getUserForAsset
+  // used by check and getSavedUser
   fixUserForInnerEntry: function(innerId, realDocUrl) {
     var obj = WinMap.getInnerEntry(innerId);
     console.assert("pending_login" in obj, "pending_login fixUserForInnerEntry");

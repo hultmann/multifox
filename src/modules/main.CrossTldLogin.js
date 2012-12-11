@@ -41,7 +41,7 @@ var CrossTldLogin = {
     if (reqTld === null) {
       return null;
     }
-    var prevTls = this._getPrevResponses(tabId);
+    var prevTls = this._getPrevResponses(tabId); // BUG typo prevTlds
     if (prevTls === null) {
       return null;
     }
@@ -58,7 +58,7 @@ var CrossTldLogin = {
     }
 
     var uri = Services.io.newURI("http://" + prevTls["prev-1"], null, null);
-    var docUser = WinMap.findUserInTab(uri, topInnerId);
+    var docUser = WinMap.findUser(uri, topInnerId, tabId);
     if (docUser === null) {
       console.log("_crossTldLogin nop docUser=null");
       return null;
@@ -91,7 +91,7 @@ var CrossTldLogin = {
       */
     }
 
-    var newDocUser = new DocumentUser(docUser.user, reqTld, topInnerId);
+    var newDocUser = new DocumentUser(docUser.user, reqTld, topInnerId);// BUG is topInnerId invalid?
     console.log("_crossTldLogin ok", docUser, newDocUser);
 
     var obj = {

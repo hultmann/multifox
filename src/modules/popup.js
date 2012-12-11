@@ -73,16 +73,22 @@ function createLoginsMenu(menupopup, onHidden) {
   var newAccount = menupopup.appendChild(doc.createElement("menuitem"));
   newAccount.setAttribute("label", util.getText("icon.user.new.label"));
   newAccount.setAttribute("accesskey", util.getText("icon.user.new.accesskey"));
-  newAccount.setAttribute("cmd", "new account");
   if (docUser === null) {
     newAccount.setAttribute("disabled", "true"); // no top logins, 3rd-party only
-  } else if (docUser.user.isNewAccount) {
-    newAccount.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
-    newAccount.className = "menuitem-iconic";
+  } else {
+    newAccount.setAttribute("cmd", "new account");
+    newAccount.setAttribute("login-user16", docUser.user.toNewAccount().encodedName);
+    newAccount.setAttribute("login-tld", docUser.user.toNewAccount().encodedTld);
+    if (docUser.user.isNewAccount) {
+      newAccount.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
+      newAccount.className = "menuitem-iconic";
+    }
   }
 
   // list 3rd-party users
-  populate3rdPartyUsers(topInnerData.thirdPartyUsers, menupopup);
+  if ("thirdPartyUsers" in topInnerData) {
+    populate3rdPartyUsers(topInnerData.thirdPartyUsers, menupopup);
+  }
 
   // about
   menupopup.appendChild(doc.createElement("menuseparator"));
@@ -140,36 +146,64 @@ function populateUsers(docUser, menupopup) {
 
 
 function populate3rdPartyUsers(thirdParty, menupopup) {
-  var users = [];
-  for (var tld in thirdParty) {
-    var encTld = StringEncoding.encode(tld);
-    // tld may be anon, nut now there is logged in
+  var loggedinTLDs = [];
+  for (var tld3rd in thirdParty) {
+    var encTld = StringEncoding.encode(tld3rd);
     if (LoginDB.isLoggedIn(encTld)) {
-      users.push(tld);
+      console.assert(thirdParty[tld3rd] !== null, "tld has users, should not be null", tld3rd);
+      loggedinTLDs.push(tld3rd);
     }
   }
-  if (users.length === 0) {
+  if (loggedinTLDs.length === 0) {
     return;
   }
 
-  users.sort(function(a, b) {
+  loggedinTLDs.sort(function(a, b) {
     return b.localeCompare(a);
   });
 
   var doc = menupopup.ownerDocument;
   menupopup.appendChild(doc.createElement("menuseparator"));
-  var username;
-  var tld;
-  var user;
-  for (var idx = 0, len = users.length; idx < len; idx++) {
-    tld = users[idx];
-    user = thirdParty[tld];
-    username = user.isNewAccount ? util.getText("icon.3rd-party.anon.label")
-                                 : user.plainName;
-    var item = menupopup.appendChild(doc.createElement("menuitem"));
-    item.setAttribute("disabled", "true");
-    item.setAttribute("label", tld + " (" + username + ")");
+  for (var idx = 0, len = loggedinTLDs.length; idx < len; idx++) {
+    var tld = loggedinTLDs[idx];
+    var userId = thirdParty[tld];
+    var username = userId.isNewAccount ? util.getText("icon.3rd-party.anon.label")
+                                       : userId.plainName;
+
+    var userMenu = menupopup.appendChild(doc.createElement("menu"));
+    userMenu.setAttribute("label", username + " / " + tld);
+
+    var userPopup = userMenu.appendChild(doc.createElement("menupopup"));
+    var nameItem = insertItem(userPopup, userId.toNewAccount(), tld);
+    nameItem.setAttribute("label", util.getText("icon.3rd-party.anon.label"));
+    if (userId.isNewAccount) {
+      nameItem.setAttribute("checked", "true");
+    }
+
+    userPopup.appendChild(doc.createElement("menuseparator"));
+    var users = LoginDB.getUsers(StringEncoding.encode(tld));
+    for (var idx2 = users.length - 1; idx2 > -1; idx2--) {
+      var myUser = users[idx2];
+      nameItem = insertItem(userPopup, myUser, tld);
+      if (userId.equals(myUser)) {
+        nameItem.setAttribute("checked", "true");
+      }
+    }
+
   }
+}
+
+
+function insertItem(userPopup, myUser, tld) {
+  var item = userPopup.ownerDocument.createElement("menuitem");
+  userPopup.appendChild(item);
+  item.setAttribute("label", myUser.plainName);
+  item.setAttribute("type", "radio");
+  item.setAttribute("cmd", "set 3rd-party");
+  item.setAttribute("login-doc", tld);
+  item.setAttribute("login-user16", myUser.encodedName);
+  item.setAttribute("login-tld", myUser.encodedTld);
+  return item;
 }
 
 
@@ -207,39 +241,48 @@ function loginCommandCore(menuItem, newTab) {
   var win = menuItem.ownerDocument.defaultView;
   var tab = UIUtils.getSelectedTab(win);
   var uri = tab.linkedBrowser.currentURI;
-  if (isSupportedScheme(uri.scheme) === false) {
-    // Error page:
-    // documentURI = about:neterror?e=netTimeout...
-    // location    = http://twitter.com/
-    return;
+  var userId = null;
+
+  if (menuItem.hasAttribute("login-tld")) {
+    userId = new UserId(menuItem.getAttribute("login-user16"),
+                        menuItem.getAttribute("login-tld"));
   }
 
   switch (menuItem.getAttribute("cmd")) {
     case "new account":
       var tabTld = getTldFromHost(uri.host);
-      console.log("removeTldData_cookies", tabTld);
-      removeTldData_cookies(tabTld);
+      removeCookies(CookieUtils.getUserCookies(userId));
       removeTldData_LS(tabTld);
-      var docUser = WinMap.getFirstPartyUser(getCurrentTopInnerId(tab));
-      loadTab(newTab, tab, docUser.user.toNewAccount());
+      loadTab(newTab, tab, userId);
       break;
 
     case "switch user":
-      var encUser = menuItem.getAttribute("login-user16");
-      var encTld = menuItem.getAttribute("login-tld");
-      loadTab(newTab, tab, new UserId(encUser, encTld));
+      loadTab(newTab, tab, userId);
       break;
 
     case "del user":
-      var userId = new UserId(menuItem.getAttribute("login-user16"),
-                              menuItem.getAttribute("login-tld"));
+      var tldTop = getTldFromHost(uri.host);
+      var users = LoginDB.getUsers(StringEncoding.encode(tldTop));
       removeCookies(CookieUtils.getUserCookies(userId));
-      UserState.removeUserFromCurrentDocuments(getTldFromHost(uri.host), userId);
-      loadTab(newTab, tab, userId.toNewAccount());
+      if (users.length === 1) {
+        // removing the last user
+        removeCookies(CookieUtils.getUserCookies(userId.toNewAccount()));
+        UserChange.remove(tldTop, true, userId);
+        util.reloadTab(tab.linkedBrowser);
+      } else {
+        UserChange.remove(tldTop, false, userId);
+        loadTab(newTab, tab, userId.toNewAccount());
+      }
       break;
 
     case "about":
       openNewTab("about:multifox", win);
+      break;
+
+    case "set 3rd-party":
+      UserState.setTabDefaultThirdParty(menuItem.getAttribute("login-doc"), getIdFromTab(tab), userId);
+      util.reloadTab(tab.linkedBrowser);
+      // TODO handle middle click
       break;
 
     default:
@@ -255,13 +298,13 @@ function loadTab(newTab, tab, user) {
   var tldDoc = getTldFromHost(uri.host);
 
   if (newTab) {
+    // TODO inherit default users
     LoginDB.setDefaultUser(StringEncoding.encode(tldDoc), user); // BUG should twitpic set twitter as well?
     openNewTab(uri.spec, tab.ownerDocument.defaultView);
   } else {
-    WinMap.setUserForTab(getIdFromTab(tab), tldDoc, user);
+    UserState.setTabDefaultFirstParty(tldDoc, getIdFromTab(tab), user);
     updateUIAsync(tab, true); // show new user now, don't wait for new dom // BUG it doesn't working
-    // don't use browser.reload(), it would reload POST requests
-    browser.loadURIWithFlags(uri.spec, Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);
+    util.reloadTab(browser);
   }
 }
 
