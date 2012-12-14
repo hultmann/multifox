@@ -17,7 +17,8 @@ b.add_binary("content/logo-popup.png")
 
 b.add_text("install.rdf")
 b.add_text("chrome.manifest")
-b.add_text("bootstrap.js")
+#b.add_text("bootstrap.js")
+b.add_text("components/protocol.js")
 
 b.add_text("content/content-injection.js")
 b.add_text("content/content-injection-reset.js")

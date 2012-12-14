@@ -7,3 +7,9 @@ content   ${CHROME_NAME} content/
 locale  ${CHROME_NAME}  en-US  locale/en-US/
 #locale  ${CHROME_NAME}  pt-BR  locale/pt-BR/
 #locale  ${CHROME_NAME}  es-ES  locale/es-ES/
+
+component   {56c5d3a5-e39c-4131-af85-ebee4fceb792}   components/protocol.js
+contract    @hultmann/multifox/bg;1                  {56c5d3a5-e39c-4131-af85-ebee4fceb792}
+category    profile-after-change                     @hultmann/multifox/bg;1                  @hultmann/multifox/bg;1
+
+resource    multifox-modules                         modules/
