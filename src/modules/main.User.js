@@ -175,18 +175,16 @@ function HostJar(host, docUser) {
   this._hostIsAnon = hostUser === null;
 
   if (this._hostIsAnon) {
+    this._tldTop = docUser._topDocTld;
     if (docUser.user === null) {
       this._mode = "nop";    // topdoc=www.foo.com frame=www.foo.com img=www.bar.com
       this._user = null;
-      this._tldTop = docUser._topDocTld;
     } else if (docUser.user.isNewAccount) {
       this._mode = "by_top";            // topdoc=www.google.com img=www.foo.com
       this._user = null;
-      this._tldTop = docUser._topDocTld;
     } else {
       this._mode = "by_inherited_user"; // topdoc=www.google.com, img=www.foo.com
       this._user = docUser.user;
-      this._tldTop = docUser._topDocTld;
     }
     return;
   }

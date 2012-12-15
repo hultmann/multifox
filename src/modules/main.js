@@ -36,6 +36,20 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 var Main = {
   _install: false,
+  _timer: null,
+
+
+  _lazyInit: function(timer) {
+    Main._timer = null;
+    var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+    try {
+      // BUG can attr be ever removed from session?
+      ss.persistTabAttribute("multifox-tab-logins");
+    } catch (ex) {
+      console.error(ex);
+    }
+  },
+
 
   install: function() {
     try { // detect silent exceptions
@@ -73,13 +87,10 @@ var Main = {
       Services.prefs.getBranch("extensions.${EXT_ID}.").setCharPref("description", desc);
     }
 
-    var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
-    try {
-      ss.persistTabAttribute("multifox-tab-logins");
-    } catch (ex) {
-      // exception resource:///modules/sessionstore/SessionStore.jsm :: ssi_writeFile :: line 4358
-      console.error(ex);
-    }
+    // persistTabAttribute would throw an exception if called now
+    // resource:///modules/sessionstore/SessionStore.jsm :: ssi_writeFile
+    this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+    this._timer.initWithCallback({notify: this._lazyInit}, 5000, Ci.nsITimer.TYPE_ONE_SHOT);
 
     StringEncoding.init();
     registerAbout();

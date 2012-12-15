@@ -54,16 +54,14 @@ var UserState = {
 
   // save currently used login by a tld in a given tab
   setTabDefaultFirstParty: function(tldDoc, tabId, userId) { // TODO use docUser instead of tldDoc + userId + tabId?
-    var tabData = WinMap.getOuterEntry(tabId);
-    this._setTabDefault(tabData, "firstParty", tldDoc, userId);
-
     // update global default for new tabs - current tabs will keep their internal defaults
     LoginDB.setDefaultUser(StringEncoding.encode(tldDoc), userId);
 
-    // for session restore
+    var tabData = WinMap.getOuterEntry(tabId);
+    this._setTabDefault(tabData, "firstParty", tldDoc, userId);
+    this.updateSessionStore(tabId);
+
     var tab = findTabById(tabId);
-    var data = JSON.stringify(tabData.tabLogins);  // BUG saving 1st + 3rd
-    tab.setAttribute("multifox-tab-logins", data); // TODO tabId is useless // TODO add versioning // TODO check if empty
     if (tab.hasAttribute("multifox-tab-error")) {
       // reset error icon
       tab.removeAttribute("multifox-tab-error");
@@ -76,10 +74,31 @@ var UserState = {
 
     var tabData = WinMap.getOuterEntry(tabId);
     this._setTabDefault(tabData, "thirdParty", tldDoc, userId);
+    this.updateSessionStore(tabId);
+  },
 
-    // for session restore
-    var data = JSON.stringify(tabData.tabLogins); // BUG saving 1st + 3rd
-    findTabById(tabId).setAttribute("multifox-tab-logins", data);
+
+  updateSessionStore: function(tabId) {
+    var tabData = WinMap.getOuterEntry(tabId);
+    var hasData = false;
+    if ("tabLogins" in tabData) {
+      if ("firstParty" in tabData.tabLogins) {
+        hasData = hasData || Object.keys(tabData.tabLogins.firstParty).length > 0;
+      }
+      if ("thirdParty" in tabData.tabLogins) {
+        hasData = hasData || Object.keys(tabData.tabLogins.thirdParty).length > 0;
+      }
+    }
+
+    var tab = findTabById(tabId);
+    if (hasData) {
+      var data = JSON.stringify(tabData.tabLogins);
+      tab.setAttribute("multifox-tab-logins", data);
+    } else {
+      if (tab.hasAttribute("multifox-tab-logins")) {
+        tab.removeAttribute("multifox-tab-logins");
+      }
+    }
   },
 
 
@@ -115,6 +134,9 @@ var UserState = {
 
   setGlobalDefault: function(tab) {
     // TODO just set topInnerId as the default source
+    // TODO default for new tab:
+    //   from bookmarks/urlbar=>last selected via menu
+    //   from link=>inherit from source tab
     var topInnerId = getCurrentTopInnerId(tab);
     var topData = WinMap.getInnerEntry(topInnerId);
 
@@ -123,14 +145,7 @@ var UserState = {
       LoginDB.setDefaultUser(docUser.encodedDocTld, docUser.user);
     }
 
-    if ("thirdPartyUsers" in topData) {
-      for (var tld in topData.thirdPartyUsers) {
-        var userId = topData.thirdPartyUsers[tld];
-        if (userId !== null) {
-          this._thirdPartyGlobalDefault[tld] = userId;
-        }
-      }
-    }
+    // default third-party users are modified only via menu
   },
 
 
@@ -283,9 +298,11 @@ var UserChange = {
         }
         docData.thirdPartyUsers[tldDoc] = user;
       }
+
+      UserState.updateSessionStore(docData.outerId);
     }
 
-    this._updateAllWindows();
+    this._updateUIAllWindows();
   },
 
 
@@ -342,13 +359,15 @@ var UserChange = {
         // replace delUserId by NewAccount
         this._replaceTldTabDefaults(tldDoc, tabData, delUserId, newUser);
       }
+
+      UserState.updateSessionStore(docData.outerId);
     }
 
-    this._updateAllWindows();
+    this._updateUIAllWindows();
   },
 
 
-  _updateAllWindows: function() {
+  _updateUIAllWindows: function() {
     var enumWin = UIUtils.getWindowEnumerator();
     while (enumWin.hasMoreElements()) {
       var tab = UIUtils.getSelectedTab(enumWin.getNext());
