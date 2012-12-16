@@ -31,7 +31,7 @@ var CookieUtils = {
     var suffix = hexlogin + "." + ns;
     for (var idx = all.length - 1; idx > -1; idx--) {
       cookie = all[idx];
-      if (endsWith(suffix, cookie.host)) {
+      if (cookie.host.endsWith(suffix)) {
         rv.push(cookie);
       }
     }

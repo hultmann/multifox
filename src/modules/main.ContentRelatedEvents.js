@@ -111,7 +111,6 @@ var ContentRelatedEvents = {
         var entry = WinMap.getInnerEntry(innerId);
         entry["x-document-element-inserted"] = win.location.href;
       }
-      console.log(topic, subject.documentURI, win.location.href);
     }
   },
 
@@ -163,6 +162,8 @@ var RemoteBrowserMethod = {
   cookie: function(msgData) {
     var docUser = WinMap.getSavedUser(msgData.inner, msgData.url); // TODO send .uri instead of .url
     if (docUser === null) {
+      // the last user has been removed; one or more tabs now use the default user
+      // BUG we need to send the correct cookie
       console.warn("cookie docUser=null", msgData);
       return null; // TODO docUser=null for unnecessarily customized docs
     }
@@ -197,9 +198,7 @@ var RemoteBrowserMethod = {
 
     var uri = docUser.appendLoginToUri(msgData.uri);
     var ssm = Cc["@mozilla.org/scriptsecuritymanager;1"].getService(Ci.nsIScriptSecurityManager);
-    var principal = "getNoAppCodebasePrincipal" in ssm
-                  ? ssm.getNoAppCodebasePrincipal(uri)
-                  : ssm.getCodebasePrincipal(uri); // TODO remove Fx17 (bug 774585)
+    var principal = ssm.getNoAppCodebasePrincipal(uri);
 
     var dsm = Cc["@mozilla.org/dom/storagemanager;1"].getService(Ci.nsIDOMStorageManager);
     var storage = dsm.getLocalStorageForPrincipal(principal, "");

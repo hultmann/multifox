@@ -58,9 +58,9 @@ var StringEncoding = {
 
 
 function findTabById(tabId) { // TODO keep a weakref list of tabs tabList[tabId]
-  var winEnum = UIUtils.getWindowEnumerator();
-  while (winEnum.hasMoreElements()) {
-    var tabList = UIUtils.getTabList(winEnum.getNext());
+  var enumWin = UIUtils.getWindowEnumerator();
+  while (enumWin.hasMoreElements()) {
+    var tabList = UIUtils.getTabList(enumWin.getNext());
     for (var idx = tabList.length - 1; idx > -1; idx--) {
       if (getIdFromTab(tabList[idx]) === tabId) {
         return tabList[idx];
@@ -144,16 +144,6 @@ function getTldFromHost(hostname) {
     return getTldFromHost(hostname.substr(1)); // recursive
   }
   return hostname;
-}
-
-
-function endsWith(sufix, str) { // TODO Fx17 str.endsWith(sufix)
-  var idx = str.lastIndexOf(sufix);
-  if (idx === -1) {
-    return false;
-  }
-  var idxMatch = str.length - sufix.length;
-  return idx === idxMatch;
 }
 
 
@@ -269,6 +259,7 @@ function debugData() {
     for (var idx = tabList.length - 1; idx > -1; idx--) {
       var tab = tabList[idx];
       if (tab.hasAttribute("multifox-tab-logins")) {
+        // TODO compare attr & WinMap
         logins[getIdFromTab(tab)] = JSON.parse(tab.getAttribute("multifox-tab-logins"));
       }
     }
