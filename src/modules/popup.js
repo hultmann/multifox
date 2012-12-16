@@ -47,17 +47,38 @@ function appendContent(container, panel) {
 }
 
 
-function createLoginsMenu(menupopup, onHidden) {
+
+function createContextMenu(menupopup) {
+  var doc = menupopup.ownerDocument;
+  menupopup.addEventListener("popuphidden", onHideContextMenu, false);
+  menupopup.addEventListener("command", onLoginCommand, false);
+
+  // about
+  var item = menupopup.appendChild(doc.createElement("menuitem"));
+  item.setAttribute("cmd", "about");
+  item.setAttribute("label", util.getText("icon.user.about.label", "${EXT_NAME}"));
+  item.setAttribute("accesskey", util.getText("icon.user.about.accesskey"));
+  item.classList.add("multifox2-item");
+}
+
+
+function onHideContextMenu(evt) {
+  var menupopup = evt.originalTarget;
+  menupopup.removeEventListener("popuphidden", onHideContextMenu, false);
+  menupopup.removeEventListener("command", onLoginCommand, false);
+  var nodeList = menupopup.querySelectorAll(".multifox2-item");
+  for (var idx = nodeList.length - 1; idx > -1; idx--) {
+    var node = nodeList[idx];
+    node.parentNode.removeChild(node);
+  }
+  initIconNormal(menupopup.ownerDocument);
+}
+
+
+function createLoginsMenu(menupopup) {
+  menupopup.addEventListener("popuphidden", onHideLoginsMenu, false);
   menupopup.addEventListener("command", onLoginCommand, false);
   menupopup.addEventListener("click", onLoginMiddleClick, false);
-  menupopup.addEventListener("popuphidden", function(evt) {
-    if (evt.currentTarget === evt.target) { // bubbled event?
-      onHidden();
-      menupopup.removeEventListener("command", onLoginCommand, false);
-      menupopup.parentNode.removeChild(menupopup);
-    }
-  }, false);
-
 
   var doc = menupopup.ownerDocument;
   var topInnerId = getCurrentTopInnerId(UIUtils.getSelectedTab(doc.defaultView));
@@ -67,35 +88,40 @@ function createLoginsMenu(menupopup, onHidden) {
   var docUser = "docUserObj" in topInnerData ? topInnerData.docUserObj : null;
   if (docUser !== null) {
     populateUsers(docUser, menupopup);
-  }
-
-  // new account
-  var newAccount = menupopup.appendChild(doc.createElement("menuitem"));
-  newAccount.setAttribute("label", util.getText("icon.user.new.label"));
-  newAccount.setAttribute("accesskey", util.getText("icon.user.new.accesskey"));
-  if (docUser === null) {
-    newAccount.setAttribute("disabled", "true"); // no top logins, 3rd-party only
-  } else {
-    newAccount.setAttribute("cmd", "new account");
-    newAccount.setAttribute("login-user16", docUser.user.toNewAccount().encodedName);
-    newAccount.setAttribute("login-tld", docUser.user.toNewAccount().encodedTld);
-    if (docUser.user.isNewAccount) {
-      newAccount.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
-      newAccount.className = "menuitem-iconic";
-    }
+    populateNewAccount(docUser, menupopup);
   }
 
   // list 3rd-party users
   if ("thirdPartyUsers" in topInnerData) {
-    populate3rdPartyUsers(topInnerData.thirdPartyUsers, menupopup);
+    populate3rdPartyUsers(topInnerData.thirdPartyUsers, menupopup, docUser !== null);
   }
+}
 
-  // about
-  menupopup.appendChild(doc.createElement("menuseparator"));
-  var item4 = menupopup.appendChild(doc.createElement("menuitem"));
-  item4.setAttribute("label", util.getText("icon.user.about.label", "${EXT_NAME}"));
-  item4.setAttribute("accesskey", util.getText("icon.user.about.accesskey"));
-  item4.setAttribute("cmd", "about");
+
+function onHideLoginsMenu(evt) {
+  if (evt.currentTarget !== evt.target) { // bubbled event?
+    return;
+  }
+  var menupopup = evt.originalTarget;
+  menupopup.removeEventListener("popuphidden", onHideLoginsMenu, false);
+  menupopup.removeEventListener("command", onLoginCommand, false);
+  menupopup.removeEventListener("click", onLoginMiddleClick, false);
+  menupopup.parentNode.removeChild(menupopup);
+  initIconNormal(menupopup.ownerDocument);
+}
+
+
+function populateNewAccount(docUser, menupopup) {
+  var newAccount = menupopup.appendChild(menupopup.ownerDocument.createElement("menuitem"));
+  newAccount.setAttribute("label", util.getText("icon.user.new.label"));
+  newAccount.setAttribute("accesskey", util.getText("icon.user.new.accesskey"));
+  newAccount.setAttribute("cmd", "new account");
+  newAccount.setAttribute("login-user16", docUser.user.toNewAccount().encodedName);
+  newAccount.setAttribute("login-tld", docUser.user.toNewAccount().encodedTld);
+  if (docUser.user.isNewAccount) {
+    newAccount.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
+    newAccount.className = "menuitem-iconic";
+  }
 }
 
 
@@ -145,7 +171,7 @@ function populateUsers(docUser, menupopup) {
 }
 
 
-function populate3rdPartyUsers(thirdParty, menupopup) {
+function populate3rdPartyUsers(thirdParty, menupopup, addSeparator) {
   var loggedinTLDs = [];
   for (var tld3rd in thirdParty) {
     var encTld = StringEncoding.encode(tld3rd);
@@ -163,7 +189,11 @@ function populate3rdPartyUsers(thirdParty, menupopup) {
   });
 
   var doc = menupopup.ownerDocument;
-  menupopup.appendChild(doc.createElement("menuseparator"));
+
+  if (addSeparator) {
+    menupopup.appendChild(doc.createElement("menuseparator"));
+  }
+
   for (var idx = 0, len = loggedinTLDs.length; idx < len; idx++) {
     var tld = loggedinTLDs[idx];
     var userId = thirdParty[tld];

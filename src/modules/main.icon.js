@@ -35,8 +35,11 @@ function updateUIAsync(tab, updateTopLogin) {
   var doc = tab.ownerDocument;
   if (updateTopLogin === false) {
     // 3rd-party icon?
-    if (getIconContainer(doc) !== null) {
-      return;
+    var container = getIconContainer(doc);
+    if (container !== null) {
+      if (container.hasAttribute("hidden") === false) {
+        return;
+      }
     }
   }
   // workaround to make it non-blocking
@@ -55,7 +58,7 @@ try {
   var topInnerId = getCurrentTopInnerId(tab);
   if (UserState.hasUsers(topInnerId) === false) {
     if (m_welcomeMode === false) {
-      removeUI(tab.ownerDocument);
+      hideUI(tab.ownerDocument, false);
       return;
     }
   }
@@ -66,6 +69,8 @@ try {
   if (container === null) {
     container = createContainer(doc);
     initIcon(doc, container, topInnerId);
+  } else if (container.hasAttribute("hidden")) {
+    container.removeAttribute("hidden");
   }
   updateIconCore(doc, container, topInnerId, tab);
 
@@ -75,10 +80,15 @@ console.error(ex);
 }
 
 
-function removeUI(xulDoc) {
+function hideUI(xulDoc, remove) {
   var container = getIconContainer(xulDoc);
-  if (container !== null) {
+  if (container === null) {
+    return;
+  }
+  if (remove) {
     container.parentNode.removeChild(container);
+  } else {
+    container.setAttribute("hidden", "true");
   }
 }
 
@@ -92,6 +102,7 @@ function removeUI(xulDoc) {
 //       <label value="username"/>
 //     </hbox>
 //   </box>
+//   <menupopup/>
 // </hbox>
 
 
@@ -110,6 +121,7 @@ function createContainer(doc) {
 function createBoxDom(container) {
   var doc = container.ownerDocument;
   var container2 = container.appendChild(doc.createElement("box"));
+  var contextMenu = container.appendChild(doc.createElement("menupopup"));
   var container3 = container2.appendChild(doc.createElement("hbox"));
   var stat = container3.appendChild(doc.createElement("hbox"));
   var label = container3.appendChild(doc.createElement("label"));
@@ -118,6 +130,10 @@ function createBoxDom(container) {
   container3.setAttribute("align", "center");
   stat.setAttribute("hidden", "true");
   stat.setAttribute("id", "multifox-icon-stat-icon");
+
+  // context menu
+  container.setAttribute("context", "_child");
+  contextMenu.addEventListener("popupshowing", onContextPopupShown, false);
 
   // max-width
   container3.style.maxWidth = "20ch"; // TODO util.getText("icon.user.maxWidth");
@@ -182,7 +198,7 @@ function updateIconCore(doc, container, topInnerId, tab) {
                               : u.plainName;
   } else {
     // 3rd-party users only
-    username = "@";
+    username = "\u271a";
   }
   getIconLabel(doc).setAttribute("value", username);
   updateIcon(tab, container);
@@ -265,7 +281,8 @@ function initIconNormal(doc) {
     // workaround
     // otherwise, mousedown on icon will close and open popup, even with stopPropagation
     statIcon.addEventListener("mousedown", showMsgPanel, false);
-    container.addEventListener("mousedown", showMenuPopup, false);
+    // firstChild => avoid conflict with contextMenu
+    container.firstChild.addEventListener("mousedown", showMenuPopup, false);
   }, 0);
   container.addEventListener("mouseover", onIconHover, false);
   container.addEventListener("mouseout", onIconHover, false);
@@ -334,6 +351,13 @@ function showMsgPanel(evt) {
 }
 
 
+function onContextPopupShown(evt) {
+  var menupopup = evt.originalTarget;
+  var ns = util.loadSubScript("${PATH_MODULE}/popup.js");
+  ns.createContextMenu(menupopup);
+}
+
+
 function showMenuPopup(evt) {
   if ((evt.button !== 0) || (evt.detail !== 1)) {
     // allow only left clicks
@@ -355,8 +379,8 @@ function showMenuPopup(evt) {
   }
 
   initIconPressed(doc, "menu");
-  var menu = doc.getElementById("mainPopupSet").appendChild(doc.createElement("menupopup"));
+  var menupopup = doc.getElementById("mainPopupSet").appendChild(doc.createElement("menupopup"));
   var ns = util.loadSubScript("${PATH_MODULE}/popup.js");
-  ns.createLoginsMenu(menu, function() {initIconNormal(doc);});
-  menu.openPopup(container, "after_end", 0, 1);
+  ns.createLoginsMenu(menupopup);
+  menupopup.openPopup(container, "after_end", 0, 1);
 }

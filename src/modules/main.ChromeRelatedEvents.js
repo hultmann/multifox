@@ -74,7 +74,7 @@ var ChromeRelatedEvents = {
 
   beforecustomization: function(evt) {
     var toolbox = evt.target;
-    removeUI(toolbox.ownerDocument);
+    hideUI(toolbox.ownerDocument, true);
   },
 
 

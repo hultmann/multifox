@@ -100,11 +100,7 @@ var MainWindow = {
       return;
     }
     // remove icon
-    var container = getIconContainer(win.document);
-    if (container !== null) {
-      container.parentNode.removeChild(container);
-    }
-
+    hideUI(win.document, true); // disabling ext
     console.log("/MainWindow.uninitWindow", reason);
   }
 };
