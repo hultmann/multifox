@@ -18,6 +18,7 @@ function welcomePopup(doc) {
   panel.setAttribute("type", "arrow");
   panel.addEventListener("popuphidden", function(evt) {
     panel.parentNode.removeChild(panel);
+    initIconNormal(doc);
   }, false);
 
   var container = panel.appendChild(doc.createElement("vbox"));

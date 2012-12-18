@@ -289,7 +289,7 @@ function initIconNormal(doc) {
 
   //statIcon.style.opacity = "1";
   setStyle("default", container.style, statIcon.style, lab);
-  //lab.opacity = "1";
+  lab.opacity = "1";
   //defaultStyle(container.style, lab);
 }
 

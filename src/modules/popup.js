@@ -29,6 +29,7 @@ function createMsgPanel(doc) {
 
   panel.addEventListener("popuphidden", function(evt) {
     panel.parentNode.removeChild(panel);
+    initIconNormal(doc);
   }, false);
 
   return panel;
