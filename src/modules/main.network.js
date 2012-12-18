@@ -73,8 +73,8 @@ var NetworkObserver = {
 
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
+        // docUser + authorization = not supported
         enableErrorMsgLocal("authorization", win);
-        return;
       }
 
       var userUri = httpChannel.URI.clone();
@@ -129,11 +129,8 @@ var NetworkObserver = {
       }
 
       if (myHeaders["www-authenticate"] !== null) {
-        if (win === null) {
-          return;
-        }
+        // docUser + www-authenticate = not supported
         enableErrorMsgLocal("www-authenticate", win);
-        return;
       }
 
       // remove "Set-Cookie"
