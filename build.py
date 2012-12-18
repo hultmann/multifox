@@ -49,7 +49,7 @@ b.set_var("SOURCE_URL",      "https://github.com/hultmann/multifox/tree/" + sys.
                              if len(sys.argv) > 1 else
                              "https://github.com/hultmann/multifox/tree/master/src")
 b.set_var("EXT_VERSION",     "2.0b7pre")
-b.set_var("EXT_ID",          "multifox@hultmann")
+b.set_var("EXT_ID",          "{42f25d10-4944-11e2-96c0-0b6a95a8daf0}")
 b.set_var("EXT_NAME",        "Multifox 2 (BETA)")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
 b.set_var("APP_MIN_VERSION", "17.0.1")
