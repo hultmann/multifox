@@ -46,8 +46,11 @@ var SubmitObserver = {
     }
 
     var tldDoc = getTldFromHost(win.location.hostname);
-    var userId = new UserId(StringEncoding.encode(username), StringEncoding.encode(tldDoc));
+    if (skipLogin(tldDoc)) {
+      return;
+    }
 
+    var userId = new UserId(StringEncoding.encode(username), StringEncoding.encode(tldDoc));
     var topInnerId = WinMap.getTopInnerId(getDOMUtils(win).currentInnerWindowID);
     var currentDocUser = WinMap.findUser(Services.io.newURI(win.location.href, null, null), topInnerId);
 
@@ -185,4 +188,30 @@ function isElementVisible(elem) {
   console.log("isElementVisible", "getBoundingClientRect().width " + elem.getBoundingClientRect().width, typeof elem.getBoundingClientRect().width, elem.tagName, elem.type, " name:" + elem.name);
 
   return elem.getBoundingClientRect().width > 0;
+}
+
+
+function skipLogin(tldDoc) {
+  var whitelist = getTldWhiteList();
+  if (whitelist === null) {
+    return false;
+  }
+  console.log("whitelistMode:", tldDoc, whitelist);
+  return whitelist.indexOf(tldDoc) === -1;
+}
+
+
+function getTldWhiteList() {
+  // extensions.{42f25d10-4944-11e2-96c0-0b6a95a8daf0}.whitelistMode.2.0b7
+  var branch = Services.prefs.getBranch("extensions.${EXT_ID}.");
+  var prefName = "whitelistMode.${EXT_VERSION}";
+  if (branch.prefHasUserValue(prefName)) {
+    try {
+      // eg "google.com   foo.bar  " => ["google.com", "foo.bar"]
+      return branch.getCharPref(prefName).trim().split(/\s* \s*/);
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+  return null;
 }
