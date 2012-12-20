@@ -192,7 +192,7 @@ function enableErrorMsg(notSupportedFeature, msgData, tab) {
   msg.push("Desc: " + msgData.err);
   console.log(msg.join("\n"));
 
-  tab.setAttribute("multifox-tab-error", notSupportedFeature);
+  tab.setAttribute("${BASE_ID}-tab-error", notSupportedFeature);
   updateUIAsync(tab, true);
 }
 

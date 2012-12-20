@@ -52,7 +52,7 @@ function onNewDocument(evt) { // DOMWindowCreated handler
 
   if (m_src !== null) {
     // TODO sendSyncMessage=undefined ==> disabled extension or exception in the parent process
-    if ((sendSyncMessage("multifox-remote-msg", msgData)[0]) !== null) {
+    if ((sendSyncMessage("${BASE_ID}-remote-msg", msgData)[0]) !== null) {
       // TODO check if multifox should be disabled for this browser
       initDoc(win);
     }
@@ -61,7 +61,7 @@ function onNewDocument(evt) { // DOMWindowCreated handler
 
   // ask for source
   msgData["initBrowser"] = true; // TODO "init-tab"
-  var rv = sendSyncMessage("multifox-remote-msg", msgData)[0];
+  var rv = sendSyncMessage("${BASE_ID}-remote-msg", msgData)[0];
   if (rv !== null) {
     startTab(rv);
     initDoc(win);
@@ -88,7 +88,7 @@ function stopTab(src) {
   }
 
   forEachWindow(resetDoc, content);
-  removeMessageListener("multifox-parent-msg", onParentMessage);
+  removeMessageListener("${BASE_ID}-parent-msg", onParentMessage);
   removeEventListener("DOMWindowCreated", onNewDocument, false);
   removeEventListener(m_nameSentByContent, onContentCustomEvent, false);
   m_src = null;
@@ -100,7 +100,7 @@ function stopTab(src) {
 
 
 function initDoc(win) {
-  var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-content"});
+  var sandbox = Cu.Sandbox(win, {sandboxName: "${BASE_ID}-content"});
   sandbox.window   = XPCNativeWrapper.unwrap(win);
   sandbox.document = XPCNativeWrapper.unwrap(win.document);
 
@@ -114,13 +114,13 @@ function initDoc(win) {
       url: win.location.href
     };
     msgData.topUrl = win !== win.top ? win.top.location.href : "";
-    sendAsyncMessage("multifox-remote-msg", msgData);
+    sendAsyncMessage("${BASE_ID}-remote-msg", msgData);
   }
 }
 
 
 function resetDoc(win, src) {
-  var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-content-reset"});
+  var sandbox = Cu.Sandbox(win, {sandboxName: "${BASE_ID}-content-reset"});
   sandbox.window = XPCNativeWrapper.unwrap(win);
   sandbox.document = XPCNativeWrapper.unwrap(win.document);
 
@@ -134,7 +134,7 @@ function resetDoc(win, src) {
       url:     win.location.href
     };
     msgData.topUrl = win !== win.top ? win.top.location.href : "";
-    sendAsyncMessage("multifox-remote-msg", msgData);
+    sendAsyncMessage("${BASE_ID}-remote-msg", msgData);
   }
 }
 
@@ -152,7 +152,7 @@ function onContentCustomEvent(evt) {
   msgData.outer = winutils.outerWindowID; // TODO useless, inner is enough
   msgData.inner = winutils.currentInnerWindowID;
 
-  var remoteObj = sendSyncMessage("multifox-remote-msg", msgData)[0];
+  var remoteObj = sendSyncMessage("${BASE_ID}-remote-msg", msgData)[0];
   if (remoteObj !== null) {
     // send remote data to page (e.g. cookie value)
     var evt = doc.createEvent("CustomEvent");
@@ -218,14 +218,14 @@ function checkState() {
     msg:   "send-inj-script",
     hosts: getSupportedUniqueHosts(content)
   };
-  sendAsyncMessage("multifox-remote-msg", msgData);
+  sendAsyncMessage("${BASE_ID}-remote-msg", msgData);
 }
 
 var m_src = null;
 var m_nameSentByChrome = null;
 var m_nameSentByContent = null;
 
-addMessageListener("multifox-parent-msg", onParentMessage);
+addMessageListener("${BASE_ID}-parent-msg", onParentMessage);
 addEventListener("DOMWindowCreated", onNewDocument, false);
 checkState();
 

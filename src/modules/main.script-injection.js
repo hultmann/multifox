@@ -23,8 +23,8 @@ var DocOverlay = {
       }
     }
 
-    this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
-    this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
+    this._sentByChrome  = "${BASE_ID}-chrome_event-"  + Math.random().toString(36).substr(2);
+    this._sentByContent = "${BASE_ID}-content_event-" + Math.random().toString(36).substr(2);
     branch.setCharPref(prefName, this._sentByChrome + " " + this._sentByContent);
   },
 

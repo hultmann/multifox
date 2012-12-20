@@ -25,7 +25,7 @@ var ContentRelatedEvents = {
     UIUtils.getContentContainer(win)
            .addEventListener("pageshow", this._onPageShow, false);
     var mm = win.messageManager;
-    mm.addMessageListener("multifox-remote-msg", this._onRemoteBrowserMessage);
+    mm.addMessageListener("${BASE_ID}-remote-msg", this._onRemoteBrowserMessage);
     mm.loadFrameScript("${PATH_MODULE}/remote-browser.js", true);
   },
 
@@ -40,8 +40,8 @@ var ContentRelatedEvents = {
     var srcCode = this._loadResetCode();
     var mm = win.messageManager;
     mm.removeDelayedFrameScript("${PATH_MODULE}/remote-browser.js");
-    mm.removeMessageListener("multifox-remote-msg", this._onRemoteBrowserMessage);
-    mm.sendAsyncMessage("multifox-parent-msg", {msg: "disable-extension", src: srcCode});
+    mm.removeMessageListener("${BASE_ID}-remote-msg", this._onRemoteBrowserMessage);
+    mm.sendAsyncMessage("${BASE_ID}-parent-msg", {msg: "disable-extension", src: srcCode});
   },
 
 
@@ -261,7 +261,7 @@ var RemoteBrowserMethod = {
       msgData2.msg = "tab-data";
       tab.linkedBrowser
          .messageManager
-         .sendAsyncMessage("multifox-parent-msg", msgData2);
+         .sendAsyncMessage("${BASE_ID}-parent-msg", msgData2);
     }
     return null;
   }

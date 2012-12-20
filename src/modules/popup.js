@@ -6,7 +6,7 @@
 
 
 function createMsgPanel(doc) {
-  var panel = doc.getElementById("multifox-popup");
+  var panel = doc.getElementById("${BASE_ID}-popup");
   if (panel) {
     //bug
     console.trace("createMsgPanel dup popup " + panel.state);
@@ -15,7 +15,7 @@ function createMsgPanel(doc) {
   }
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
-  panel.setAttribute("id", "multifox-popup");
+  panel.setAttribute("id", "${BASE_ID}-popup");
   panel.setAttribute("type", "arrow");
 
   var container = panel.appendChild(doc.createElement("vbox"));
@@ -38,7 +38,7 @@ function createMsgPanel(doc) {
 
 function appendContent(container, panel) {
   var tab = UIUtils.getSelectedTab(container.ownerDocument.defaultView);
-  var errorId = tab.getAttribute("multifox-tab-error");
+  var errorId = tab.getAttribute("${BASE_ID}-tab-error");
   if (errorId.length === 0) {
     return null;
   }
@@ -59,7 +59,7 @@ function createContextMenu(menupopup) {
   item.setAttribute("cmd", "about");
   item.setAttribute("label", util.getText("icon.user.about.label", "${EXT_NAME}"));
   item.setAttribute("accesskey", util.getText("icon.user.about.accesskey"));
-  item.classList.add("multifox2-item");
+  item.classList.add("${BASE_ID}-item");
 }
 
 
@@ -67,7 +67,7 @@ function onHideContextMenu(evt) {
   var menupopup = evt.originalTarget;
   menupopup.removeEventListener("popuphidden", onHideContextMenu, false);
   menupopup.removeEventListener("command", onLoginCommand, false);
-  var nodeList = menupopup.querySelectorAll(".multifox2-item");
+  var nodeList = menupopup.querySelectorAll(".${BASE_ID}-item");
   for (var idx = nodeList.length - 1; idx > -1; idx--) {
     var node = nodeList[idx];
     node.parentNode.removeChild(node);

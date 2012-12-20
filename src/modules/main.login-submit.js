@@ -67,7 +67,7 @@ var SubmitObserver = {
     } else {
       copyDataToAnotherUser(tldDoc, docUser, currentDocUser);
     }
-    tab.setAttribute("multifox-logging-in", "true"); // activate transition
+    tab.setAttribute("${BASE_ID}-logging-in", "true"); // activate transition
   }
 
 };

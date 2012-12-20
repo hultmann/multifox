@@ -60,6 +60,8 @@ b.set_var("PATH_CONTENT",    "chrome://multifox/content")
 b.set_var("PATH_LOCALE",     "chrome://multifox/locale")
 b.set_var("PATH_MODULE",     "resource://multifox-modules")
 
+b.set_var("BASE_ID",         "multifox2")
+
 b.set_var("INTERNAL_DOMAIN_SUFFIX_LOGGEDIN", "multifox-auth-2")
 b.set_var("INTERNAL_DOMAIN_SUFFIX_ANON",     "multifox-anon-2") #external anon 3party
 

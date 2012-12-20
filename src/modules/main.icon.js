@@ -93,10 +93,10 @@ function hideUI(xulDoc, remove) {
 }
 
 
-// <hbox align="center" id="multifox-icon">
+// <hbox align="center" id="${BASE_ID}-icon">
 //   <box>
 //     <hbox align="center">
-//       <hbox id="multifox-icon-stat-icon">
+//       <hbox id="${BASE_ID}-icon-stat-icon">
 //         <image src="warning.png"/>
 //       </hbox>
 //       <label value="username"/>
@@ -111,7 +111,7 @@ function createContainer(doc) {
   if (container === null) {
     var ref = doc.getElementById("urlbar-icons");
     container = ref.insertBefore(doc.createElement("hbox"), ref.firstChild);
-    container.setAttribute("id", "multifox-icon");
+    container.setAttribute("id", "${BASE_ID}-icon");
     container.setAttribute("align", "center");
   }
   return container;
@@ -129,7 +129,7 @@ function createBoxDom(container) {
   container2.setAttribute("tooltiptext", "${EXT_NAME}");
   container3.setAttribute("align", "center");
   stat.setAttribute("hidden", "true");
-  stat.setAttribute("id", "multifox-icon-stat-icon");
+  stat.setAttribute("id", "${BASE_ID}-icon-stat-icon");
 
   // context menu
   container.setAttribute("context", "_child");
@@ -207,7 +207,7 @@ function updateIconCore(doc, container, topInnerId, tab) {
 
 function updateIcon(tab, container) {
   var currentError = container.hasAttribute("current-error") ? container.getAttribute("current-error") : "";
-  var newError = tab.hasAttribute("multifox-tab-error") ? tab.getAttribute("multifox-tab-error") : "";
+  var newError = tab.hasAttribute("${BASE_ID}-tab-error") ? tab.getAttribute("${BASE_ID}-tab-error") : "";
   if (currentError !== newError) {
     container.setAttribute("current-error", newError);
     insertIcon(newError.length > 0, "chrome://global/skin/icons/warning-16.png", tab.ownerDocument); // ubuntu: 22x22
@@ -235,7 +235,7 @@ function insertIcon(show, url, doc) {
 
 
 function getIconContainer(doc) {
-  return doc.getElementById("multifox-icon");
+  return doc.getElementById("${BASE_ID}-icon");
 }
 
 
@@ -248,7 +248,7 @@ function getIconLabel(doc) {
 
 
 function getStatIconContainer(doc) {
-  return doc.getElementById("multifox-icon-stat-icon");
+  return doc.getElementById("${BASE_ID}-icon-stat-icon");
 }
 
 
@@ -258,8 +258,8 @@ function initIcon(doc, container, topInnerId) {
   setStyleCore(container.style, doc);
 
   var tab = UIUtils.getSelectedTab(doc.defaultView);
-  if (tab.hasAttribute("multifox-logging-in")) {
-    tab.removeAttribute("multifox-logging-in");
+  if (tab.hasAttribute("${BASE_ID}-logging-in")) {
+    tab.removeAttribute("${BASE_ID}-logging-in");
     container.style.opacity = "0";
     container.style.MozTransition = "opacity .3s ease";
     doc.defaultView.setTimeout(function() {
@@ -343,7 +343,7 @@ function showMsgPanel(evt) {
   panel.addEventListener("popuphidden", function(evt) {
     initIconNormal(doc);
     var tab = UIUtils.getSelectedTab(doc.defaultView);
-    tab.removeAttribute("multifox-tab-error");
+    tab.removeAttribute("${BASE_ID}-tab-error");
     updateUIAsync(tab, true); // remove error msg
   }, false);
 

@@ -6,7 +6,7 @@
 
 
 function welcomePopup(doc) {
-  var panel = doc.getElementById("multifox-popup");
+  var panel = doc.getElementById("${BASE_ID}-popup");
   if (panel) {
     //bug
     panel.hidePopup();
@@ -14,7 +14,7 @@ function welcomePopup(doc) {
   }
 
   panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
-  panel.setAttribute("id", "multifox-popup");
+  panel.setAttribute("id", "${BASE_ID}-popup");
   panel.setAttribute("type", "arrow");
   panel.addEventListener("popuphidden", function(evt) {
     panel.parentNode.removeChild(panel);

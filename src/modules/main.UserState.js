@@ -62,9 +62,9 @@ var UserState = {
     this.updateSessionStore(tabId);
 
     var tab = findTabById(tabId);
-    if (tab.hasAttribute("multifox-tab-error")) {
+    if (tab.hasAttribute("${BASE_ID}-tab-error")) {
       // reset error icon
-      tab.removeAttribute("multifox-tab-error");
+      tab.removeAttribute("${BASE_ID}-tab-error");
     }
   },
 
