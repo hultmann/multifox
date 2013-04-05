@@ -80,14 +80,27 @@ function onDOMContentLoaded(evt) {
 
   win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 
+
+  var ns = {};
+  Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
+  var isNotPriv = ns.PrivateBrowsingUtils.isWindowPrivate(win.top) === false;
+
+
   switch (win.document.location.href) {
     case "chrome://browser/content/browser.xul":
-      BrowserOverlay.add(win);
+      if (isNotPriv) {
+        BrowserOverlay.add(win);
+      }
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
+      if (isNotPriv) {
+        loadSubScript().PlacesOverlay.add(win);
+      }
+      break;
     case "chrome://browser/content/places/places.xul":
-      loadSubScript().PlacesOverlay.add(win);
+      // BUG removed to avoid bugs with private window
+      //loadSubScript().PlacesOverlay.add(win);
       break;
     case "chrome://mozapps/content/extensions/about.xul":
       loadSubScript().AboutOverlay.add(win);
