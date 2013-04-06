@@ -265,7 +265,7 @@ const FindIdentity = {
   },
 
   _getIdentityFromOpenerChrome: function(contentWin) {
-    var chromeWin = ContentWindow.getChromeWindow(contentWin);
+    var chromeWin = ContentWindow.getTopLevelWindow(contentWin);
     if (chromeWin === null) {
       return Profile.UndefinedIdentity;
     }
@@ -305,7 +305,7 @@ const FindIdentity = {
 
 const ContentWindow = {
   getContainerElement: function(contentWin) {
-    var chromeWin = this.getChromeWindow(contentWin);
+    var chromeWin = this.getTopLevelWindow(contentWin);
     if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
       var elem = chromeWin.getBrowser();
       switch (elem.tagName) {
@@ -325,27 +325,25 @@ const ContentWindow = {
     return null;
   },
 
-  getChromeWindow: function(contentWin) {
-    var qi = contentWin.QueryInterface;
-    if (!qi) {
+
+  getTopLevelWindow: function(win) { // content or chrome windows
+    if ((!win) || (!win.QueryInterface)) {
+      console.trace("getTopLevelWindow win=" + win);
       return null;
     }
 
-    if (contentWin instanceof Ci.nsIDOMChromeWindow) {
-      // extensions.xul, updates.xul ...
-      return contentWin;
-    }
+    var topwin = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIWebNavigation)
+                    .QueryInterface(Ci.nsIDocShellTreeItem)
+                    .rootTreeItem
+                    .QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIDOMWindow);
 
-    var win = qi(Ci.nsIInterfaceRequestor)
-                .getInterface(Ci.nsIWebNavigation)
-                .QueryInterface(Ci.nsIDocShell)
-                .chromeEventHandler
-                .ownerDocument
-                .defaultView;
-    // wrappedJSObject allows access to gBrowser etc
-    // wrappedJSObject=undefined sometimes. e.g. contentWin=about:multifox
-    var unwrapped = win.wrappedJSObject;
-    return unwrapped ? unwrapped : win;
+    console.assert(topwin !== null, "getTopLevelWindow null", win);
+    console.assert(topwin !== undefined, "getTopLevelWindow undefined", win);
+    console.assert(topwin === topwin.top, "getTopLevelWindow should return a top window");
+    // unwrapped object allows access to gBrowser etc
+    return XPCNativeWrapper.unwrap(topwin);
   }
 
 };
