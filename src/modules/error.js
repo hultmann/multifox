@@ -50,8 +50,7 @@ Components.utils.import("${PATH_MODULE}/main.js");
 //         <button/>
 //   <separator/>
 
-// TODO "error" is not used anymore
-function appendErrorToPanel(box, panel, error) {
+function appendErrorToPanel(box, panel) {
   var doc = box.ownerDocument;
 
   var box2 = box.appendChild(doc.createElement("hbox"));

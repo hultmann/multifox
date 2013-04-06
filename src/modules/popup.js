@@ -85,7 +85,7 @@ function appendError(container, panel) {
     return null;
   }
   Components.utils.import("${PATH_MODULE}/error.js");
-  return appendErrorToPanel(container, panel, error);
+  return appendErrorToPanel(container, panel);
 }
 
 

@@ -113,7 +113,6 @@ function clearStatusIcon(idData, win) {
 
 
 function ScriptSourceLoader() {
-  this._path = "${PATH_CONTENT}/content-injection.js";
   this._src = null;
   this._load(true);
 }
@@ -132,11 +131,10 @@ ScriptSourceLoader.prototype = {
     var me = this;
     var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
     xhr.onload = function() {
-      delete me._path;
       me._src = xhr.responseText + "initContext(window, document, '"
                                  + m_runner.eventSentByChrome + "','" + m_runner.eventSentByContent + "');";
     };
-    xhr.open("GET", this._path, async);
+    xhr.open("GET", "${PATH_CONTENT}/content-injection.js", async);
     xhr.overrideMimeType("text/plain");
     xhr.send(null);
   }

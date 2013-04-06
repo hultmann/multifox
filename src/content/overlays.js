@@ -54,10 +54,6 @@ const AboutOverlay = {
       return;
     }
 
-    var Cc = Components.classes;
-    var Ci = Components.interfaces;
-    Components.utils.import("resource://gre/modules/Services.jsm");
-
     var browserWin = Services.wm.getMostRecentWindow("navigator:browser");
     if (browserWin === null) {
       return;
@@ -67,9 +63,9 @@ const AboutOverlay = {
     var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
     browserWin.browserDOMWindow.openURI(uri, null, where, null);
 
-    win.setTimeout(win.close, 0);
+    win.close();
 
-    // hide window to avoid flicker
+    // hide window to avoid flickering
     var root = win.document.documentElement;
     root.setAttribute("hidechrome", "true");
     root.setAttribute("hidden", "true");
