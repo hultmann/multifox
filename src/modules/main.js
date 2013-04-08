@@ -287,7 +287,7 @@ const ContentWindow = {
           break;
         default: // view-source => tagName="browser"
           console.log("getContainerElement=" + elem.tagName + " " +
-                      contentWin.document.location + " " +chromeWin.document.location);
+                      contentWin.location + " " +chromeWin.location);
           break;
       }
     }

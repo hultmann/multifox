@@ -35,7 +35,7 @@ function DocObserver() {
 DocObserver.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
-    // win.document.location=about:blank
+    // win.location=about:blank
     win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);
   }
 };
@@ -55,7 +55,7 @@ function onDOMContentLoaded(evt) {
   var isNotPriv = ns.PrivateBrowsingUtils.isWindowPrivate(win.top) === false;
 
 
-  switch (win.document.location.href) {
+  switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
       if (isNotPriv) {
         BrowserOverlay.add(win);

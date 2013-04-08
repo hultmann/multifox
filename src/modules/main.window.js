@@ -141,7 +141,7 @@ function showError(contentWin, notSupportedFeature, details) {
   msg.push("ERROR=" + notSupportedFeature);
   msg.push(details);
   if (contentWin.document) {
-    msg.push("location=" + contentWin.document.location);
+    msg.push("location=" + contentWin.location);
     if (contentWin.document.documentURIObject) {
       msg.push("uri=     " + contentWin.document.documentURIObject.spec);
     }
