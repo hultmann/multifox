@@ -18,7 +18,7 @@
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
         <em:minVersion>${APP_MIN_VERSION}</em:minVersion>
         <em:maxVersion>${APP_MAX_VERSION}</em:maxVersion>
-        <em:updateLink>https://github.com/downloads/hultmann/multifox/${XPI_NAME}</em:updateLink>
+        <em:updateLink>https://multifox.googlecode.com/files/${XPI_NAME}</em:updateLink>
         <em:updateHash>${XPI_HASH}</em:updateHash>
       </RDF:Description>
 
