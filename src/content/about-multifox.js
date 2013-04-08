@@ -70,7 +70,7 @@ function populatePage() {
         break;
 
       case "source":
-        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "https://github.com/hultmann/multifox/tree/${EXT_VERSION}");
+        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "${SOURCE_URL}");
         break;
 
       case "l10n":

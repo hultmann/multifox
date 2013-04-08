@@ -6,6 +6,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import build_tools
+import sys
 
 b = build_tools.BuildExtension()
 
@@ -50,6 +51,9 @@ b.add_text("locale/${locale}/general.properties")
 b.add_text("locale/${locale}/about.properties")
 
 
+b.set_var("SOURCE_URL",      "https://github.com/hultmann/multifox/tree/" + sys.argv[1] #changeset
+                             if len(sys.argv) > 1 else
+                             "https://github.com/hultmann/multifox/tree/master/src")
 b.set_var("EXT_VERSION",     "1.3.6")
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
