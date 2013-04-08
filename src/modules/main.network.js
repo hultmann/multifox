@@ -10,7 +10,11 @@ const httpListeners = {
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var winChannel = getChannelWindow(httpChannel);
+      var ctx = getLoadContext(httpChannel)
+      if ((ctx === null) || (ctx.usePrivateBrowsing)) {
+        return;
+      }
+      var winChannel = ctx.associatedWindow;
       var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
@@ -35,7 +39,11 @@ const httpListeners = {
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
-      var winChannel = getChannelWindow(httpChannel);
+      var ctx = getLoadContext(httpChannel)
+      if ((ctx === null) || (ctx.usePrivateBrowsing)) {
+        return;
+      }
+      var winChannel = ctx.associatedWindow;
       var profileId = FindIdentity.fromContent(winChannel).profileNumber;
       switch (profileId) {
         case Profile.DefaultIdentity:
@@ -103,13 +111,12 @@ const HttpHeaders = {
 };
 
 
-function getChannelWindow(channel) {
+function getLoadContext(channel) {
   if (channel.notificationCallbacks) {
     try {
       return channel
               .notificationCallbacks
-              .getInterface(Ci.nsILoadContext)
-              .associatedWindow;
+              .getInterface(Ci.nsILoadContext);
     } catch (ex) {
       //util2.logEx("channel.notificationCallbacks ", channel.notificationCallbacks, channel.URI.spec, ex);
     }
@@ -120,8 +127,7 @@ function getChannelWindow(channel) {
       return channel
               .loadGroup
               .notificationCallbacks
-              .getInterface(Ci.nsILoadContext)
-              .associatedWindow;
+              .getInterface(Ci.nsILoadContext);
     } catch (ex) {
       util2.logEx("channel.loadGroup", channel.loadGroup, channel.URI.spec, ex);
     }
