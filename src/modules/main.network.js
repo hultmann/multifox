@@ -23,9 +23,9 @@ var NetworkObserver = {
     // nsIObserver
     observe: function HttpListeners_request(subject, topic, data) {
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
-      var win = getChannelWindow(httpChannel);
+      var ctx = getLoadContext(httpChannel)
 
-      if (win === null) {
+      if ((ctx === null) || ctx.usePrivateBrowsing) {
         // safebrowsing, http://wpad/wpad.dat
         return;
       }
@@ -33,6 +33,7 @@ var NetworkObserver = {
       var docUser;
       var isWin = isWindowChannel(httpChannel);
 
+      var win = ctx.associatedWindow;
       var tab = UIUtils.getLinkedTab(win);
       if (tab !== null) {
         if (isWin) {
@@ -88,11 +89,12 @@ var NetworkObserver = {
     // nsIObserver
     observe: function HttpListeners_response(subject, topic, data) {
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
-      var win = getChannelWindow(httpChannel);
-      if (win === null) {
+      var ctx = getLoadContext(httpChannel)
+      if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
       }
 
+      var win = ctx.associatedWindow;
       var tab = UIUtils.getLinkedTab(win);
       if (tab === null) {
         return;
@@ -223,13 +225,12 @@ function isWindowChannel(channel) {
 }
 
 
-function getChannelWindow(channel) {
+function getLoadContext(channel) {
   if (channel.notificationCallbacks) {
     try {
       return channel
               .notificationCallbacks
-              .getInterface(Ci.nsILoadContext)
-              .associatedWindow;
+              .getInterface(Ci.nsILoadContext);
     } catch (ex) {
       //console.trace("channel.notificationCallbacks " + "/" + channel.notificationCallbacks + "/" + channel.URI + "/" + ex);
     }
@@ -240,8 +241,7 @@ function getChannelWindow(channel) {
       return channel
               .loadGroup
               .notificationCallbacks
-              .getInterface(Ci.nsILoadContext)
-              .associatedWindow;
+              .getInterface(Ci.nsILoadContext);
     } catch (ex) {
       console.trace("channel.loadGroup " + channel.loadGroup + "/" + channel.URI.spec + "/" + ex);
     }

@@ -51,6 +51,9 @@ var MainWindow = {
     var enumWin = UIUtils.getWindowEnumerator();
     while (enumWin.hasMoreElements()) {
       win = enumWin.getNext();
+      if (UIUtils.isPrivateWindow(win)) {
+        continue;
+      }
       this.initWindow(win);
       this._initTabs(win);
     }
@@ -74,6 +77,10 @@ var MainWindow = {
 
 
   initWindow: function(win) {
+    if (UIUtils.isPrivateWindow(win)) {
+      return;
+    }
+
     ChromeRelatedEvents.initWindow(win);
     ContentRelatedEvents.initWindow(win);
 

@@ -77,6 +77,13 @@ var UIUtils = {
   },
 
 
+  isPrivateWindow: function(win) {
+    var ns = {};
+    Cu.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
+    return ns.PrivateBrowsingUtils.isWindowPrivate(win);
+  },
+
+
   getTopLevelWindow: function(win) { // content or chrome windows
     if ((!win) || (!win.QueryInterface)) {
       console.trace("getTopLevelWindow win=" + win);

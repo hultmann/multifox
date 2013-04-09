@@ -15,6 +15,10 @@ var SubmitObserver = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIFormSubmitObserver]),
 
   notify: function (form, win, actionURI, cancelSubmit) {
+    if (UIUtils.isPrivateWindow(win)) {
+      return true;
+    }
+
     console.assert(form.ownerDocument.defaultView === win, "form.ownerDocument.defaultView != win");
     this._notify(form, win);
     return true;
