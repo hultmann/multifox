@@ -5,7 +5,7 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow"];
+const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -49,23 +49,13 @@ function onDOMContentLoaded(evt) {
 
   win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 
-
-  var ns = {};
-  Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
-  var isNotPriv = ns.PrivateBrowsingUtils.isWindowPrivate(win.top) === false;
-
-
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      if (isNotPriv) {
-        BrowserOverlay.add(win);
-      }
+      BrowserOverlay.add(win);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
-      if (isNotPriv) {
-        loadSubScript().PlacesOverlay.add(win);
-      }
+      loadSubScript().PlacesOverlay.add(win);
       break;
     case "chrome://browser/content/places/places.xul":
       // BUG removed to avoid bugs with private window
@@ -127,9 +117,33 @@ const BrowserOverlay = {
 };
 
 
+function isPrivateWindow(win) {
+  var ns = {};
+  Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
+  return ns.PrivateBrowsingUtils.isWindowPrivate(win);
+}
+
+
+function showPrivateWinMsg(win) {
+  var val = "${BASE_DOM_ID}-privwin";
+  var msg = "Multifox is not available in private windows. Please try again from a regular window.";
+  var icon = "chrome://global/skin/icons/information-16.png";
+
+  var browser = win.gBrowser.selectedBrowser;
+  var barBox = browser.getTabBrowser().getNotificationBox(browser);
+  barBox.appendNotification(msg, val, icon, barBox.PRIORITY_WARNING_MEDIUM);
+}
+
+
 function onKey(evt) {
   var key = evt.target;
   var win = key.ownerDocument.defaultView.top;
+
+  if (isPrivateWindow(win)) {
+    showPrivateWinMsg(win);
+    return;
+  }
+
   newPendingWindow();
   win.OpenBrowserWindow();
 }

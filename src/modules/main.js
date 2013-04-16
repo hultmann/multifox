@@ -86,6 +86,11 @@ const Profile = {
   MaxIdentity:       999999999999999,
 
   defineIdentity: function(win, id) {
+
+    if (isPrivateWindow(win)) {
+      id = Profile.DefaultIdentity;
+    }
+
     console.log("defineIdentity " + id);
     if (id > Profile.MaxIdentity) {
       console.log("id > max " + id);

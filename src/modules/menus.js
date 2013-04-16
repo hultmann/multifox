@@ -158,10 +158,14 @@ function tabMenu(menu) {
 
 
 function newIdentityCommand(evt, cmd) {
-  console.log("newIdentityCommand " + cmd);
+  var win = evt.currentTarget.ownerDocument.defaultView.top; // defaultView=history-panel.xul/browser.xul
+  if (isPrivateWindow(win)) {
+    showPrivateWinMsg(win);
+    return;
+  }
+
   newPendingWindow();
 
-  var win = evt.currentTarget.ownerDocument.defaultView.top; // defaultView=history-panel.xul/browser.xul
   switch (cmd) {
     case "places":
       win.goDoPlacesCommand("placesCmd_open:window");
