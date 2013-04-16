@@ -88,7 +88,7 @@ const Profile = {
   defineIdentity: function(win, id) {
 
     if (isPrivateWindow(win)) {
-      id = Profile.DefaultIdentity;
+      id = Profile.UndefinedIdentity;
     }
 
     console.log("defineIdentity " + id);
@@ -271,7 +271,6 @@ const FindIdentity = {
       }
     }
 
-    console.log("request [" + profileId + "] id.opener="+ profileId);
     return Profile.UndefinedIdentity;
   }
 };
