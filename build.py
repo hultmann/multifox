@@ -54,7 +54,7 @@ b.add_text("locale/${locale}/about.properties")
 b.set_var("SOURCE_URL",      "https://github.com/hultmann/multifox/tree/" + sys.argv[1] #changeset
                              if len(sys.argv) > 1 else
                              "https://github.com/hultmann/multifox/tree/master/src")
-b.set_var("EXT_VERSION",     "1.3.7pre")
+b.set_var("EXT_VERSION",     "1.3.7")
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
