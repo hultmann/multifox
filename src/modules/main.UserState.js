@@ -231,75 +231,96 @@ var UserChange = {
   //   other docs (from current (not visible/bfcached docs) and other tabs):
   //     update TLD docs to NewAccount
   //
-  // defaults
-  //   current tab: add docUser.user to 1st/3rd-party defaults
+  // 1st-party default
+  //   current tab: add docUser.user
+  //   different tabs/topdocs:
+  //     tld+doc is anon (is docUser.user the first user for tld)?
+  //       n: do nothing
+  //       y: replace null by NewAccount
+  //
+  // 3rd-party default
+  //   current tab: add docUser.user to 1st-party defaults
   //   current topdoc: add docUser.user to thirdPartyUsers
   //   other tabs/topdocs:
   //     tld+doc is anon (is docUser.user the first user for tld)?
   //       n: do nothing
   //       y: add NewAccount
   add: function(docUser, loginOuterId) {
-    // len=0 because _notify didn't copy the data yet
-    var isFirstForTld = LoginDB.getUsers(StringEncoding.encode(tldDoc)).length === 0;
     var newAccount = docUser.user.toNewAccount();
-    var tldDoc = docUser.ownerTld;
 
     for (var id in WinMap._inner) {
       var docData = WinMap._inner[id];
-      var innerId = parseInt(id, 10);
       if ("pending_login" in docData) {
         continue;
       }
 
-      var uriInner = Services.io.newURI(docData.url, null, null);
-      var tldInner = getTldFromUri(uriInner);
+      var tldInner = getTldFromUri(Services.io.newURI(docData.url, null, null));
+      if ((tldInner === null) || (tldInner !== docUser.ownerTld)) {
+        continue;
+      }
 
+      // docData is from docUser.ownerTld
+      var innerId = parseInt(id, 10);
       var topInnerId = WinMap.getTopInnerId(innerId);
-      if ((tldInner !== null) && (tldInner === tldDoc)) {
-        console.assert(isFirstForTld || (("docUserObj" in docData) === false),
-                       "docData should not have an user.", innerId, isFirstForTld, docData);
+      var docDataTop = WinMap._inner[topInnerId];
+      var topTld = getTldFromUri(Services.io.newURI(docDataTop.url, null, null));
+      var isFirstParty = topTld === null ? false : topTld === tldInner;
+      var tabId = WinMap.getTabId(docData.outerId);
 
-        if (docUser.topDocId === topInnerId) { // same top doc?
-          docData.docUserObj = docUser;
+      // same tab, doc from visible/login tab
+      if (topInnerId === docUser.topDocId) {
+        if ("thirdPartyUsers" in docData) { // login could be a 3rd-party iframe
+          if (docUser.ownerTld in docData.thirdPartyUsers) {
+            docData.thirdPartyUsers[docUser.ownerTld] = docUser.user;
+          }
+        }
+
+        docData.docUserObj = docUser; // the doc/iframe we are logging in
+
+        if (isFirstParty) {
+          UserState.setTabDefaultFirstParty(docUser.ownerTld, tabId, docUser.user);
         } else {
-          // other tabs or not visible docs from same tab
-          if (isFirstForTld) {
-            docData.docUserObj = new DocumentUser(newAccount, tldDoc, topInnerId);
+          UserState.setTabDefaultThirdParty(docUser.ownerTld, tabId, docUser.user);
+        }
+
+      // same tab, doc from bfcache
+      } else if (WinMap.getTabId(loginOuterId) === tabId) {
+        if ("thirdPartyUsers" in docData) { // thirdPartyUsers => it's a topdoc
+          if (docUser.ownerTld in docData.thirdPartyUsers) {
+            if (docData.thirdPartyUsers[docUser.ownerTld] === null) {
+              docData.thirdPartyUsers[docUser.ownerTld] = newAccount;
+            }
+          }
+        }
+
+        if (("docUserObj" in docData) === false) {
+          docData.docUserObj = new DocumentUser(newAccount, docUser.ownerTld, topInnerId);
+        }
+
+
+      // other tabs
+      } else {
+        if ("thirdPartyUsers" in docData) { // thirdPartyUsers => it's a topdoc
+          if (docUser.ownerTld in docData.thirdPartyUsers) {
+            if (docData.thirdPartyUsers[docUser.ownerTld] === null) {
+              docData.thirdPartyUsers[docUser.ownerTld] = newAccount;
+              UserState.setTabDefaultFirstParty(docUser.ownerTld, tabId, newAccount);
+            }
+          }
+        }
+
+        if (("docUserObj" in docData) === false) {
+          docData.docUserObj = new DocumentUser(newAccount, docUser.ownerTld, topInnerId);
+          if (isFirstParty) {
+            UserState.setTabDefaultFirstParty(docUser.ownerTld, tabId, newAccount);
+          } else {
+            UserState.setTabDefaultThirdParty(docUser.ownerTld, tabId, newAccount);
           }
         }
       }
 
-      // change defaults
-      if (WinMap.isTabId(docData.parentInnerId) === false) {
-        continue;
-      }
-      // docData = topData
-      var user;
-      if (docUser.topDocId === topInnerId) { // current topdoc?
-        user = docUser.user;
-      } else {
-        if (isFirstForTld === false) {
-          continue;
-        }
-        user = newAccount;
-      }
 
-      var topUri = Services.io.newURI(docData.url, null, null);
-      var topTld = getTldFromUri(uriInner);
-      var isInner1stParty = topTld === null ? false : tldDoc === topTld;
-      if (isInner1stParty) {
-        UserState.setTabDefaultFirstParty(tldDoc, docData.outerId, user);
-      } else {
-        UserState.setTabDefaultThirdParty(tldDoc, docData.outerId, user);
-
-        // update thirdPartyUsers for current topdoc: it is probably null
-        if (("thirdPartyUsers" in docData) === false) {
-          docData.thirdPartyUsers = Object.create(null);
-        }
-        docData.thirdPartyUsers[tldDoc] = user;
-      }
-
-      UserState.updateSessionStore(docData.outerId);
+      UserState.updateSessionStore(tabId);
     }
 
     this._updateUIAllWindows();
@@ -360,7 +381,7 @@ var UserChange = {
         this._replaceTldTabDefaults(tldDoc, tabData, delUserId, newUser);
       }
 
-      UserState.updateSessionStore(docData.outerId);
+      UserState.updateSessionStore(WinMap.getTabId(docData.outerId));
     }
 
     this._updateUIAllWindows();
