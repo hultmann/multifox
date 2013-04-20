@@ -15,10 +15,6 @@ var SubmitObserver = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIFormSubmitObserver]),
 
   notify: function (form, win, actionURI, cancelSubmit) {
-    if (UIUtils.isPrivateWindow(win)) {
-      return true;
-    }
-
     console.assert(form.ownerDocument.defaultView === win, "form.ownerDocument.defaultView != win");
     this._notify(form, win);
     return true;
@@ -42,6 +38,13 @@ var SubmitObserver = {
       return; // no password provided => not a login form
     }
 
+    if (UIUtils.isPrivateWindow(win)) {
+      // obs: do not call WinMap.loginSubmitted for private windows
+      // they should not be registered by WinMap
+      showPrivateWinMsg(tab);
+      return true;
+    }
+
     var username = findUserName(form);
     if (username === null) {
       console.log("SubmitObserver: NOP, username not found, confirm pw form?");
@@ -51,6 +54,7 @@ var SubmitObserver = {
 
     var tldDoc = getTldFromHost(win.location.hostname);
     if (skipLogin(tldDoc)) {
+      WinMap.loginSubmitted(win, "submit-skip", null);
       return;
     }
 
@@ -75,6 +79,18 @@ var SubmitObserver = {
   }
 
 };
+
+
+function showPrivateWinMsg(tab) {
+  var val = "${BASE_DOM_ID}-privwin";
+  var msg = util.getText("infobar.private-window.label", "${EXT_NAME}");
+  var icon = "chrome://global/skin/icons/information-16.png";
+
+  var browser = tab.linkedBrowser;
+  var barBox = browser.getTabBrowser().getNotificationBox(browser);
+  barBox.appendNotification(msg, val, icon, barBox.PRIORITY_WARNING_MEDIUM)
+        .persistence = 1;
+}
 
 
 function copyDataToAnotherUser(tabTld, newLogin, prevLogin) {
