@@ -201,11 +201,23 @@ var RemoteBrowserMethod = {
     }
 
     var uri = docUser.appendLoginToUri(msgData.uri);
-    var ssm = Cc["@mozilla.org/scriptsecuritymanager;1"].getService(Ci.nsIScriptSecurityManager);
-    var principal = ssm.getNoAppCodebasePrincipal(uri);
+    var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
+                    .getService(Ci.nsIScriptSecurityManager)
+                    .getNoAppCodebasePrincipal(uri);
 
-    var dsm = Cc["@mozilla.org/dom/storagemanager;1"].getService(Ci.nsIDOMStorageManager);
-    var storage = dsm.getLocalStorageForPrincipal(principal, "");
+    var storage;
+    if ("@mozilla.org/dom/localStorage-manager;1" in Cc) {
+      // Firefox 23
+      storage = Cc["@mozilla.org/dom/localStorage-manager;1"]
+                  .getService(Ci.nsIDOMStorageManager)
+                  .createStorage(principal, "");
+    } else {
+      // Firefox < 23
+      storage = Cc["@mozilla.org/dom/storagemanager;1"]
+                  .getService(Ci.nsIDOMStorageManager)
+                  .getLocalStorageForPrincipal(principal, "");
+    }
+
 
     var rv;
     switch (msgData.cmdMethod) {
