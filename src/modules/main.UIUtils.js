@@ -69,6 +69,9 @@ var UIUtils = {
 
 
   getLinkedTab: function(win) {
+    if (win === null) {
+      return null;
+    }
     var browser = win.QueryInterface(Ci.nsIInterfaceRequestor)
                      .getInterface(Ci.nsIWebNavigation)
                      .QueryInterface(Ci.nsIDocShell)
