@@ -222,9 +222,9 @@ function skipLogin(tldDoc) {
 
 
 function getTldWhiteList() {
-  // extensions.{42f25d10-4944-11e2-96c0-0b6a95a8daf0}.whitelistMode.2.0b7
+  // extensions.{42f25d10-4944-11e2-96c0-0b6a95a8daf0}.tldWhitelistMode
   var branch = Services.prefs.getBranch("extensions.${EXT_ID}.");
-  var prefName = "whitelistMode.${EXT_VERSION}";
+  var prefName = "tldWhitelistMode";
   if (branch.prefHasUserValue(prefName)) {
     try {
       // eg "google.com   foo.bar  " => ["google.com", "foo.bar"]
