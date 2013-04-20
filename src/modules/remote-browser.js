@@ -12,6 +12,7 @@ Object.defineProperty(this, "initMultifox", {
     return function(Cu, Ci, Cc, m_global) {
 
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 
 #include "console.js"
   console.setAsRemote();
@@ -19,8 +20,12 @@ Cu.import("resource://gre/modules/Services.jsm");
 function onNewDocument(evt) { // DOMWindowCreated handler
   var doc = evt.target;
   var win = doc.defaultView;
-  var utils = getDOMUtils(win);
 
+  if (PrivateBrowsingUtils.isWindowPrivate(win)) {
+    return;
+  }
+
+  var utils = getDOMUtils(win);
   var msgData = {
     msg: "new-doc",
     // TODO host: win.location.hostname,

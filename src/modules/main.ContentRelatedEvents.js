@@ -106,6 +106,10 @@ var ContentRelatedEvents = {
         return; // xsl/xbl chrome://....xml
       }
 
+      if (UIUtils.isPrivateWindow(win)) {
+        return;
+      }
+
       var innerId = getDOMUtils(win).currentInnerWindowID;
       if (innerId in WinMap._inner) {
         var entry = WinMap.getInnerEntry(innerId);
