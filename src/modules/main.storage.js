@@ -19,11 +19,19 @@ function windowLocalStorage(obj, contentDoc) {
   var uri = toInternalUri(originalUri, profileId);
   var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
                   .getService(Ci.nsIScriptSecurityManager)
-                  .getCodebasePrincipal(uri);
+                  .getNoAppCodebasePrincipal(uri);
 
-  var storage = Cc["@mozilla.org/dom/storagemanager;1"]
+  var storage;
+  if ("@mozilla.org/dom/localStorage-manager;1" in Cc) {
+    storage = Cc["@mozilla.org/dom/localStorage-manager;1"]
+                .getService(Ci.nsIDOMStorageManager)
+                .createStorage(principal, "");
+  } else {
+    storage = Cc["@mozilla.org/dom/storagemanager;1"]
                 .getService(Ci.nsIDOMStorageManager)
                 .getLocalStorageForPrincipal(principal, "");
+  }
+
 
   var rv = undefined;
   switch (obj.cmd) {
