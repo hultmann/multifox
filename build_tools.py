@@ -36,6 +36,14 @@ def ensure_path_exists(path):
         os.makedirs(dir)
 
 
+def getVersionedString(changeset, ver):
+    import datetime
+    if changeset == None:
+        return ver + "." + datetime.datetime.now().strftime("%j.%H.%M.%S")
+    else:
+        return changeset
+
+
 class BuildExtension:
 
     def __init__(self):

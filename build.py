@@ -8,6 +8,11 @@
 import build_tools
 import sys
 
+if len(sys.argv) > 1:
+    changeset = sys.argv[1]
+else:
+    changeset = None
+
 b = build_tools.BuildExtension()
 
 b.add_binary("icon.png")
@@ -50,21 +55,27 @@ b.add_locale("sr")
 b.add_text("locale/${locale}/general.properties")
 b.add_text("locale/${locale}/about.properties")
 
+b.set_var("EXT_VERSION", "1.9pre")
+verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
 
-b.set_var("SOURCE_URL",      "https://github.com/hultmann/multifox/tree/" + sys.argv[1] #changeset
-                             if len(sys.argv) > 1 else
-                             "https://github.com/hultmann/multifox/tree/master/src")
-b.set_var("EXT_VERSION",     "1.9pre")
+if changeset == None:
+    b.set_var("SOURCE_URL", "https://github.com/hultmann/multifox/tree/master/src")
+    b.set_var("EXT_VERSION", verEx)
+else:
+    b.set_var("SOURCE_URL", "https://github.com/hultmann/multifox/tree/" + changeset)
+
+
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
 b.set_var("APP_MIN_VERSION", "22.0")
 b.set_var("APP_MAX_VERSION", "24.*")
 b.set_var("CHROME_NAME",     "multifox")
-b.set_var("RESOURCE_NAME",   "multifox-modules")
+b.set_var("RESOURCE_NAME",   "multifox-" + verEx)
+
 b.set_var("PATH_CONTENT",    "chrome://multifox/content")
 b.set_var("PATH_LOCALE",     "chrome://multifox/locale")
-b.set_var("PATH_MODULE",     "resource://multifox-modules")
+b.set_var("PATH_MODULE",     "resource://" + b.get_var("RESOURCE_NAME"))
 
 b.set_var("BASE_DOM_ID",            "multifox-dom")
 
