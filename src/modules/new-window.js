@@ -5,7 +5,7 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "init", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg"];
+const EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "Bootstrap", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -18,14 +18,87 @@ function newPendingWindow() {
 
 var m_docObserver = null;
 
-function init() {
-  console.assert(m_docObserver === null, "m_docObserver should be null");
-  m_docObserver = new DocObserver();
-}
+var Bootstrap = {
+
+  extensionStartup: function(installing) {
+    console.assert(m_docObserver === null, "m_docObserver should be null");
+    console.assert(m_pendingNewWindows === 0, "m_pendingNewWindows should be zero");
+
+    if (installing) {
+      var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about");
+      Services.prefs.getBranch("extensions.${EXT_ID}.").setCharPref("description", desc);
+    }
+
+    m_docObserver = new DocObserver();
+    var enumWin = Services.wm.getEnumerator(null);
+    while (enumWin.hasMoreElements()) {
+      forEachWindow(addOverlay, enumWin.getNext());
+    }
+  },
+
+  extensionShutdown: function() {
+    m_docObserver.shutdown();
+    var enumWin = Services.wm.getEnumerator(null);
+    while (enumWin.hasMoreElements()) {
+      forEachWindow(removeOverlay, enumWin.getNext());
+    }
+  },
+
+
+  extensionUninstall: function() {
+    var enumWin = Services.wm.getEnumerator(null);
+    while (enumWin.hasMoreElements()) {
+      forEachWindow(removeState, enumWin.getNext());
+    }
+
+    // prefs
+    Services.prefs.getBranch("extensions.${EXT_ID}.").deleteBranch("");
+
+    // cookies
+    this._removeCookies();
+
+    // TODO localStorage
+  },
+
+
+  _removeCookies: function() {
+    var myCookies = [];
+    var COOKIE = Ci.nsICookie2;
+    var mgr = Services.cookies;
+
+    for (var idx = 0; idx < 100; idx++) {
+      var h = ".multifox-profile-" + idx;
+      var all = mgr.enumerator;
+
+      while (all.hasMoreElements()) {
+        var cookie = all.getNext().QueryInterface(COOKIE);
+        if (cookie.host.endsWith(h)) {
+          myCookies.push(cookie);
+        }
+      }
+    }
+
+    for (var idx = myCookies.length - 1; idx > -1; idx--) {
+      cookie = myCookies[idx];
+      mgr.remove(cookie.host, cookie.name, cookie.path, false);
+    }
+  }
+
+};
+
 
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/Services.jsm");
+
+
+function forEachWindow(fn, win) {
+  fn(win);
+  for (var idx = win.length - 1; idx > -1; idx--) {
+    forEachWindow(fn, win[idx]);
+  }
+}
+
 
 function DocObserver() {
   Services.obs.addObserver(this, "chrome-document-global-created", false);
@@ -33,6 +106,10 @@ function DocObserver() {
 
 
 DocObserver.prototype = {
+  shutdown: function() {
+    Services.obs.removeObserver(this, "chrome-document-global-created");
+  },
+
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
     // win.location=about:blank
@@ -48,30 +125,69 @@ function onDOMContentLoaded(evt) {
   }
 
   win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+  addOverlay(win);
+}
 
+
+function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
+      setWindowProfile(win)
       BrowserOverlay.add(win);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
-      loadSubScript().PlacesOverlay.add(win);
+      PlacesOverlay.add(win);
       break;
     case "chrome://browser/content/places/places.xul":
       // BUG removed to avoid bugs with private window
-      //loadSubScript().PlacesOverlay.add(win);
+      //PlacesOverlay.add(win);
       break;
     case "chrome://mozapps/content/extensions/about.xul":
-      loadSubScript().AboutOverlay.add(win);
+      AboutOverlay.add(win);
       break;
   }
 }
 
 
-function loadSubScript() {
-  var ns = {};
-  Services.scriptloader.loadSubScript("${PATH_CONTENT}/overlays.js", ns);
-  return ns;
+function removeOverlay(win) {
+  switch (win.location.href) {
+    case "chrome://browser/content/browser.xul":
+      BrowserOverlay.remove(win);
+
+      var contentContainer = win.getBrowser();
+      var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id");
+      contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", tmp, null);
+
+      var ns = {};
+      Components.utils.import("${PATH_MODULE}/main.js", ns);
+      ns.Profile.defineIdentity(win, ns.Profile.DefaultIdentity);
+      break;
+
+    case "chrome://browser/content/history/history-panel.xul":
+    case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
+      PlacesOverlay.remove(win);
+      break;
+
+    case "chrome://browser/content/places/places.xul":
+      break;
+    case "chrome://mozapps/content/extensions/about.xul":
+      break;
+  }
+}
+
+
+function removeState(win) { // uninstalling
+  switch (win.location.href) {
+    case "chrome://browser/content/browser.xul":
+      var contentContainer = win.getBrowser();
+      contentContainer.setUserData("${BASE_DOM_ID}-identity-id", null, null);
+      contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", null, null);
+
+      var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+      ss.deleteWindowValue(win, "${BASE_DOM_ID}-identity-id");
+      break;
+  }
 }
 
 
@@ -79,7 +195,6 @@ const BrowserOverlay = {
   add: function(win) {
     win.addEventListener("unload", BrowserOverlay._unload, false);
 
-    setWindowProfile(win)
 
     var doc = win.document;
     //if ((doc instanceof Ci.nsIDOMDocument) === false) {
@@ -117,6 +232,50 @@ const BrowserOverlay = {
 };
 
 
+var PlacesOverlay = {
+  add: function(win) {
+    var popup = win.document.getElementById("placesContext");
+    popup.addEventListener("popupshowing", PlacesOverlay._listener, false);
+  },
+
+  remove: function(win) {
+    var popup = win.document.getElementById("placesContext");
+    popup.removeEventListener("popupshowing", PlacesOverlay._listener, false);
+  },
+
+  _listener: function(evt) {
+    var ns = {};
+    Components.utils.import("${PATH_MODULE}/menus.js", ns);
+    ns.menuShowing(evt);
+  }
+};
+
+
+var AboutOverlay = {
+  add: function(win) {
+    if (win.arguments[0].id !== "${EXT_ID}") {
+      return;
+    }
+
+    var browserWin = Services.wm.getMostRecentWindow("navigator:browser");
+    if (browserWin === null) {
+      return;
+    }
+
+    var uri = Services.io.newURI("about:multifox", null, null);
+    var where = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB;
+    browserWin.browserDOMWindow.openURI(uri, null, where, null);
+
+    win.close();
+
+    // hide window to avoid flickering
+    var root = win.document.documentElement;
+    root.setAttribute("hidechrome", "true");
+    root.setAttribute("hidden", "true");
+  }
+};
+
+
 function isPrivateWindow(win) {
   var ns = {};
   Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
@@ -150,18 +309,27 @@ function onKey(evt) {
 
 
 function setWindowProfile(newWin) {
-  if (m_pendingNewWindows > 0) {
+  var ns = {};
+  Components.utils.import("${PATH_MODULE}/main.js", ns);
+
+  var contentContainer = newWin.getBrowser();
+  var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id-tmp");
+
+  if (tmp !== null) {
+    // updating/enabling the extension
+    contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", null, null);
+    ns.Profile.defineIdentity(newWin, ns.Profile.toInt(tmp));
+
+  } else if (m_pendingNewWindows > 0) {
     // new identity profile
     console.log("m_pendingNewWindows=" + m_pendingNewWindows);
     m_pendingNewWindows--;
-    Components.utils.import("${PATH_MODULE}/main.js");
-    NewWindow.newId(newWin);
+    ns.NewWindow.newId(newWin);
 
   } else {
     // inherit identity profile
     if (util.networkListeners.active) {
-      Components.utils.import("${PATH_MODULE}/main.js");
-      NewWindow.inheritId(newWin);
+      ns.NewWindow.inheritId(newWin);
     } else {
       // no Multifox window
       console.log("setWindowProfile NOP => util.networkListeners.active=false");
@@ -236,8 +404,9 @@ function removeMenuListeners(doc) {
 
 
 function onMenuPopupShowing(evt) {
-  Components.utils.import("${PATH_MODULE}/menus.js");
-  menuShowing(evt);
+  var ns = {};
+  Components.utils.import("${PATH_MODULE}/menus.js", ns);
+  ns.menuShowing(evt);
 }
 
 

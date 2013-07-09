@@ -13,8 +13,6 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");
 
-console.log("===>LOADING main.js");
-
 
 #include "main.window.js"
 #include "main.icon.js"
@@ -86,6 +84,7 @@ const Profile = {
   MaxIdentity:       999999999999999,
 
   defineIdentity: function(win, id) {
+    console.assert(typeof id === "number", "id is not a number. " + typeof id);
 
     if (isPrivateWindow(win)) {
       id = Profile.UndefinedIdentity;
@@ -172,23 +171,24 @@ const Profile = {
 };
 
 
+
 function SaveToSessionStore(doc) {
-  this._doc = doc;
+  this._doc = Components.utils.getWeakReference(doc);
   this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
   this._timer.init(this, 1300, Ci.nsITimer.TYPE_ONE_SHOT);
 }
 
 SaveToSessionStore.prototype = {
-
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver, Ci.nsISupportsWeakReference]),
 
   observe: function(aSubject, aTopic, aData) {
-    console.log("SaveToSessionStore timer!");
-    var doc = this._doc;
-    if (doc.defaultView === null) {
-      console.log("_syncToSessionStore window closed");
+    var doc = this._doc.get();
+    if ((doc === null) || (doc.defaultView === null)) {
       return;
     }
+
+    // BUG extension disabled => Components is not available
+    // Profile.DefaultIdentity won't be saved
 
     var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
     var val = Profile.getIdentity(doc.defaultView);
@@ -206,9 +206,8 @@ SaveToSessionStore.prototype = {
     if (val <= Profile.DefaultIdentity) { // UndefinedIdentity OR DefaultIdentity
       ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
     }
-
-    console.log("_syncToSessionStore OK=" + Profile.getIdentity(doc.defaultView));
   }
+
 };
 
 
