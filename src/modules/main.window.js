@@ -73,6 +73,7 @@ function onUnloadChromeWindow(evt) {
 function customizeToolbar(evt) {
   var toolbox = evt.target;
   updateUI(toolbox.ownerDocument.defaultView);
+  updateButton(toolbox.ownerDocument.defaultView);
 }
 
 

@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-
 "use strict";
 
 var EXPORTED_SYMBOLS = ["NewWindow",
+                        "createButton", "destroyButton", "updateButton", "ProfileAlias",
                         "Profile"      // error.js
                        ];
 
@@ -16,6 +16,7 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 
 #include "main.window.js"
 #include "main.icon.js"
+#include "main.button.js"
 #include "main.script-injection.js"
 #include "main.network.js"
 #include "main.cookies.js"
@@ -111,6 +112,8 @@ const Profile = {
     this._save(win, id);
     BrowserWindow.register(win);
     updateUI(win);
+    updateButton(win);
+
     return id;
   },
 

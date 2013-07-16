@@ -38,6 +38,7 @@ b.add_text("modules/main.js")
 b.add_text("modules/menus.js")
 b.add_text("modules/error.js")
 b.add_text("modules/popup.js")
+b.add_text("modules/actions.js")
 
 
 b.add_locale("en-US")

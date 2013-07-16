@@ -58,7 +58,7 @@ function appMenu(menu) {
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("appmenu.new.label"));
   cmd.setAttribute("accesskey", util.getText("appmenu.new.accesskey"));
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "appMenu");}, false);
+  cmd.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   menu.insertBefore(cmd, position);
 
@@ -77,7 +77,7 @@ function fileMenu(menu) {
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("menu.file.label"));
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "fileMenu");}, false);
+  cmd.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   menu.insertBefore(cmd, position);
 
@@ -182,10 +182,7 @@ function newIdentityCommand(evt, cmd) {
     case "link":
       win.gContextMenu.openLink();
       break;
-    case "appMenu":
-    case "fileMenu":
     default:
-      var newWin = win.OpenBrowserWindow();
-      break;
+      throw new Error("${EXT_NAME} - cmd unknown: " + cmd);
   }
 }
