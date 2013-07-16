@@ -175,7 +175,7 @@ function initIconCore(iconContainer, profileId) {
   styleLabel.margin = "-1px 0px";
 
   initIconNormal(icon);
-  iconContainer.removeAttribute("hidden");
+  //iconContainer.removeAttribute("hidden");
 }
 
 
