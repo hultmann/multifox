@@ -29,13 +29,17 @@ var ProfileAlias = {
     } else {
       delete this._alias[profileId];
     }
-    util.setUnicodePref("alias", JSON.stringify(this._alias));
+    var ns = {}; // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", ns);
+    ns.util.setUnicodePref("alias", JSON.stringify(this._alias));
   },
 
 
   remove: function(profileId) {
     delete this._alias[profileId];
-    util.setUnicodePref("alias", JSON.stringify(this._alias));
+    var ns = {}; // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", ns);
+    ns.util.setUnicodePref("alias", JSON.stringify(this._alias));
   },
 
   sort: function(arr) {
@@ -59,15 +63,18 @@ var ProfileAlias = {
   format: function(profileId) {
     console.assert(this._alias !== null, "call ProfileAlias._load");
 
+    var ns = {}; // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", ns);
+
     if (profileId <= Profile.DefaultIdentity) {
-      return util.getText("button.profile-default.label");
+      return ns.util.getText("button.profile-default.label");
     }
 
     if (profileId in this._alias) {
       return this._alias[profileId];
     }
 
-    return util.getText("button.profile-generic.label", profileId);
+    return ns.util.getText("button.profile-generic.label", profileId);
   }
 };
 
@@ -157,7 +164,7 @@ function destroyButton(doc) {
 function onMenuPopupShowing(evt) {
   if (evt.currentTarget === evt.target) {
     var ns = {};
-    Components.utils.import("${PATH_MODULE}/actions.js", ns);
+    Cu.import("${PATH_MODULE}/actions.js", ns);
     ns.menuButtonShowing(evt.target);
   }
 }

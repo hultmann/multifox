@@ -5,18 +5,22 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "console", "util", "Bootstrap", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg", "onXulCommand"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg", "onXulCommand"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
+Components.utils.import("${PATH_MODULE}/main.js");
+
+
 var m_pendingNewWindows = [];
+
 
 function newPendingWindow(profileId) {
   if (profileId === undefined) {
-    var ns = {};
-    Components.utils.import("${PATH_MODULE}/main.js", ns);
-    profileId = ns.Profile.UndefinedIdentity;
+    profileId = Profile.UndefinedIdentity;
   }
   m_pendingNewWindows.push(profileId);
 }
@@ -71,11 +75,6 @@ var Bootstrap = {
   }
 
 };
-
-
-
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-Components.utils.import("resource://gre/modules/Services.jsm");
 
 
 function forEachWindow(fn, win) {
@@ -159,10 +158,7 @@ function removeOverlay(win) {
       var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id");
       contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", tmp, null);
 
-      var ns = {};
-      Components.utils.import("${PATH_MODULE}/main.js", ns);
-      ns.Profile.defineIdentity(win, ns.Profile.DefaultIdentity);
-
+      Profile.defineIdentity(win, Profile.DefaultIdentity);
       BrowserOverlay.remove(win);
       break;
 
@@ -219,10 +215,8 @@ const BrowserOverlay = {
 
   add2: function(win) { // toolbar button
     console.assert(win.location.href === "chrome://browser/content/browser.xul",
-                   "win should be a browser window " + win.location.href);
-    var ns = {};
-    Components.utils.import("${PATH_MODULE}/main.js", ns);
-    ns.createButton(win.document);
+                   "win should be a browser window", win.location.href);
+    createButton(win.document);
     setWindowProfile(win);
   },
 
@@ -244,9 +238,7 @@ const BrowserOverlay = {
     // commands
     removeXulCommands(doc);
 
-    var ns = {};
-    Components.utils.import("${PATH_MODULE}/main.js", ns);
-    ns.destroyButton(doc);
+    destroyButton(doc);
   }
 };
 
@@ -355,30 +347,27 @@ function showPrivateWinMsg(win) {
 
 
 function setWindowProfile(newWin) {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/main.js", ns);
-
   var contentContainer = newWin.getBrowser();
   var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id-tmp");
 
   if (tmp !== null) {
     // updating/enabling the extension
     contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", null, null);
-    ns.Profile.defineIdentity(newWin, ns.Profile.toInt(tmp));
+    Profile.defineIdentity(newWin, Profile.toInt(tmp));
 
   } else if (m_pendingNewWindows.length > 0) {
     var profileId = m_pendingNewWindows.pop();
-    if (profileId !== ns.Profile.UndefinedIdentity) {
-      ns.Profile.defineIdentity(newWin, profileId);
+    if (profileId !== Profile.UndefinedIdentity) {
+      Profile.defineIdentity(newWin, profileId);
     } else {
       // new identity profile
-      ns.NewWindow.newId(newWin);
+      NewWindow.newId(newWin);
     }
 
   } else {
     // inherit identity profile
     if (util.networkListeners.active) {
-      ns.NewWindow.inheritId(newWin);
+      NewWindow.inheritId(newWin);
     } else {
       // no Multifox window
       console.log("setWindowProfile NOP => util.networkListeners.active=false");
@@ -401,10 +390,9 @@ function onTabRestoring(evt) {
     return;
   }
 
-  console.log("first tab restoring " + stringId);
+  console.log("first tab restoring", stringId);
 
   // add icon; sync id — override any previous profile id
-  Components.utils.import("${PATH_MODULE}/main.js");
   NewWindow.applyRestore(win);
 }
 
@@ -459,30 +447,6 @@ function onMenuPopupShowing(evt) {
 }
 
 
-const console = {
-  log: function(msg) {
-    var now = new Date();
-    var ms = now.getMilliseconds();
-    var ms2;
-    if (ms < 100) {
-      ms2 = ms < 10 ? "00" + ms : "0" + ms;
-    } else {
-      ms2 = ms.toString();
-    }
-    var p = "${CHROME_NAME}[" + now.toLocaleFormat("%H:%M:%S") + "." + ms2 + "] ";
-    Services.console.logStringMessage(p + msg);
-  },
-
-  assert: function(test, msg) {
-    if (test !== true) {
-      var ex =  new Error("console.assert - " + msg + " - " + test);
-      Components.utils.reportError(ex) // sometimes exception doesn't show up in console
-      throw "";
-    }
-  }
-};
-
-
 const util = {
   setUnicodePref: function(name, val) {
     var CiS = Ci.nsISupportsString;
@@ -520,8 +484,7 @@ const util = {
 
     _cookieRejectedListener: {
       observe: function(aSubject, aTopic, aData) {
-        Components.utils.import("${PATH_MODULE}/main.js");
-        console.log("cookie-rejected\n" + aSubject + "\n" + aTopic + "\n" + aData + "\n" + aSubject.QueryInterface(Ci.nsIURI).spec);
+        console.log("cookie-rejected\n", aSubject, "\n", aTopic, "\n", aData, "\n", aSubject.QueryInterface(Ci.nsIURI).spec);
       }
     },
 

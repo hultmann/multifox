@@ -23,11 +23,11 @@ function documentCookieGetter(obj, contentDoc) {
     case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
-      util2.throwStack.go("documentCookieGetter " + profileId);
+      console.trace("documentCookieGetter", profileId);
       return;
   }
 
-  var uri = util2.stringToUri(contentDoc.location.href);
+  var uri = stringToUri(contentDoc.location.href);
   var cookie2 = Cookies.getCookie(true, uri, profileId);
 
   var cookie = cookie2 === null ? "" : cookie2;
@@ -42,11 +42,11 @@ function documentCookieSetter(obj, contentDoc) {
     case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
-      util2.throwStack.go("documentCookieSetter " + profileId);
+      console.trace("documentCookieSetter", profileId);
       return;
   }
 
-  var originalUri = util2.stringToUri(contentDoc.location.href);
+  var originalUri = stringToUri(contentDoc.location.href);
   Cookies.setCookie(profileId, originalUri, obj.value, true);
 }
 
@@ -173,7 +173,7 @@ function toInternalUri(uri, sessionId) {
   if (sessionId > Profile.DefaultIdentity) {
     u.host = cookieInternalDomain(u.host, sessionId);
   } else {
-    util2.throwStack.go("invalid profile " + sessionId);
+    console.trace("invalid profile", sessionId);
   }
   return u;
 }
@@ -222,7 +222,7 @@ SetCookieParser.prototype = {
         if (name.length > 0 && value !== null) {
           unit.defineValue(name, value);
         } else {
-          util2.logEx("_allCookies invalid", name, value, headerLine);
+          console.trace("_allCookies invalid", name, value, headerLine);
           break;
         }
       } else {

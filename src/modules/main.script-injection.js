@@ -40,13 +40,13 @@ DocStartScriptInjection.prototype = {
         return;
     }
 
-    var sandbox = Components.utils.Sandbox(win, {sandboxName: "multifox-content"});
+    var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-content"});
     sandbox.window = win.wrappedJSObject;
     sandbox.document = win.document.wrappedJSObject;
 
     var src = this._loader.getScript();
     try {
-      Components.utils.evalInSandbox(src, sandbox);
+      Cu.evalInSandbox(src, sandbox);
     } catch (ex) {
       showError(win, "sandbox", subject.documentURI + " " + "//exception=" + ex);
     }

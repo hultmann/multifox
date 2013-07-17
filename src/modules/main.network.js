@@ -118,7 +118,7 @@ function getLoadContext(channel) {
               .notificationCallbacks
               .getInterface(Ci.nsILoadContext);
     } catch (ex) {
-      //util2.logEx("channel.notificationCallbacks ", channel.notificationCallbacks, channel.URI.spec, ex);
+      //console.trace("channel.notificationCallbacks ", channel.notificationCallbacks, channel.URI.spec, ex);
     }
   }
 
@@ -129,7 +129,7 @@ function getLoadContext(channel) {
               .notificationCallbacks
               .getInterface(Ci.nsILoadContext);
     } catch (ex) {
-      util2.logEx("channel.loadGroup", channel.loadGroup, channel.URI.spec, ex);
+      console.trace("channel.loadGroup", channel.loadGroup, channel.URI.spec, ex);
     }
   }
 

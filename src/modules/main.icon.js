@@ -5,7 +5,7 @@
 
 function getIconNode(doc) {
   if (!doc) {
-    util2.throwStack.go("getIconNode "+doc);
+    console.trace("getIconNode", doc);
   }
   return doc.getElementById("multifox-icon");
 }

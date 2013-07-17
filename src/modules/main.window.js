@@ -111,12 +111,14 @@ function onContentEvent(evt) {
 
 
 function MultifoxRunner() {
-  console.log("MultifoxRunner");
+  var ns = {}; // BUG util is undefined???
+  Cu.import("${PATH_MODULE}/new-window.js", ns);
+
   this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
   this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
   this._inject = new DocStartScriptInjection();
   Cookies.start();
-  util.networkListeners.enable(httpListeners.request, httpListeners.response);
+  ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);
 }
 
 MultifoxRunner.prototype = {
@@ -130,7 +132,10 @@ MultifoxRunner.prototype = {
 
   shutdown: function() {
     console.log("MultifoxRunner.shutdown");
-    util.networkListeners.disable();
+    var ns = {}; // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", ns);
+
+    ns.util.networkListeners.disable();
     this._inject.stop();
     Cookies.stop();
   }

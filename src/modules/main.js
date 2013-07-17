@@ -4,14 +4,16 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["NewWindow",
+var EXPORTED_SYMBOLS = ["NewWindow", "console",
                         "createButton", "destroyButton", "updateButton", "ProfileAlias",
-                        "Profile"      // error.js
+                        "Profile"
                        ];
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-Components.utils.import("resource://gre/modules/Services.jsm");
-Components.utils.import("${PATH_MODULE}/new-window.js");
+var Cu = Components.utils;
+
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("${PATH_MODULE}/new-window.js");
 
 
 #include "main.window.js"
@@ -21,7 +23,7 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 #include "main.network.js"
 #include "main.cookies.js"
 #include "main.storage.js"
-#include "main.util.js"
+#include "main.console.js"
 
 
 const NewWindow = {
@@ -176,7 +178,7 @@ const Profile = {
 
 
 function SaveToSessionStore(doc) {
-  this._doc = Components.utils.getWeakReference(doc);
+  this._doc = Cu.getWeakReference(doc);
   this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
   this._timer.init(this, 1300, Ci.nsITimer.TYPE_ONE_SHOT);
 }
@@ -201,7 +203,7 @@ SaveToSessionStore.prototype = {
       ss.setWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id", val);
     } catch (ex) {
       // keep trying
-      util2.logEx("SaveToSessionStore FAIL", val, doc, doc.defaultView, doc.defaultView.state, ex);
+      console.trace("SaveToSessionStore FAIL", val, doc, doc.defaultView, doc.defaultView.state, ex);
       this._timer.init(this, 700, Ci.nsITimer.TYPE_ONE_SHOT);
       return;
     }

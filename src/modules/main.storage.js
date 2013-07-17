@@ -10,12 +10,12 @@ function windowLocalStorage(obj, contentDoc) {
     case Profile.UndefinedIdentity:
       return;
     case Profile.DefaultIdentity:
-      util2.throwStack.go("windowLocalStorage " + profileId);
+      console.trace("windowLocalStorage", profileId);
       return;
   }
 
 
-  var originalUri = util2.stringToUri(contentDoc.location.href);
+  var originalUri = stringToUri(contentDoc.location.href);
   var uri = toInternalUri(originalUri, profileId);
   var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
                   .getService(Ci.nsIScriptSecurityManager)
@@ -57,6 +57,15 @@ function windowLocalStorage(obj, contentDoc) {
       throw "localStorage interface unknown: " + obj.cmd;
   }
 
-  console.log("localStorage " + uri.spec + "\n"+JSON.stringify(obj, null, 2) + "\n=====\nreturn " + rv);
+  console.log("localStorage", uri.spec, obj.cmd, obj.key, typeof rv);
   return rv;
+}
+
+
+function stringToUri(spec) {
+  try {
+    return Services.io.newURI(spec, null, null);
+  } catch (ex) {
+    return null;
+  }
 }
