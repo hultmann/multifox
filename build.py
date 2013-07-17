@@ -31,7 +31,6 @@ b.add_text("bootstrap.js")
 b.add_text("content/content-injection.js")
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
-b.add_text("content/about-badges.html")
 
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")

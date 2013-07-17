@@ -9,29 +9,9 @@ var Cc = Components.classes;
 var Ci = Components.interfaces;
 
 window.addEventListener("DOMContentLoaded", function() {
-  loadBadges();
   populateDescription();
   populatePage();
 }, false);
-
-
-// load badges document into file:// iframe
-function loadBadges() {
-  Components.utils.import("resource://gre/modules/Services.jsm");
-  var uri = Services.io.newURI("${PATH_CONTENT}/about-badges.html", null, null);
-
-  var fileUrl = Cc["@mozilla.org/chrome/chrome-registry;1"]
-                .getService(Ci.nsIChromeRegistry)
-                .convertChromeURL(uri)
-                .spec;
-
-  var iframe = document.getElementById("badges");
-  iframe.setAttribute("src", fileUrl);
-  iframe.contentWindow.addEventListener("load", function() {
-    // about:blank loaded
-    iframe.setAttribute("src", fileUrl);
-  }, false);
-}
 
 
 function populateDescription() {
@@ -47,26 +27,17 @@ function populatePage() {
   var ns = {};
   Components.utils.import("${PATH_MODULE}/new-window.js", ns);
 
-  var items = ["spread", "author", "l10n", "source", "legal", "version2"];
+  var items = ["author", "l10n", "source", "legal"];
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
     var hHtml = ns.util.getTextFrom(id + ".h", "about");
     var pId = id + ".p";
     var pHtml;
     switch (id) {
-      case "spread":
-        hHtml = ns.util.getTextFrom(id + ".h", "about");
-        pHtml = "<!-- nop -->";
-        break;
-
       case "author":
         pHtml = ns.util.getTextFrom(pId, "about", "mailto:hultmann@gmail.com",
                                                   "http://twitter.com/multifox",
                                                   "https://github.com/hultmann/multifox/issues");
-        break;
-
-      case "version2":
-        pHtml = ns.util.getTextFrom(pId, "about", "http://br.mozdev.org/multifox/all.html");
         break;
 
       case "source":
