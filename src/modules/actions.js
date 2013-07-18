@@ -125,8 +125,9 @@ function showDeletePopup(doc) {
 function removeData() {
   // TODO localStorage
   // cookies
-  for (var idx = 0; idx < 100; idx++) {
-    removeProfile(idx);
+  var list = getProfileList();
+  for (var idx = list.length - 1; idx > -1; idx--) {
+    removeProfile(list[idx]);
   }
 }
 
@@ -267,22 +268,33 @@ function profilePopup(menu, doc, profileId) {
 
 
 function getProfileList() {
-  var COOKIE = Ci.nsICookie2;
-  var mgr = Services.cookies;
+  var t0 = new Date().getTime();
   var list = [];
+  var nsList = [];
 
-  for (var idx = 0; idx < 100; idx++) {
-    var h = ".multifox-profile-" + idx;
-    var all = mgr.enumerator;
-
-    while (all.hasMoreElements()) {
-      var cookie = all.getNext().QueryInterface(COOKIE);
-      if (cookie.host.endsWith(h)) {
-        list.push(idx);
-        break; // next idx
+  var all = Services.cookies.enumerator;
+  var COOKIE = Ci.nsICookie2;
+  while (all.hasMoreElements()) {
+    var h = all.getNext().QueryInterface(COOKIE).host;
+    if (h.indexOf(".multifox-profile-") === -1) {
+      continue;
+    }
+    var ns = h.substr(h.lastIndexOf(".") + 1);
+    if (ns.startsWith("multifox-profile-")) {
+      if (nsList.indexOf(ns) === -1) {
+        nsList.push(ns);
       }
     }
   }
 
+  for (var idx = nsList.length - 1; idx > -1; idx--) {
+    var n = parseInt(nsList[idx].substr(17), 10);
+    // 17="multifox-profile-".length
+    if (Number.isNaN(n) === false) { // Fx15+
+      list.push(n);
+    }
+  }
+
+  console.log("getProfileList", new Date().getTime() - t0, list);
   return list;
 }
