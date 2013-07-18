@@ -11,7 +11,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
-      if ((ctx === null) || (ctx.usePrivateBrowsing)) {
+      if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
       }
       var winChannel = ctx.associatedWindow;
@@ -22,11 +22,13 @@ const httpListeners = {
           return;
       }
 
+      /*
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
         showError(winChannel, "authorization", "-");
         return;
       }
+      */
 
       var cook = Cookies.getCookie(false, httpChannel.URI, profileId);
       httpChannel.setRequestHeader("Cookie", cook, false);
@@ -40,7 +42,7 @@ const httpListeners = {
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
-      if ((ctx === null) || (ctx.usePrivateBrowsing)) {
+      if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
       }
       var winChannel = ctx.associatedWindow;
@@ -89,6 +91,7 @@ const HttpHeaders = {
     }
   },
 
+  /*
   fromRequest: function(request) {
     var nameValues = {
       //"cookie": null, //for debug only
@@ -98,6 +101,7 @@ const HttpHeaders = {
     request.visitRequestHeaders(this.visitLoop);
     return nameValues;
   },
+  */
 
   fromResponse: function(response) {
     var nameValues = {
