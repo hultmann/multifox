@@ -101,8 +101,13 @@ function updateButton(win) {
 
 function styleButton(button) {
   // show label beside its icon (is there a better way to do that?)
-  button.setAttribute("class", "chromeclass-toolbar-additional");// don't use toolbarbutton-1
-  button.setAttribute("style", "-moz-box-orient: horizontal !important;");
+
+  // don't use toolbarbutton-1 (it looks bad)
+  button.setAttribute("class", "chromeclass-toolbar-additional");
+
+  // -moz-box-orient=> label position
+  // display=> needed for popups
+  button.setAttribute("style", "-moz-box-orient:horizontal !important; display:-moz-box !important;");
   var anonNodes = button.ownerDocument.getAnonymousNodes(button);
   for (var idx = anonNodes.length - 1; idx > -1; idx--) {
     if (anonNodes[idx].tagName === "xul:label") {
