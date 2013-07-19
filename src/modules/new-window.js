@@ -154,9 +154,13 @@ function removeOverlay(win) {
         break;
       }
 
-      var contentContainer = win.getBrowser();
-      var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id");
-      contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", tmp, null);
+      var node = win.getBrowser();
+      if (node.hasAttribute("${BASE_DOM_ID}-identity-id")) {
+        var id = node.getAttribute("${BASE_DOM_ID}-identity-id");
+        node.setAttribute("${BASE_DOM_ID}-identity-id-tmp", id);
+      } else {
+        node.removeAttribute("${BASE_DOM_ID}-identity-id-tmp");
+      }
 
       Profile.defineIdentity(win, Profile.DefaultIdentity);
       BrowserOverlay.remove(win);
@@ -178,9 +182,9 @@ function removeOverlay(win) {
 function removeState(win) { // uninstalling
   console.assert(win.location.href === "chrome://browser/content/browser.xul", "win should be a browser window");
 
-  var contentContainer = win.getBrowser();
-  contentContainer.setUserData("${BASE_DOM_ID}-identity-id", null, null);
-  contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", null, null);
+  var node = win.getBrowser();
+  node.removeAttribute("${BASE_DOM_ID}-identity-id");
+  node.removeAttribute("${BASE_DOM_ID}-identity-id-tmp");
 
   var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
   ss.deleteWindowValue(win, "${BASE_DOM_ID}-identity-id");
@@ -347,12 +351,13 @@ function showPrivateWinMsg(win) {
 
 
 function setWindowProfile(newWin) {
-  var contentContainer = newWin.getBrowser();
-  var tmp = contentContainer.getUserData("${BASE_DOM_ID}-identity-id-tmp");
+  var node = newWin.getBrowser();
+  var nameTmp = "${BASE_DOM_ID}-identity-id-tmp";
 
-  if (tmp !== null) {
+  if (node.hasAttribute(nameTmp)) {
     // updating/enabling the extension
-    contentContainer.setUserData("${BASE_DOM_ID}-identity-id-tmp", null, null);
+    var tmp = node.getAttribute(nameTmp);
+    node.removeAttribute(nameTmp);
     Profile.defineIdentity(newWin, Profile.toInt(tmp));
 
   } else if (m_pendingNewWindows.length > 0) {

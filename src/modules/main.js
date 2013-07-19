@@ -125,13 +125,22 @@ const Profile = {
       console.log("getIdentity=DefaultIdentity, tabbrowser=null");
       return Profile.DefaultIdentity;
     }
-    var id = tabbrowser.getUserData("${BASE_DOM_ID}-identity-id");
-    return this.toInt(id);
+
+    if (tabbrowser.hasAttribute("${BASE_DOM_ID}-identity-id")) {
+      return this.toInt(tabbrowser.getAttribute("${BASE_DOM_ID}-identity-id"));
+    } else {
+      return Profile.DefaultIdentity;
+    }
   },
 
   _save: function(win, id) {
     console.log("save " + id);
-    win.getBrowser().setUserData("${BASE_DOM_ID}-identity-id", id === Profile.DefaultIdentity ? null : id, null);
+    var node = win.getBrowser();
+    if (id > Profile.DefaultIdentity) {
+      node.setAttribute("${BASE_DOM_ID}-identity-id", id);
+    } else {
+      node.removeAttribute("${BASE_DOM_ID}-identity-id");
+    }
     new SaveToSessionStore(win.document);
   },
 
@@ -161,7 +170,7 @@ const Profile = {
 
   toInt: function(str) {
     var rv = parseInt(str, 10);
-    return isNaN(rv) ? Profile.DefaultIdentity : rv;
+    return Number.isNaN(rv) ? Profile.DefaultIdentity : rv;
   },
 
   toString: function(id) {
