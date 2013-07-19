@@ -129,6 +129,7 @@ function removeData() {
   for (var idx = list.length - 1; idx > -1; idx--) {
     removeProfile(list[idx]);
   }
+  removeFromButtonSet();
 }
 
 

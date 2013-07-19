@@ -5,7 +5,7 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
-                        "createButton", "destroyButton", "updateButton", "ProfileAlias",
+                        "createButton", "destroyButton", "updateButton", "removeFromButtonSet", "ProfileAlias",
                         "Profile"
                        ];
 

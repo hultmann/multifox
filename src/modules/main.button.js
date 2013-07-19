@@ -119,20 +119,25 @@ function styleButton(button) {
 
 
 function createButton(doc) {
-  // add to palette
   var buttonId = "${CHROME_NAME}-button";
-  doc.getElementById("navigator-toolbox").palette.appendChild(createElement(doc, buttonId));
+  console.assert(doc.getElementById(buttonId) === null, "createButton dupe");
 
-  // persist button
-  var toolbar = doc.getElementById("nav-bar");
-  if (toolbar.currentSet.split(",").indexOf(buttonId) > -1) {
+  // add it to <toolbarpalette>
+  doc.getElementById("navigator-toolbox")
+     .palette.appendChild(createElement(doc, buttonId));
+
+  // add it to <toolbar>
+  var toolbar = findButtonLocation(doc, buttonId);
+  if (toolbar != null) {
+    var button0 = getPrecedingButton(toolbar, buttonId);
+    toolbar.insertItem(buttonId, button0, null, false);
     return;
   }
-  var newSet = toolbar.currentSet + "," + buttonId;
-  toolbar.setAttribute("currentset", newSet);
-  toolbar.currentSet = newSet;
-  doc.persist("nav-bar", "currentset");
-  doc.defaultView.BrowserToolboxCustomizeDone(true);
+
+  // add it to default position
+  toolbar = doc.getElementById("nav-bar");
+  toolbar.insertItem(buttonId);
+  saveButtonSet(toolbar, toolbar.getAttribute("currentset") + "," + buttonId);
 }
 
 
@@ -146,6 +151,57 @@ function createElement(doc, buttonId) {
   var menupopup = button.appendChild(doc.createElement("menupopup"));
   menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
   return button;
+}
+
+
+function saveButtonSet(toolbar, newSet) {
+  toolbar.setAttribute("currentset", newSet);
+  toolbar.ownerDocument.persist(toolbar.id, "currentset");
+}
+
+
+function removeFromButtonSet() {
+  var buttonId = "${CHROME_NAME}-button";
+  var enumWin = Services.wm.getEnumerator("navigator:browser");
+  while (enumWin.hasMoreElements()) {
+    var doc = enumWin.getNext().document;
+    var toolbar = findButtonLocation(doc, buttonId);
+    if (toolbar === null) {
+      continue;
+    }
+    var all = toolbar.getAttribute("currentset").split(",");
+    var removed = all.splice(all.indexOf(buttonId), 1);
+    console.assert(removed.length > 0, "button not found");
+    saveButtonSet(toolbar, all.join(","));
+  }
+}
+
+
+function findButtonLocation(doc, buttonId) {
+  var bars = doc.getElementsByTagName("toolbar");
+  for (var idx = bars.length - 1; idx > -1; idx--) {
+    var all = bars[idx].getAttribute("currentset").split(",");
+    if (all.indexOf(buttonId) > -1) {
+      return bars[idx];
+    }
+  }
+  return null;
+}
+
+
+function getPrecedingButton(toolbar, id) {
+  var all = toolbar.getAttribute("currentset").split(",");
+  var idxButton = all.indexOf(id);
+  if (idxButton === -1) {
+    throw new Error("button not found @ " + toolbar.id);
+  }
+  var doc = toolbar.ownerDocument;
+  for (var idx = idxButton + 1, len = all.length; idx < len; idx++) {
+    var beforeNode = doc.getElementById(all[idx]);
+    if (beforeNode !== null) {
+      return beforeNode;
+    }
+  }
 }
 
 
