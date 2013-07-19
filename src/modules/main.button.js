@@ -102,8 +102,12 @@ function updateButton(win) {
 function styleButton(button) {
   // show label beside its icon (is there a better way to do that?)
 
-  // don't use toolbarbutton-1 (it looks bad)
-  button.setAttribute("class", "chromeclass-toolbar-additional");
+  if (Services.appinfo.OS === "Darwin") {
+    button.setAttribute("class", "chromeclass-toolbar-additional toolbarbutton-1");
+  } else {
+    // toolbarbutton-1 looks broken
+    button.setAttribute("class", "chromeclass-toolbar-additional");
+  }
 
   // -moz-box-orient=> label position
   // display=> needed for popups

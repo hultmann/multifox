@@ -425,7 +425,11 @@ function addMenuListeners(doc) {
 
   doc.getElementById("tabContextMenu").addEventListener("popupshowing", onMenuPopupShowing, false);
 
-  var newTabPopup = doc.getElementById("appmenu_newNavigator").parentNode;
+  var windowMenu = doc.getElementById("appmenu_newNavigator");
+  if (windowMenu === null) {
+    return;
+  }
+  var newTabPopup = windowMenu.parentNode;
   newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
   newTabPopup.setAttribute("multifox-id", "app-menu");
 }
@@ -439,7 +443,11 @@ function removeMenuListeners(doc) {
 
   doc.getElementById("tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
 
-  var newTabPopup = doc.getElementById("appmenu_newNavigator").parentNode;
+  var windowMenu = doc.getElementById("appmenu_newNavigator");
+  if (windowMenu === null) {
+    return;
+  }
+  var newTabPopup = windowMenu.parentNode;
   newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
   newTabPopup.removeAttribute("multifox-id");
 }
