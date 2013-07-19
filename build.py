@@ -55,7 +55,7 @@ b.add_locale("sr")
 b.add_text("locale/${locale}/general.properties")
 b.add_text("locale/${locale}/about.properties")
 
-b.set_var("EXT_VERSION", "1.9pre")
+b.set_var("EXT_VERSION", "2.0.0")
 verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
 
 if changeset == None:
