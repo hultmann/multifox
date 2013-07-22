@@ -183,12 +183,15 @@ function menuButtonShowing(menupopup) {
   item.setAttribute("accesskey", util.getText("button.new-profile.accesskey"));
 
   var list = getProfileList();
-  var profileId = Profile.getIdentity(doc.defaultView);
 
-  // show profileId from current window even if it's not in the profile list
-  if (profileId > Profile.DefaultIdentity) {
-    if (list.indexOf(profileId) === -1) {
-      list.push(profileId);
+  // show profileId from all windows even if it's not in the profile list
+  var enumWin = Services.wm.getEnumerator("navigator:browser");
+  while (enumWin.hasMoreElements()) {
+    var id = Profile.getIdentity(enumWin.getNext());
+    if (id > Profile.DefaultIdentity) {
+      if (list.indexOf(id) === -1) {
+        list.push(id);
+      }
     }
   }
 
@@ -196,10 +199,10 @@ function menuButtonShowing(menupopup) {
     return;
   }
 
+  list = ProfileAlias.sort(list); // sort formatted IDs
+  var profileId = Profile.getIdentity(doc.defaultView);
 
   menupopup.appendChild(doc.createElement("menuseparator"));
-
-  list = ProfileAlias.sort(list); // sort formatted IDs
   appendSelectWindowItems(menupopup, doc, profileId, list);
   if (profileId === Profile.DefaultIdentity) {
     return;
