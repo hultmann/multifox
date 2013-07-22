@@ -39,16 +39,17 @@ def ensure_path_exists(path):
 def getVersionedString(changeset, ver):
     import datetime
     if changeset == None:
-        return ver + "." + datetime.datetime.now().strftime("%j.%H.%M.%S")
+        return ver + "." + datetime.datetime.now().strftime("%j.%H-%M")
     else:
         return changeset
 
 
 class BuildExtension:
 
-    def __init__(self):
-        self.__src = ""
-        self.__dst = ""
+    def __init__(self, dir_src, dir_dst):
+        self.__src = dir_src + "/"
+        self.__dst = dir_dst + "/unpacked/"
+        self.__xpi_path = dir_dst + "/xpi/"
         self.__vars = {}
         self.__text = []
         self.__binary = []
@@ -75,26 +76,30 @@ class BuildExtension:
         self.__locales.append(code)
 
 
-    def build(self, dir_src, dir_dst, xpi_name):
-        self.__dst = dir_dst + "/unpacked/"
-        self.__src = dir_src + "/"
-        self.__copyFiles()
-        if xpi_name == None:
-            return
-
-        self.set_var("XPI_NAME", xpi_name)
-        xpi_path = dir_dst + "/xpi/"
-        ensure_path_exists(xpi_path)
-        self.__createXpi(xpi_path)
-
+    def create_update_rdf(self, xpi_name):
         src_update = self.__src + "update.rdf"
         if os.path.exists(src_update):
-          self.__update(src_update, xpi_path + xpi_name)
+          self.__update(src_update, self.__xpi_path + xpi_name)
 
 
-    def __createXpi(self, xpi_path):
+    def build_xpi(self, xpi_name):
+        self.__updateInstallRdf()
+        self.set_var("XPI_NAME", xpi_name)
+        self.__createXpi()
+
+
+    def __updateInstallRdf(self):
+        txt = self.__load_text_file(self.__src + "install.rdf")
+        f = codecs.open(self.__dst + "install.rdf", "w", "utf-8")
+        f.write(txt)
+        f.close()
+
+
+    def __createXpi(self):
+        ensure_path_exists(self.__xpi_path)
+
         import zipfile
-        zip = zipfile.ZipFile(xpi_path + self.get_var("XPI_NAME"), "w", zipfile.ZIP_DEFLATED)
+        zip = zipfile.ZipFile(self.__xpi_path + self.get_var("XPI_NAME"), "w", zipfile.ZIP_DEFLATED)
         for root, dirs, files in os.walk(self.__dst):
             for name in files:
                 fs_path = os.path.join(root, name)
@@ -108,7 +113,7 @@ class BuildExtension:
         self.__parse_text_file(src_update, xpi + "-update.rdf")
 
 
-    def __copyFiles(self):
+    def copy_files(self):
         if os.path.exists(self.__dst):
             shutil.rmtree(self.__dst)
 
@@ -156,7 +161,13 @@ class BuildExtension:
 
     def __load_text_file(self, path):
         f = codecs.open(path, "r", "utf-8")
-        txt = f.read()
-        buf = string.Template(txt).safe_substitute(self.__vars) # safe==>%1$S
+        all_lines = f.readlines()
         f.close()
+
+        # convert to unix eol (and remove trailing spaces)
+        for idx, line in enumerate(all_lines):
+            all_lines[idx] = all_lines[idx].rstrip()
+
+        txt = "\n".join(all_lines) + "\n"
+        buf = string.Template(txt).safe_substitute(self.__vars) # safe==>%1$S
         return buf

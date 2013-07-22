@@ -19,14 +19,6 @@
       </RDF:Description>
     </em:targetApplication>
 
-
-    <!-- Update -->
-    <em:updateURL><![CDATA[${EXT_SITE}update.html?reqVersion=%REQ_VERSION%&extId=%ITEM_ID%&extVersion=%ITEM_VERSION%&extMaxappversion=%ITEM_MAXAPPVERSION%&extStatus=%ITEM_STATUS%&appId=%APP_ID%&appVersion=%APP_VERSION%&appOs=%APP_OS%&appAbi=%APP_ABI%&appLocale=%APP_LOCALE%]]></em:updateURL>
-    <em:updateKey>
-      MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDeQmBgnA27cxcxXMlSA4QGaY41UKOXi8Ps
-      J6IitDvvXsp9ZTzjdwDIdvJ7oB9dyycXlHZL9tKcatOwhXbUN0jt28hv8sYGxlj2oxIt5sOQ
-      C0q/P2KHU5OAHMl/eRJIe8QINCBGI5CEr84ArnhJ7g+DYOFQfVtop3sNBYI78nEQ2wIDAQAB
-    </em:updateKey>
-
+${UPDATE_DATA}
   </RDF:Description>
 </RDF:RDF>
