@@ -249,6 +249,7 @@ const BrowserOverlay = {
 
 function appendXulCommands(doc) {
   var commands = [
+    "${CHROME_NAME}:cmd_show_error",
     "${CHROME_NAME}:cmd_new_profile",
     "${CHROME_NAME}:cmd_rename_profile_prompt",
     "${CHROME_NAME}:cmd_delete_profile_prompt",

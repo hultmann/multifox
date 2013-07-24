@@ -91,7 +91,7 @@ function updateButton(win) {
     txt = "";
   }
 
-  var button = win.document.getElementById("${CHROME_NAME}-button");
+  var button = getButtonElem(win.document);
   if (button !== null) { // visible?
     button.setAttribute("label", txt);
     styleButton(button);
@@ -122,9 +122,14 @@ function styleButton(button) {
 }
 
 
+function getButtonElem(doc) {
+  return doc.getElementById("${CHROME_NAME}-button");
+}
+
+
 function createButton(doc) {
+  console.assert(getButtonElem(doc) === null, "createButton dupe");
   var buttonId = "${CHROME_NAME}-button";
-  console.assert(doc.getElementById(buttonId) === null, "createButton dupe");
 
   // add it to <toolbarpalette>
   doc.getElementById("navigator-toolbox")
@@ -148,6 +153,7 @@ function createButton(doc) {
 function createElement(doc, buttonId) {
   var button = doc.createElement("toolbarbutton");
   button.setAttribute("id", buttonId);
+  button.setAttribute("tab-status", "");
   button.setAttribute("type", "menu");
   button.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
   button.setAttribute("label", "");
@@ -216,7 +222,7 @@ function destroyButton(doc) {
     plt.removeChild(button2);
   }
 
-  var button = doc.getElementById("${CHROME_NAME}-button");
+  var button = getButtonElem(doc);
   if (button !== null) {
     var menu = button.firstChild;
     console.assert(menu.tagName === "menupopup", "wrong element: " + menu.tagName)

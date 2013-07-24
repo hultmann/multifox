@@ -14,23 +14,26 @@ const httpListeners = {
       if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
       }
-      var winChannel = ctx.associatedWindow;
-      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
-      switch (profileId) {
+
+      var winInfo = FindIdentity.fromContent(ctx.associatedWindow);
+      switch (winInfo.profileNumber) {
         case Profile.DefaultIdentity:
         case Profile.UndefinedIdentity: // favicon, updates
           return;
       }
 
+      if (isTopWindowChannel(httpChannel, ctx.associatedWindow)) {
+        ErrorHandler.onNewWindowRequest(winInfo.browserElement);
+      }
       /*
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
-        showError(winChannel, "authorization", "-");
+        ErrorHandler.addNetworkError(ctx.associatedWindow, "authorization");
         return;
       }
       */
 
-      var cook = Cookies.getCookie(false, httpChannel.URI, profileId);
+      var cook = Cookies.getCookie(false, httpChannel.URI, winInfo.profileNumber);
       httpChannel.setRequestHeader("Cookie", cook, false);
     }
   },
@@ -63,7 +66,7 @@ const httpListeners = {
 
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
       if (myHeaders["www-authenticate"] !== null) {
-        showError(winChannel, "www-authenticate", "-");
+        ErrorHandler.addNetworkError(winChannel, "www-authenticate");
         return;
       }
 
@@ -141,4 +144,12 @@ function getLoadContext(channel) {
   //return context.isContent ? context.associatedWindow : null;
   //console.log("LOAD CONTEXT FAIL " + channel.URI.spec);
   return null; // e.g. <link rel=prefetch> <link rel=next> ...
+}
+
+
+function isTopWindowChannel(channel, associatedWin) {
+  if ((channel.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI) === 0) {
+    return false;
+  }
+  return associatedWin === associatedWin.top;
 }

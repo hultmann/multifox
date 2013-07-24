@@ -72,8 +72,13 @@ function onUnloadChromeWindow(evt) {
 
 function customizeToolbar(evt) {
   var toolbox = evt.target;
-  updateUI(toolbox.ownerDocument.defaultView);
   updateButton(toolbox.ownerDocument.defaultView);
+}
+
+
+function tabSelected(evt) {
+  var tab = evt.originalTarget;
+  ErrorHandler.updateButtonAsync(tab.linkedBrowser);
 }
 
 
@@ -92,7 +97,7 @@ function onContentEvent(evt) {
       rv = windowLocalStorage(obj, contentDoc);
       break;
     case "error":
-      showError(contentDoc.defaultView, obj.cmd, "-");
+      ErrorHandler.addScriptError(contentDoc.defaultView, obj.cmd, "-");
       break;
     default:
       throw obj.from;
@@ -141,26 +146,3 @@ MultifoxRunner.prototype = {
   }
 };
 
-
-function showError(contentWin, notSupportedFeature, details) {
-  var msg = [];
-  msg.push("ERROR=" + notSupportedFeature);
-  msg.push(details);
-  if (contentWin.document) {
-    msg.push("location=" + contentWin.location);
-    if (contentWin.document.documentURIObject) {
-      msg.push("uri=     " + contentWin.document.documentURIObject.spec);
-    }
-  }
-  msg.push("title=[" + contentWin.document.title + "]");
-  console.log(msg.join("\n"));
-
-  var browser = ContentWindow.getContainerElement(contentWin);
-  browser.setAttribute("multifox-tab-status", notSupportedFeature);
-
-  var doc = browser.ownerDocument;
-  var selBrowser = doc.defaultView.getBrowser().selectedTab.linkedBrowser;
-  if (selBrowser === browser) {
-    updateStatus(doc);
-  }
-}

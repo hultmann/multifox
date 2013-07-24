@@ -23,13 +23,16 @@ DocStartScriptInjection.prototype = {
       return; // xsl/xbl
     }
 
-    var idData = FindIdentity.fromContent(win);
-    clearStatusIcon(idData, win);
 
-    switch (idData.profileNumber) {
+    var winInfo = FindIdentity.fromContent(win);
+    switch (winInfo.profileNumber) {
       case Profile.DefaultIdentity:
       case Profile.UndefinedIdentity:
         return;
+    }
+
+    if (winInfo.browserElement) {
+      ErrorHandler.onNewWindow(win, winInfo.browserElement);
     }
 
     switch (subject.documentURIObject.scheme) {
@@ -48,37 +51,11 @@ DocStartScriptInjection.prototype = {
     try {
       Cu.evalInSandbox(src, sandbox);
     } catch (ex) {
-      showError(win, "sandbox", subject.documentURI + " " + "//exception=" + ex);
+      ErrorHandler.addScriptError(win, "sandbox", subject.documentURI + " " + "//exception=" + ex);
     }
 
   }
 };
-
-
-function clearStatusIcon(idData, win) {
-  if (win !== win.top) {
-    return;
-  }
-  var browser = idData.browserElement;
-  if (!browser) {
-    return;
-  }
-  var icon = getIconNode(browser.ownerDocument);
-  if (icon === null) { // view-source?
-    return;
-  }
-  var stat = icon.getAttribute("tab-status");
-  if (stat.length === 0) {
-    return;
-  }
-
-  var selBrowser = browser.getTabBrowser().selectedBrowser;
-  if (selBrowser !== browser) {
-    return;
-  }
-  browser.removeAttribute("multifox-tab-status");
-  updateStatus(browser.ownerDocument);
-}
 
 
 function ScriptSourceLoader() {

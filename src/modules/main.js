@@ -6,6 +6,7 @@
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
                         "createButton", "destroyButton", "updateButton", "removeFromButtonSet", "ProfileAlias",
+                        "ErrorHandler",
                         "Profile"
                        ];
 
@@ -17,12 +18,12 @@ Cu.import("${PATH_MODULE}/new-window.js");
 
 
 #include "main.window.js"
-#include "main.icon.js"
 #include "main.button.js"
 #include "main.script-injection.js"
 #include "main.network.js"
 #include "main.cookies.js"
 #include "main.storage.js"
+#include "main.error.js"
 #include "main.console.js"
 
 
@@ -113,7 +114,6 @@ const Profile = {
 
     this._save(win, id);
     BrowserWindow.register(win);
-    updateUI(win);
     updateButton(win);
 
     return id;
@@ -229,26 +229,30 @@ const FindIdentity = {
 
   fromContent: function(contentWin) {
     if (contentWin === null) {
-      return { profileNumber: Profile.UndefinedIdentity };
+      return { profileNumber:  Profile.UndefinedIdentity,
+               browserElement: null };
     }
 
     var profileId;
     var browser = ContentWindow.getContainerElement(contentWin);
     if (browser === null) {
-      // source-view?
+      // source-view? -- BUG chat browser?
       profileId = this._getIdentityFromOpenerChrome(contentWin);
-      return { profileNumber: profileId };
+      return { profileNumber:  profileId,
+               browserElement: null };
     }
 
     var chromeWin = browser.ownerDocument.defaultView;
     profileId = Profile.getIdentity(chromeWin);
     if (profileId !== Profile.UndefinedIdentity) {
-      return { profileNumber: profileId, browserElement: browser };
+      return { profileNumber:  profileId,
+               browserElement: browser };
     }
 
     // popup via js/window.open
     profileId = this._getIdentityFromOpenerContent(contentWin, chromeWin);
-    return { profileNumber: profileId, browserElement: browser };
+    return { profileNumber:  profileId,
+             browserElement: browser };
   },
 
   _getIdentityFromOpenerChrome: function(contentWin) {

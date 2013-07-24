@@ -18,10 +18,6 @@ b = build_tools.BuildExtension("src", "build")
 b.add_binary("icon.png")
 b.add_binary("content/favicon.ico")
 b.add_binary("content/logo-about.png")
-b.add_binary("content/logo-popup.png")
-b.add_binary("content/icon.png")
-b.add_binary("content/icon-linux.png")
-b.add_binary("content/icon-osx.png")
 
 
 b.add_text("install.rdf")
@@ -35,8 +31,6 @@ b.add_text("content/about-multifox.js")
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
 b.add_text("modules/menus.js")
-b.add_text("modules/error.js")
-b.add_text("modules/popup.js")
 b.add_text("modules/actions.js")
 
 

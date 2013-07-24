@@ -35,6 +35,9 @@ function xulCommand(evt) {
     case "${CHROME_NAME}:cmd_select_window":
       selectProfileWindow(win, evt);
       break;
+    case "${CHROME_NAME}:cmd_show_error":
+      showError(win);
+      break;
     default:
       throw new Error("${EXT_NAME} - xul cmd unknown: " + cmd.getAttribute("id"));
   }
@@ -102,14 +105,7 @@ function deleteCurrentPopup(win) {
 
 
 function showDeletePopup(doc) {
-  var panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
-  panel.setAttribute("id", "multifox-popup");
-  panel.setAttribute("type", "arrow");
-  panel.openPopup(doc.getElementById("${CHROME_NAME}-button"), "bottomcenter topright");
-
-  var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = ".5ch .5ch";
-  container.style.width = "40ch";
+  var container = createArrowPanel(doc);
 
   var desc = container.appendChild(doc.createElement("description"));
   desc.appendChild(doc.createTextNode(util.getText("delete.text")));
@@ -122,6 +118,52 @@ function showDeletePopup(doc) {
 }
 
 
+function showError(win) {
+  var doc = win.document;
+  var container = createArrowPanel(doc);
+  var msg;
+
+  switch (ErrorHandler.getCurrentError(doc)) {
+    case "incompatible-extension":
+      msg = ["Error", "HTTP authentication not supported"];
+      break;
+    case "private-mode":
+      msg = ["Error", util.getText("error.private-window.infobar.label")];
+      break;
+    case "www-authenticate":
+    case "authorization":
+      msg = ["Error", "HTTP Basic authentication not supported"];
+      break;
+    case "indexedDB":
+      msg = ["Error", "indexedDB", util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}")];
+      break;
+    case "sandbox":
+      msg = ["Error", util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}")];
+      break;
+    default:
+      msg = ["Error", ErrorHandler.getCurrentError(doc)];
+      break;
+  }
+
+  for (var idx = 0; idx < msg.length; idx++) {
+    var desc = container.appendChild(doc.createElement("description"));
+    desc.appendChild(doc.createTextNode(msg[idx]));
+  }
+}
+
+
+function createArrowPanel(doc) {
+  var panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
+  panel.setAttribute("type", "arrow");
+  panel.openPopup(doc.getElementById("${CHROME_NAME}-button"), "bottomcenter topright");
+
+  var container = panel.appendChild(doc.createElement("vbox"));
+  container.style.margin = ".5ch .5ch";
+  container.style.width = "40ch";
+  return container;
+}
+
+
 function removeData() {
   // TODO localStorage
   // cookies
@@ -130,6 +172,17 @@ function removeData() {
     removeProfile(list[idx]);
   }
   removeFromButtonSet();
+
+  // remove error attributes
+  var enumWin = Services.wm.getEnumerator("navigator:browser");
+  while (enumWin.hasMoreElements()) {
+    var tabbrowser = enumWin.getNext().getBrowser();
+    for (idx = tabbrowser.length - 1; idx > -1; idx--) {
+      var browser = tabbrowser.browsers[idx];
+      browser.removeAttribute("multifox-tab-error-script");
+      browser.removeAttribute("multifox-tab-error-net");
+    }
+  }
 }
 
 
@@ -195,27 +248,37 @@ function menuButtonShowing(menupopup) {
     }
   }
 
-  if (list.length === 0) {
-    return;
-  }
-
   list = ProfileAlias.sort(list); // sort formatted IDs
   var profileId = Profile.getIdentity(doc.defaultView);
+  appendProfileList(menupopup, list, profileId);
+  appendCurrentProfileMenu(menupopup, list, profileId);
 
-  menupopup.appendChild(doc.createElement("menuseparator"));
-  appendSelectWindowItems(menupopup, doc, profileId, list);
-  if (profileId === Profile.DefaultIdentity) {
-    return;
+
+  if (ErrorHandler.getCurrentError(doc).length > 0) {
+    appendErrorItem(menupopup, list, profileId);
   }
-
-  menupopup.appendChild(doc.createElement("menuseparator"));
-  var menu = menupopup.appendChild(doc.createElement("menu"));
-  setProfilePopup(menu, doc, list, profileId);
 }
 
 
-function appendSelectWindowItems(menupopup, doc, profileId, list) {
+function appendErrorItem(menupopup) {
+  var doc = menupopup.ownerDocument;
+
+  menupopup.appendChild(doc.createElement("menuseparator"));
   var item = menupopup.appendChild(doc.createElement("menuitem"));
+  item.setAttribute("command", "${CHROME_NAME}:cmd_show_error");
+  item.setAttribute("label", util.getText("button.menuitem.error.label"));
+  item.setAttribute("accesskey", util.getText("button.menuitem.error.accesskey"));
+  item.setAttribute("image", "chrome://global/skin/icons/warning-16.png");
+  item.classList.add("menuitem-iconic");
+}
+
+
+function appendProfileList(menupopup, list, profileId) {
+  var doc = menupopup.ownerDocument;
+
+  menupopup.appendChild(doc.createElement("menuseparator"));
+  var item = menupopup.appendChild(doc.createElement("menuitem"));
+
   item.setAttribute("label", ProfileAlias.format(Profile.DefaultIdentity));
   item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
   item.setAttribute("profile-id", Profile.DefaultIdentity);
@@ -241,8 +304,16 @@ function appendSelectWindowItems(menupopup, doc, profileId, list) {
 }
 
 
+function appendCurrentProfileMenu(menupopup, list, profileId) {
+  var doc = menupopup.ownerDocument;
 
-function setProfilePopup(menu, doc, list, profileId) {
+  menupopup.appendChild(doc.createElement("menuseparator"));
+  var menu = menupopup.appendChild(doc.createElement("menu"));
+
+  if (profileId === Profile.DefaultIdentity) {
+    menu.setAttribute("disabled", "true");
+  }
+
   menu.setAttribute("label", util.getText("button.set-profile.label"));
   menu.setAttribute("accesskey", util.getText("button.set-profile.accesskey"));
   var menupopup = menu.appendChild(doc.createElement("menupopup"));
