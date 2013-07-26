@@ -16,10 +16,8 @@ const httpListeners = {
       }
 
       var winInfo = FindIdentity.fromContent(ctx.associatedWindow);
-      switch (winInfo.profileNumber) {
-        case Profile.DefaultIdentity:
-        case Profile.UndefinedIdentity: // favicon, updates
-          return;
+      if (Profile.isNativeProfile(winInfo.profileNumber)) {
+        return; // default/private window, favicon, updates
       }
 
       if (isTopWindowChannel(httpChannel, ctx.associatedWindow)) {
@@ -50,17 +48,8 @@ const httpListeners = {
       }
       var winChannel = ctx.associatedWindow;
       var profileId = FindIdentity.fromContent(winChannel).profileNumber;
-      switch (profileId) {
-        case Profile.DefaultIdentity:
-        case Profile.UndefinedIdentity:
-          /*
-          var myHeaders = HttpHeaders.fromResponse(httpChannel);
-          var setCookies = myHeaders["set-cookie"];
-          if (setCookies !== null) {
-            console.log("req "+profileId+"--"+httpChannel.URI.spec+"\n"+setCookies);
-          }
-          */
-          return;
+      if (Profile.isNativeProfile(profileId)) {
+        return;
       }
 
 

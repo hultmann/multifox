@@ -25,10 +25,8 @@ DocStartScriptInjection.prototype = {
 
 
     var winInfo = FindIdentity.fromContent(win);
-    switch (winInfo.profileNumber) {
-      case Profile.DefaultIdentity:
-      case Profile.UndefinedIdentity:
-        return;
+    if (Profile.isNativeProfile(winInfo.profileNumber)) {
+      return;
     }
 
     if (winInfo.browserElement) {

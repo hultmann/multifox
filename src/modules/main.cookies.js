@@ -18,36 +18,21 @@ function documentCookie(obj, contentDoc) {
 
 function documentCookieGetter(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
-
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      console.trace("documentCookieGetter", profileId);
-      return;
+  if (Profile.isExtensionProfile(profileId)) {
+    var uri = stringToUri(contentDoc.location.href);
+    var cookie2 = Cookies.getCookie(true, uri, profileId);
+    var cookie = cookie2 === null ? "" : cookie2;
+    return cookie; // send cookie value to content
   }
-
-  var uri = stringToUri(contentDoc.location.href);
-  var cookie2 = Cookies.getCookie(true, uri, profileId);
-
-  var cookie = cookie2 === null ? "" : cookie2;
-  return cookie; // send cookie value to content
 }
 
 
 function documentCookieSetter(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
-
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      console.trace("documentCookieSetter", profileId);
-      return;
+  if (Profile.isExtensionProfile(profileId)) {
+    var originalUri = stringToUri(contentDoc.location.href);
+    Cookies.setCookie(profileId, originalUri, obj.value, true);
   }
-
-  var originalUri = stringToUri(contentDoc.location.href);
-  Cookies.setCookie(profileId, originalUri, obj.value, true);
 }
 
 
@@ -170,7 +155,7 @@ function convertCookieDomain(cookieHeader, profileId) {
 
 function toInternalUri(uri, sessionId) {
   var u = uri.clone();
-  if (sessionId > Profile.DefaultIdentity) {
+  if (Profile.isExtensionProfile(sessionId)) {
     u.host = cookieInternalDomain(u.host, sessionId);
   } else {
     console.trace("invalid profile", sessionId);

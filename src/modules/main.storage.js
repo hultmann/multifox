@@ -6,12 +6,9 @@
 function windowLocalStorage(obj, contentDoc) {
   var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
 
-  switch (profileId) {
-    case Profile.UndefinedIdentity:
-      return;
-    case Profile.DefaultIdentity:
-      console.trace("windowLocalStorage", profileId);
-      return;
+  if (Profile.isNativeProfile(profileId)) {
+    console.trace("windowLocalStorage", profileId);
+    return;
   }
 
 

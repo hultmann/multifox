@@ -5,7 +5,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "isPrivateWindow", "showPrivateWinMsg", "onXulCommand"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "onXulCommand"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -126,9 +126,6 @@ function onBrowserWinLoad(evt) {
 function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      if (isPrivateWindow(win)) {
-        break;
-      }
       BrowserOverlay.add(win);
       win.addEventListener("load", onBrowserWinLoad, false);
       break;
@@ -150,10 +147,6 @@ function addOverlay(win) {
 function removeOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      if (isPrivateWindow(win)) {
-        break;
-      }
-
       var node = win.getBrowser();
       if (node.hasAttribute("${BASE_DOM_ID}-identity-id")) {
         var id = node.getAttribute("${BASE_DOM_ID}-identity-id");
@@ -276,13 +269,6 @@ function removeXulCommands(doc) {
 
 
 function onXulCommand(evt) {
-  var cmd = evt.target; // <command>
-  var win = cmd.ownerDocument.defaultView.top;
-  if (isPrivateWindow(win)) {
-    showPrivateWinMsg(win);
-    return;
-  }
-
   var ns = {};
   Components.utils.import("${PATH_MODULE}/actions.js", ns);
   ns.xulCommand(evt);
@@ -334,23 +320,6 @@ var AboutOverlay = {
 };
 
 
-function isPrivateWindow(win) {
-  var ns = {};
-  Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm", ns);
-  return ns.PrivateBrowsingUtils.isWindowPrivate(win);
-}
-
-
-function showPrivateWinMsg(win) {
-  var msg = util.getText("error.private-window.infobar.label", "${EXT_NAME}");
-  var icon = "chrome://global/skin/icons/information-16.png";
-
-  var browser = win.gBrowser.selectedBrowser;
-  var barBox = browser.getTabBrowser().getNotificationBox(browser);
-  barBox.appendNotification(msg, "${BASE_DOM_ID}-privwin", icon, barBox.PRIORITY_WARNING_MEDIUM);
-}
-
-
 function setWindowProfile(newWin) {
   var node = newWin.getBrowser();
   var nameTmp = "${BASE_DOM_ID}-identity-id-tmp";
@@ -359,7 +328,9 @@ function setWindowProfile(newWin) {
     // updating/enabling the extension
     var tmp = node.getAttribute(nameTmp);
     node.removeAttribute(nameTmp);
-    Profile.defineIdentity(newWin, Profile.toInt(tmp));
+    var savedId = Profile.toInt(tmp);
+    console.assert(Profile.isExtensionProfile(savedId), "not a profile id", savedId);
+    Profile.defineIdentity(newWin, savedId);
 
   } else if (m_pendingNewWindows.length > 0) {
     var profileId = m_pendingNewWindows.pop();

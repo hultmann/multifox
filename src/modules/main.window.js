@@ -10,7 +10,7 @@ const BrowserWindow = {
   register: function(win) {
     var profileId = Profile.getIdentity(win);
 
-    if (profileId === Profile.DefaultIdentity) {
+    if (Profile.isNativeProfile(profileId)) {
       console.log("BrowserWindow.register NOP");
       return;
     }
@@ -43,7 +43,7 @@ const BrowserWindow = {
     var idw = Profile.getIdentity(win);
     console.log("BrowserWindow.unregister " + idw);
 
-    if (idw === Profile.DefaultIdentity) {
+    if (Profile.isNativeProfile(idw)) {
       // nothing to unregister
       return;
     }
@@ -53,8 +53,14 @@ const BrowserWindow = {
     win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
     var sessions = Profile.activeIdentities(win);
-    var onlyDefault = (sessions.length === 1) && (sessions[0] === Profile.DefaultIdentity);
-    if (onlyDefault) {
+    var onlyNative = true;
+    for (var idx = sessions.length - 1; idx > -1; idx--) {
+      if (Profile.isExtensionProfile(sessions[idx])) {
+        onlyNative = false;
+        break;
+      }
+    }
+    if (onlyNative) {
       // no more multifox windows
       m_runner.shutdown();
       m_runner = null;

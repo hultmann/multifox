@@ -7,6 +7,7 @@
 
 const EXPORTED_SYMBOLS = ["menuShowing"];
 
+Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function menuShowing(evt) {
@@ -106,6 +107,9 @@ function placesMenu(menu) {
   cmd.setAttribute("label", util.getText("context.places.label"));
   cmd.setAttribute("accesskey", util.getText("context.places.accesskey"));
   cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "places");}, false);
+  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
+    cmd.setAttribute("disabled", "true");
+  }
   menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
@@ -113,7 +117,7 @@ function placesMenu(menu) {
 
 function contentMenu(menu) {
   var doc = menu.ownerDocument;
-  var item = doc.getElementById("context-openlink");
+  var item = doc.getElementById("context-openlinkintab");
   if (item === null || item.hidden) {
     return;
   }
@@ -128,8 +132,11 @@ function contentMenu(menu) {
   cmd.setAttribute("label", util.getText("context.link.label"));
   cmd.setAttribute("accesskey", util.getText("context.link.accesskey"));
   cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "link");}, false);
-  menu.insertBefore(cmd, position);
+  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
+    cmd.setAttribute("disabled", "true");
+  }
 
+  menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
 
@@ -151,17 +158,19 @@ function tabMenu(menu) {
   cmd.setAttribute("label", util.getText("context.tab.label"));
   cmd.setAttribute("accesskey", util.getText("context.tab.accesskey"));
   cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "tab");}, false);
-  menu.insertBefore(cmd, position);
+  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
+    cmd.setAttribute("disabled", "true");
+  }
 
+  menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
 }
 
 
 function newIdentityCommand(evt, cmd) {
   var win = evt.currentTarget.ownerDocument.defaultView.top; // defaultView=history-panel.xul/browser.xul
-  if (isPrivateWindow(win)) {
-    showPrivateWinMsg(win);
-    return;
+  if (PrivateBrowsingUtils.isWindowPrivate(win)) {
+    throw new Error("Command not supported in a private window.");
   }
 
   newPendingWindow();

@@ -7,6 +7,7 @@
 var EXPORTED_SYMBOLS = ["xulCommand", "removeData", "menuButtonShowing"];
 
 Components.utils.import("resource://gre/modules/Services.jsm");
+Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");
 Components.utils.import("${PATH_MODULE}/main.js");
 
@@ -60,6 +61,13 @@ function selectProfileWindow(win, evt) {
       win2.focus();
       return;
     }
+  }
+
+  // New window
+
+  if (newProfileId === Profile.PrivateIdentity) {
+    win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+    return;
   }
 
   newPendingWindow(newProfileId);
@@ -127,9 +135,6 @@ function showError(win) {
     case "incompatible-extension":
       msg = ["Error", "HTTP authentication not supported"];
       break;
-    case "private-mode":
-      msg = ["Error", util.getText("error.private-window.infobar.label")];
-      break;
     case "www-authenticate":
     case "authorization":
       msg = ["Error", "HTTP Basic authentication not supported"];
@@ -187,7 +192,7 @@ function removeData() {
 
 
 function removeProfile(profileId) {
-  console.assert(profileId > Profile.DefaultIdentity, "cannot remote DefaultIdentity, " + profileId);
+  console.assert(Profile.isExtensionProfile(profileId), "cannot remove native profile", profileId);
 
   var h = ".multifox-profile-" + profileId;
   var myCookies = [];
@@ -237,20 +242,25 @@ function menuButtonShowing(menupopup) {
 
   var list = getProfileList();
 
+  // TODO var profiles = Profile.activeIdentities(win);
   // show profileId from all windows even if it's not in the profile list
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
     var id = Profile.getIdentity(enumWin.getNext());
-    if (id > Profile.DefaultIdentity) {
+    if (Profile.isExtensionProfile(id)) {
       if (list.indexOf(id) === -1) {
         list.push(id);
       }
     }
   }
 
+  appendDefaultItems(menupopup, profileId);
+
   list = ProfileAlias.sort(list); // sort formatted IDs
   var profileId = Profile.getIdentity(doc.defaultView);
-  appendProfileList(menupopup, list, profileId);
+  if (list.length > 0) {
+    appendProfileList(menupopup, list, profileId);
+  }
   appendCurrentProfileMenu(menupopup, list, profileId);
 
 
@@ -273,7 +283,7 @@ function appendErrorItem(menupopup) {
 }
 
 
-function appendProfileList(menupopup, list, profileId) {
+function appendDefaultItems(menupopup, profileId) {
   var doc = menupopup.ownerDocument;
 
   menupopup.appendChild(doc.createElement("menuseparator"));
@@ -282,10 +292,31 @@ function appendProfileList(menupopup, list, profileId) {
   item.setAttribute("label", ProfileAlias.format(Profile.DefaultIdentity));
   item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
   item.setAttribute("profile-id", Profile.DefaultIdentity);
-  if (profileId === Profile.DefaultIdentity) {
+
+  var item2 = menupopup.appendChild(doc.createElement("menuitem"));
+  item2.setAttribute("label", ProfileAlias.format(Profile.PrivateIdentity));
+  item2.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
+  item2.setAttribute("profile-id", Profile.PrivateIdentity);
+
+  if (Profile.isExtensionProfile(profileId)) {
+    return;
+  }
+
+
+  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
+    item2.setAttribute("disabled", "true");
+    item2.removeAttribute("command");
+  } else {
     item.setAttribute("disabled", "true");
     item.removeAttribute("command");
   }
+}
+
+
+function appendProfileList(menupopup, list, profileId) {
+  var doc = menupopup.ownerDocument;
+
+  menupopup.appendChild(doc.createElement("menuseparator"));
 
   for (var idx = 0; idx < list.length; idx++) {
     var label = ProfileAlias.format(list[idx]);
@@ -295,7 +326,7 @@ function appendProfileList(menupopup, list, profileId) {
       profilePopup(menu, doc, profileId);
 
     } else {
-      item = menupopup.appendChild(doc.createElement("menuitem"));
+      var item = menupopup.appendChild(doc.createElement("menuitem"));
       item.setAttribute("label", label);
       item.setAttribute("profile-id", list[idx]);
       item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
@@ -310,7 +341,7 @@ function appendCurrentProfileMenu(menupopup, list, profileId) {
   menupopup.appendChild(doc.createElement("menuseparator"));
   var menu = menupopup.appendChild(doc.createElement("menu"));
 
-  if (profileId === Profile.DefaultIdentity) {
+  if (Profile.isNativeProfile(profileId)) {
     menu.setAttribute("disabled", "true");
   }
 

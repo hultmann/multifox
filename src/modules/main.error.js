@@ -88,11 +88,6 @@ var ErrorHandler = {
       return;
     }
 
-    if (isPrivateWindow(browser.ownerDocument.defaultView)) {
-      this._update("private-mode", button);
-      return;
-    }
-
     if (browser.hasAttribute("multifox-tab-error-net")) {
       this._update(browser.getAttribute("multifox-tab-error-net"), button);
       return;

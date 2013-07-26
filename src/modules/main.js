@@ -14,6 +14,7 @@ var Cu = Components.utils;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Cu.import("${PATH_MODULE}/new-window.js");
 
 
@@ -65,11 +66,7 @@ const NewWindow = {
     var stringId = Cc["@mozilla.org/browser/sessionstore;1"]
                     .getService(Ci.nsISessionStore)
                     .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
-    var id = Profile.toInt(stringId);
-    if (id < Profile.DefaultIdentity) { //UndefinedIdentity?
-      id = Profile.DefaultIdentity;
-    }
-    Profile.defineIdentity(win, id);
+    Profile.defineIdentity(win, Profile.toInt(stringId));
   },
 
   _shouldBeDefault: function(win) {
@@ -83,15 +80,16 @@ const NewWindow = {
 
 
 const Profile = {
-  UndefinedIdentity: 0,
+  UndefinedIdentity:-1,
+  PrivateIdentity:   0,
   DefaultIdentity:   1,
   MaxIdentity:       999999999999999,
 
   defineIdentity: function(win, id) {
     console.assert(typeof id === "number", "id is not a number. " + typeof id);
 
-    if (isPrivateWindow(win)) {
-      id = Profile.UndefinedIdentity;
+    if (PrivateBrowsingUtils.isWindowPrivate(win)) {
+      id = Profile.PrivateIdentity;
     }
 
     console.log("defineIdentity " + id);
@@ -108,7 +106,7 @@ const Profile = {
       console.log("defineIdentity NOP");
       return id;
     }
-    if (current !== Profile.DefaultIdentity) {
+    if (this.isExtensionProfile(current)) {
       BrowserWindow.unregister(win);
     }
 
@@ -119,6 +117,17 @@ const Profile = {
     return id;
   },
 
+
+  isNativeProfile: function(id) { // including UndefinedIdentity
+    return this.isExtensionProfile(id) === false;
+  },
+
+
+  isExtensionProfile: function(id) {
+    return id > Profile.DefaultIdentity;
+  },
+
+
   getIdentity: function(chromeWin) {
     var tabbrowser = chromeWin.getBrowser();
     if (tabbrowser === null) {
@@ -127,16 +136,19 @@ const Profile = {
     }
 
     if (tabbrowser.hasAttribute("${BASE_DOM_ID}-identity-id")) {
-      return this.toInt(tabbrowser.getAttribute("${BASE_DOM_ID}-identity-id"));
+      var profileId = this.toInt(tabbrowser.getAttribute("${BASE_DOM_ID}-identity-id"));
+      console.assert(Profile.isExtensionProfile(profileId), "profileId expected", profileId);
+      return profileId;
     } else {
-      return Profile.DefaultIdentity;
+      return PrivateBrowsingUtils.isWindowPrivate(chromeWin) ? Profile.PrivateIdentity
+                                                             : Profile.DefaultIdentity;
     }
   },
 
   _save: function(win, id) {
     console.log("save " + id);
     var node = win.getBrowser();
-    if (id > Profile.DefaultIdentity) {
+    if (this.isExtensionProfile(id)) {
       node.setAttribute("${BASE_DOM_ID}-identity-id", id);
     } else {
       node.removeAttribute("${BASE_DOM_ID}-identity-id");
@@ -217,7 +229,7 @@ SaveToSessionStore.prototype = {
       return;
     }
 
-    if (val <= Profile.DefaultIdentity) { // UndefinedIdentity OR DefaultIdentity
+    if (Profile.isNativeProfile(val)) {
       ss.deleteWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id");
     }
   }

@@ -66,9 +66,17 @@ var ProfileAlias = {
     var ns = {}; // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", ns);
 
-    if (profileId <= Profile.DefaultIdentity) {
-      return ns.util.getText("button.profile-default.label");
+    switch (profileId) {
+      case Profile.DefaultIdentity:
+        return ns.util.getText("button.profile-default.label");
+
+      case Profile.PrivateIdentity:
+        return ns.util.getText("button.profile-private.label");
+
+      case Profile.UndefinedIdentity:
+        throw new Error("unexpected Profile.UndefinedIdentity");
     }
+    console.assert(Profile.isExtensionProfile(profileId), "profileId unexpected", profileId);
 
     if (profileId in this._alias) {
       return this._alias[profileId];
@@ -84,7 +92,7 @@ function updateButton(win) {
   var profileId = Profile.getIdentity(win);
 
   var txt;
-  if (profileId > Profile.DefaultIdentity) {
+  if (Profile.isExtensionProfile(profileId)) {
     txt = ProfileAlias.hasAlias(profileId) ? ProfileAlias.format(profileId)
                                            : profileId.toString();
   } else {
