@@ -1,10 +1,10 @@
-content   ${CHROME_NAME} content/
+content   ${EXT_HOST} content/
 
-locale  ${CHROME_NAME}  en-US  locale/en-US/
-#locale  ${CHROME_NAME}  pt-BR  locale/pt-BR/
-#locale  ${CHROME_NAME}  es-ES  locale/es-ES/
-#locale  ${CHROME_NAME}  fr     locale/fr/
-#locale  ${CHROME_NAME}  sv-SE  locale/sv-SE/
-#locale  ${CHROME_NAME}  zh-CN  locale/zh-CN/
-#locale  ${CHROME_NAME}  zh-TW  locale/zh-TW/
-#locale  ${CHROME_NAME}  sr     locale/sr/
+locale  ${EXT_HOST}  en-US  locale/en-US/
+#locale  ${EXT_HOST}  pt-BR  locale/pt-BR/
+#locale  ${EXT_HOST}  es-ES  locale/es-ES/
+#locale  ${EXT_HOST}  fr     locale/fr/
+#locale  ${EXT_HOST}  sv-SE  locale/sv-SE/
+#locale  ${EXT_HOST}  zh-CN  locale/zh-CN/
+#locale  ${EXT_HOST}  zh-TW  locale/zh-TW/
+#locale  ${EXT_HOST}  sr     locale/sr/

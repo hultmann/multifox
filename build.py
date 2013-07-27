@@ -65,11 +65,11 @@ b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
 b.set_var("APP_MIN_VERSION", "22.0")
 b.set_var("APP_MAX_VERSION", "24.*")
 b.set_var("CHROME_NAME",     "multifox")
-b.set_var("RESOURCE_NAME",   "multifox-" + verEx)
+b.set_var("EXT_HOST",        "multifox-" + verEx)
 
-b.set_var("PATH_CONTENT",    "chrome://multifox/content")
-b.set_var("PATH_LOCALE",     "chrome://multifox/locale")
-b.set_var("PATH_MODULE",     "resource://" + b.get_var("RESOURCE_NAME"))
+b.set_var("PATH_CONTENT",    "chrome://"   + b.get_var("EXT_HOST") + "/content")
+b.set_var("PATH_LOCALE",     "chrome://"   + b.get_var("EXT_HOST") + "/locale")
+b.set_var("PATH_MODULE",     "resource://" + b.get_var("EXT_HOST"))
 
 b.set_var("BASE_DOM_ID",            "multifox-dom")
 

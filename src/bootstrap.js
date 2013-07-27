@@ -76,7 +76,7 @@ function registerResourceProtocol(uri) { // null to unregister
   var module = uri ? io.newURI(uri.resolve("modules/"), null, null) : null;
   io.getProtocolHandler("resource")
     .QueryInterface(Ci.nsIResProtocolHandler)
-    .setSubstitution("${RESOURCE_NAME}", module);
+    .setSubstitution("${EXT_HOST}", module);
 }
 
 

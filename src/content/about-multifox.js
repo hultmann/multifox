@@ -48,7 +48,7 @@ function populatePage() {
         var reg = Cc["@mozilla.org/chrome/chrome-registry;1"]
                     .getService(Ci.nsIXULChromeRegistry);
         var localeApp = reg.getSelectedLocale("global");
-        var localeExt = reg.getSelectedLocale("${CHROME_NAME}");
+        var localeExt = reg.getSelectedLocale("${EXT_HOST}");
 
         hHtml = ns.util.getTextFrom(id + ".h", "about", localeExt);
 
@@ -74,7 +74,7 @@ function populatePage() {
 function hasExtensionLocale(code) {
   var locales = Cc["@mozilla.org/chrome/chrome-registry;1"]
                   .getService(Ci.nsIToolkitChromeRegistry)
-                  .getLocalesForPackage("${CHROME_NAME}");
+                  .getLocalesForPackage("${EXT_HOST}");
   while (locales.hasMore()) {
     if (locales.getNext() === code) {
       return true;
