@@ -102,30 +102,6 @@ function updateButton(win) {
   var button = getButtonElem(win.document);
   if (button !== null) { // visible?
     button.setAttribute("label", txt);
-    styleButton(button);
-  }
-}
-
-
-function styleButton(button) {
-  // show label beside its icon (is there a better way to do that?)
-
-  if (Services.appinfo.OS === "Darwin") {
-    button.setAttribute("class", "chromeclass-toolbar-additional toolbarbutton-1");
-  } else {
-    // toolbarbutton-1 looks broken
-    button.setAttribute("class", "chromeclass-toolbar-additional");
-  }
-
-  // -moz-box-orient=> label position
-  // display=> needed for popups
-  button.setAttribute("style", "-moz-box-orient:horizontal !important; display:-moz-box !important;");
-  var anonNodes = button.ownerDocument.getAnonymousNodes(button);
-  for (var idx = anonNodes.length - 1; idx > -1; idx--) {
-    if (anonNodes[idx].tagName === "xul:label") {
-      anonNodes[idx].setAttribute("style", "display: -moz-box !important;");
-      break;
-    }
   }
 }
 
@@ -163,7 +139,8 @@ function createElement(doc, buttonId) {
   button.setAttribute("id", buttonId);
   button.setAttribute("tab-status", "");
   button.setAttribute("type", "menu");
-  button.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
+  button.setAttribute("class", "bookmark-item"); // show label beside its icon
+  button.setAttribute("style", "list-style-image:url(${PATH_CONTENT}/favicon.ico);-moz-image-region:auto");
   button.setAttribute("label", "");
   button.setAttribute("tooltiptext", "${EXT_NAME}");
   var menupopup = button.appendChild(doc.createElement("menupopup"));
