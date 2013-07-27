@@ -14,19 +14,13 @@ function windowLocalStorage(obj, contentDoc) {
 
   var originalUri = stringToUri(contentDoc.location.href);
   var uri = toInternalUri(originalUri, profileId);
-  var principal = Cc["@mozilla.org/scriptsecuritymanager;1"]
-                  .getService(Ci.nsIScriptSecurityManager)
-                  .getNoAppCodebasePrincipal(uri);
+  var principal = Services.scriptSecurityManager.getNoAppCodebasePrincipal(uri);
 
   var storage;
-  if ("@mozilla.org/dom/localStorage-manager;1" in Cc) {
-    storage = Cc["@mozilla.org/dom/localStorage-manager;1"]
-                .getService(Ci.nsIDOMStorageManager)
-                .createStorage(principal, "");
+  if ("createStorage" in Services.domStorageManager) {
+    storage = Services.domStorageManager.createStorage(principal, "");
   } else {
-    storage = Cc["@mozilla.org/dom/storagemanager;1"]
-                .getService(Ci.nsIDOMStorageManager)
-                .getLocalStorageForPrincipal(principal, "");
+    storage = Services.domStorageManager.getLocalStorageForPrincipal(principal, "");
   }
 
 
