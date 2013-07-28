@@ -53,25 +53,46 @@ function getProfileIdFromMenuItem(evt) {
 
 function selectProfileWindow(win, evt) {
   var newProfileId = getProfileIdFromMenuItem(evt);
-
-  var enumWin = Services.wm.getEnumerator("navigator:browser");
-  while (enumWin.hasMoreElements()) {
-    var win2 = enumWin.getNext();
-    if (Profile.getIdentity(win2) === newProfileId) {
-      win2.focus();
-      return;
+  var arr = getProfileWindows(newProfileId);
+  if (arr.length === 0) {
+    // New window
+    if (newProfileId === Profile.PrivateIdentity) {
+      win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+    } else {
+      newPendingWindow(newProfileId);
+      win.OpenBrowserWindow();
     }
-  }
-
-  // New window
-
-  if (newProfileId === Profile.PrivateIdentity) {
-    win.document.getElementById("Tools:PrivateBrowsing").doCommand();
     return;
   }
 
-  newPendingWindow(newProfileId);
-  win.OpenBrowserWindow();
+  // focus next window
+  var domUtils = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIDOMWindowUtils);
+  var idx = arr.indexOf(domUtils.outerWindowID) + 1;
+  if (idx > (arr.length - 1)) {
+    idx = 0;
+  }
+  return domUtils.getOuterWindowWithId(arr[idx]).focus();
+}
+
+
+function getProfileWindows(profileId) {
+  var arr = [];
+
+  var enumWin = Services.wm.getEnumerator("navigator:browser");
+  while (enumWin.hasMoreElements()) {
+    var win = enumWin.getNext();
+    if (Profile.getIdentity(win) === profileId) {
+      var domUtils = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                        .getInterface(Ci.nsIDOMWindowUtils);
+      arr.push(domUtils.outerWindowID);
+    }
+  }
+
+  arr.sort(function(a, b) {
+    return a - b;
+  });
+  return arr;
 }
 
 
@@ -237,8 +258,8 @@ function menuButtonShowing(menupopup) {
   var item = menupopup.appendChild(doc.createElement("menuitem"));
   item.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
   item.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
-  item.setAttribute("label", util.getText("button.new-profile.label"));
-  item.setAttribute("accesskey", util.getText("button.new-profile.accesskey"));
+  item.setAttribute("label", util.getText("button.menuitem.new.label"));
+  item.setAttribute("accesskey", util.getText("button.menuitem.new.accesskey"));
 
   var list = getProfileList();
 
@@ -302,14 +323,9 @@ function appendDefaultItems(menupopup, profileId) {
     return;
   }
 
-
-  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
-    item2.setAttribute("disabled", "true");
-    item2.removeAttribute("command");
-  } else {
-    item.setAttribute("disabled", "true");
-    item.removeAttribute("command");
-  }
+  var current = PrivateBrowsingUtils.isWindowPrivate(doc.defaultView) ? item2 : item;
+  current.setAttribute("type", "radio");
+  current.setAttribute("checked", "true");
 }
 
 
@@ -319,18 +335,14 @@ function appendProfileList(menupopup, list, profileId) {
   menupopup.appendChild(doc.createElement("menuseparator"));
 
   for (var idx = 0; idx < list.length; idx++) {
-    var label = ProfileAlias.format(list[idx]);
+    var item = menupopup.appendChild(doc.createElement("menuitem"));
     if (profileId === list[idx]) {
-      var menu = menupopup.appendChild(doc.createElement("menu"));
-      menu.setAttribute("label", label);
-      profilePopup(menu, doc, profileId);
-
-    } else {
-      var item = menupopup.appendChild(doc.createElement("menuitem"));
-      item.setAttribute("label", label);
-      item.setAttribute("profile-id", list[idx]);
-      item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
+      item.setAttribute("type", "radio");
+      item.setAttribute("checked", "true");
     }
+    item.setAttribute("label", ProfileAlias.format(list[idx]));
+    item.setAttribute("profile-id", list[idx]);
+    item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
   }
 }
 
@@ -345,8 +357,8 @@ function appendCurrentProfileMenu(menupopup, list, profileId) {
     menu.setAttribute("disabled", "true");
   }
 
-  menu.setAttribute("label", util.getText("button.set-profile.label"));
-  menu.setAttribute("accesskey", util.getText("button.set-profile.accesskey"));
+  menu.setAttribute("label", util.getText("button.menuitem.edit.label"));
+  menu.setAttribute("accesskey", util.getText("button.menuitem.edit.accesskey"));
   var menupopup = menu.appendChild(doc.createElement("menupopup"));
 
   for (var idx = 0; idx < list.length; idx++) {
@@ -360,11 +372,13 @@ function appendCurrentProfileMenu(menupopup, list, profileId) {
       item.setAttribute("checked", "true");
     }
   }
+
+  menupopup.appendChild(doc.createElement("menuseparator"));
+  profilePopup(menupopup, doc, profileId);
 }
 
 
-function profilePopup(menu, doc, profileId) {
-  var menupopup = menu.appendChild(doc.createElement("menupopup"));
+function profilePopup(menupopup, doc, profileId) {
   var item;
 
   item = menupopup.appendChild(doc.createElement("menuitem"));
