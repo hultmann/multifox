@@ -5,7 +5,7 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
-                        "createButton", "destroyButton", "updateButton", "removeFromButtonSet", "ProfileAlias",
+                        "insertButton", "destroyButton", "updateButton", "removeFromButtonSet", "ProfileAlias",
                         "ErrorHandler",
                         "Profile"
                        ];
@@ -67,6 +67,7 @@ const NewWindow = {
                     .getService(Ci.nsISessionStore)
                     .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
     Profile.defineIdentity(win, Profile.toInt(stringId));
+    updateButton(win);
   },
 
   _shouldBeDefault: function(win) {
@@ -86,7 +87,7 @@ const Profile = {
   MaxIdentity:       999999999999999,
 
   defineIdentity: function(win, id) {
-    console.assert(typeof id === "number", "id is not a number. " + typeof id);
+    console.assert(typeof id === "number", "id is not a number.", typeof id);
 
     if (PrivateBrowsingUtils.isWindowPrivate(win)) {
       id = Profile.PrivateIdentity;
@@ -112,7 +113,6 @@ const Profile = {
 
     this._save(win, id);
     BrowserWindow.register(win);
-    updateButton(win);
 
     return id;
   },

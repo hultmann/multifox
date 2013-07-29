@@ -32,9 +32,6 @@ const BrowserWindow = {
 
     // update icon status
     win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
-
-    // restore icon after toolbar customization
-    win.addEventListener("aftercustomization", customizeToolbar, false);
   },
 
 
@@ -49,7 +46,6 @@ const BrowserWindow = {
     }
 
     win.removeEventListener(m_runner.eventSentByContent, onContentEvent, false);
-    win.removeEventListener("aftercustomization", customizeToolbar, false);
     win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
     var sessions = Profile.activeIdentities(win);
@@ -73,12 +69,6 @@ const BrowserWindow = {
 function onUnloadChromeWindow(evt) {
   var win = evt.currentTarget;
   BrowserWindow.unregister(win);
-}
-
-
-function customizeToolbar(evt) {
-  var toolbox = evt.target;
-  updateButton(toolbox.ownerDocument.defaultView);
 }
 
 

@@ -61,7 +61,9 @@ var ProfileAlias = {
   },
 
   format: function(profileId) {
-    console.assert(this._alias !== null, "call ProfileAlias._load");
+    if (this._alias === null) {
+      this._load();
+    }
 
     var ns = {}; // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", ns);
@@ -89,9 +91,19 @@ var ProfileAlias = {
 
 
 function updateButton(win) {
-  var profileId = Profile.getIdentity(win);
+  var doc = win.document;
+  var button = getButtonElem(doc);
+  if (button === null) { // visible?
+    return;
+  }
 
+  // show <dropmarker> (hidden by class bookmark-item)
+  doc.getAnonymousElementByAttribute(button, "class", "toolbarbutton-menu-dropmarker")
+     .setAttribute("style", "display:-moz-box !important");
+
+  // update label
   var txt;
+  var profileId = Profile.getIdentity(win);
   if (Profile.isExtensionProfile(profileId)) {
     txt = ProfileAlias.hasAlias(profileId) ? ProfileAlias.format(profileId)
                                            : profileId.toString();
@@ -99,10 +111,7 @@ function updateButton(win) {
     txt = "";
   }
 
-  var button = getButtonElem(win.document);
-  if (button !== null) { // visible?
-    button.setAttribute("label", txt);
-  }
+  button.setAttribute("label", txt);
 }
 
 
@@ -111,30 +120,37 @@ function getButtonElem(doc) {
 }
 
 
-function createButton(doc) {
-  console.assert(getButtonElem(doc) === null, "createButton dupe");
+function insertButton(doc) {
+  console.assert(getButtonElem(doc) === null, "insertButton dupe");
+
+  // restore icon after toolbar customization
+  doc.defaultView.addEventListener("aftercustomization", customizeToolbar, false);
+
   var buttonId = "${CHROME_NAME}-button";
 
   // add it to <toolbarpalette>
   doc.getElementById("navigator-toolbox")
-     .palette.appendChild(createElement(doc, buttonId));
+     .palette.appendChild(createButtonElem(doc, buttonId));
 
   // add it to <toolbar>
   var toolbar = findButtonLocation(doc, buttonId);
   if (toolbar != null) {
     var button0 = getPrecedingButton(toolbar, buttonId);
     toolbar.insertItem(buttonId, button0, null, false);
+    updateButton(doc.defaultView);
     return;
   }
 
   // add it to default position
   toolbar = doc.getElementById("nav-bar");
   toolbar.insertItem(buttonId);
+  updateButton(doc.defaultView);
+
   saveButtonSet(toolbar, toolbar.getAttribute("currentset") + "," + buttonId);
 }
 
 
-function createElement(doc, buttonId) {
+function createButtonElem(doc, buttonId) {
   var button = doc.createElement("toolbarbutton");
   button.setAttribute("id", buttonId);
   button.setAttribute("tab-status", "");
@@ -201,6 +217,8 @@ function getPrecedingButton(toolbar, id) {
 
 
 function destroyButton(doc) {
+   doc.defaultView.removeEventListener("aftercustomization", customizeToolbar, false);
+
   var plt = doc.getElementById("navigator-toolbox").palette;
   var button2 = plt.children.namedItem("${CHROME_NAME}-button");
   if (button2 !== null) {
@@ -214,6 +232,12 @@ function destroyButton(doc) {
     menu.removeEventListener("popupshowing", onMenuPopupShowing, false);
     button.parentNode.removeChild(button);
   }
+}
+
+
+function customizeToolbar(evt) {
+  var toolbox = evt.target;
+  updateButton(toolbox.ownerDocument.defaultView);
 }
 
 

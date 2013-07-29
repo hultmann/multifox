@@ -47,7 +47,7 @@ var Bootstrap = {
 
     enumWin = Services.wm.getEnumerator("navigator:browser");
     while (enumWin.hasMoreElements()) {
-      BrowserOverlay.add2(enumWin.getNext());
+      BrowserOverlay.add(enumWin.getNext());
     }
   },
 
@@ -55,7 +55,7 @@ var Bootstrap = {
     m_docObserver.shutdown();
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
-      forEachWindow(removeOverlay, enumWin.getNext());
+      forEachWindow(disableExtension, enumWin.getNext());
     }
   },
 
@@ -105,28 +105,29 @@ DocObserver.prototype = {
 
 function onDOMContentLoaded(evt) {
   var win = evt.currentTarget;
-  if (win.document !== evt.target) {
-    return; // avoid bubbled DOMContentLoaded events
+  if (win.document === evt.target) {
+    // avoid bubbled DOMContentLoaded events
+    win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
+    addOverlay(win);
   }
-
-  win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-  addOverlay(win);
 }
 
 
 // DOMContentLoaded is too early for #navigator-toolbox.palette
-// load may be too late to new MultifoxRunner()
+// load might be a bit late for network listeners
 function onBrowserWinLoad(evt) {
   var win = evt.currentTarget;
   win.removeEventListener("load", onBrowserWinLoad, false);
-  BrowserOverlay.add2(win);
+  win.mozRequestAnimationFrame(function() {
+    BrowserOverlay.add(win);
+  });
 }
 
 
 function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      BrowserOverlay.add(win);
+      setWindowProfile(win); // enable netwok listeners
       win.addEventListener("load", onBrowserWinLoad, false);
       break;
     case "chrome://browser/content/history/history-panel.xul":
@@ -144,7 +145,7 @@ function addOverlay(win) {
 }
 
 
-function removeOverlay(win) {
+function disableExtension(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
       var node = win.getBrowser();
@@ -186,6 +187,9 @@ function removeState(win) { // uninstalling
 
 const BrowserOverlay = {
   add: function(win) {
+    console.assert(win.location.href === "chrome://browser/content/browser.xul",
+                   "win should be a browser window", win.location.href);
+
     win.addEventListener("unload", BrowserOverlay._unload, false);
 
 
@@ -208,23 +212,21 @@ const BrowserOverlay = {
 
     // menus
     addMenuListeners(doc);
-  },
 
-  add2: function(win) { // toolbar button
-    console.assert(win.location.href === "chrome://browser/content/browser.xul",
-                   "win should be a browser window", win.location.href);
-    createButton(win.document);
-    setWindowProfile(win);
+    // insert into toolbar
+    insertButton(doc);
   },
 
 
   _unload: function(evt) {
+    // do not set window to DefaultIdentity, it can be restored
     var win = evt.currentTarget;
-    win.removeEventListener("unload", BrowserOverlay._unload, false);
     BrowserOverlay.remove(win);
   },
 
   remove: function(win) {
+    win.removeEventListener("unload", BrowserOverlay._unload, false);
+
     var doc = win.document;
     removeMenuListeners(doc);
 

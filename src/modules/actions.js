@@ -32,6 +32,7 @@ function xulCommand(evt) {
       break;
     case "${CHROME_NAME}:cmd_set_profile_window":
       Profile.defineIdentity(win, getProfileIdFromMenuItem(evt));
+      updateButton(win);
       break;
     case "${CHROME_NAME}:cmd_select_window":
       selectProfileWindow(win, evt);
