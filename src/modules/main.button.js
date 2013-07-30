@@ -9,7 +9,7 @@ var ProfileAlias = {
   _load: function() {
     var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
     if (prefs.prefHasUserValue("alias") === false) {
-      this._alias = {__proto__: null};
+      this._alias = Object.create(null);
       return;
     }
 
@@ -18,7 +18,7 @@ var ProfileAlias = {
       this._alias = JSON.parse(a);
     } catch (ex) {
       console.log(ex + " - buggy json - " + a);
-      this._alias = {__proto__: null};
+      this._alias = Object.create(null);
     }
   },
 

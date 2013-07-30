@@ -49,10 +49,27 @@ var Bootstrap = {
     while (enumWin.hasMoreElements()) {
       BrowserOverlay.add(enumWin.getNext());
     }
+
+    this._incompatibilityCheck();
+  },
+
+
+  _timer: null,
+
+  _incompatibilityCheck: function() {
+    this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+    this._timer.initWithCallback({
+      notify: function() {
+        delete Bootstrap._timer;
+        ExtCompat.findIncompatibleExtensions(ErrorHandler.addIncompatibilityError);
+        ExtCompat.installAddonListener();
+      }
+    }, 8000, Ci.nsITimer.TYPE_ONE_SHOT);
   },
 
   extensionShutdown: function() {
     m_docObserver.shutdown();
+    ExtCompat.uninstallAddonListener();
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
       forEachWindow(disableExtension, enumWin.getNext());

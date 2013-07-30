@@ -8,7 +8,12 @@ var ErrorHandler = {
 
   // incompatible extension installed
   addIncompatibilityError: function() {
-    this._incompatibility = true;
+    // this=undefined
+    ErrorHandler._incompatibility = true;
+    var enumWin = Services.wm.getEnumerator("navigator:browser");
+    while (enumWin.hasMoreElements()) {
+      ErrorHandler.updateButtonAsync(enumWin.getNext().getBrowser().selectedBrowser);
+    }
   },
 
 
@@ -104,7 +109,7 @@ var ErrorHandler = {
       return;
     }
     if (isError) {
-      button.setAttribute("image", "chrome://global/skin/icons/warning-16.png");
+      button.setAttribute("image", "chrome://global/skin/icons/error-16.png");
       button.setAttribute("tab-status", newStat);
     } else {
       button.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
@@ -120,6 +125,66 @@ var ErrorHandler = {
     // multifox-tab-error refers to a different document.
     // it seems the current is fine.
     return "";
+  }
+
+};
+
+
+
+var ExtCompat = {
+
+  // Extensions with known compatibility issues.
+  // To update it please file a bug: https://github.com/hultmann/multifox/issues
+  _incompatIds: [
+    "{37fa1426-b82d-11db-8314-0800200c9a66}", // X-notifier
+    "{42f25d10-4944-11e2-96c0-0b6a95a8daf0}"  // former Multifox 2
+  ],
+
+
+  findIncompatibleExtensions: function(onFound) {
+    var jsm = {};
+    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+    jsm.AddonManager.getAddonsByIDs(this._incompatIds, function(arr) {
+      var enabled = [];
+      for (var idx = arr.length - 1; idx > -1; idx--) {
+        var ext = arr[idx];
+        if ((ext !== null) && ext.isActive) {
+          enabled.push(ext.name);
+        }
+      }
+      if (enabled.length > 0) {
+        onFound(enabled);
+      }
+    });
+  },
+
+
+  _addonListener: {
+    onEnabled: function(addon) {
+      if (ExtCompat._incompatIds.indexOf(addon.id) > -1) {
+        ErrorHandler.addIncompatibilityError();
+      }
+    },
+
+    onDisabled: function(addon) {
+      if (ExtCompat._incompatIds.indexOf(addon.id) > -1) {
+        ExtCompat.findIncompatibleExtensions(ErrorHandler.addIncompatibilityError);
+      }
+    }
+  },
+
+
+  installAddonListener: function() {
+    var jsm = {};
+    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+    jsm.AddonManager.addAddonListener(this._addonListener);
+  },
+
+
+  uninstallAddonListener: function() {
+    var jsm = {};
+    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
+    jsm.AddonManager.removeAddonListener(this._addonListener);
   }
 
 };

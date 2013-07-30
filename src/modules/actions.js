@@ -135,10 +135,10 @@ function deleteCurrentPopup(win) {
 
 
 function showDeletePopup(doc) {
-  var container = createArrowPanel(doc);
+  var container = createArrowPanel(doc, "warning");
 
   var desc = container.appendChild(doc.createElement("description"));
-  desc.appendChild(doc.createTextNode(util.getText("delete.text")));
+  desc.appendChild(doc.createTextNode(util.getText("delete.text", "${EXT_NAME}")));
 
   var container2 = container.appendChild(doc.createElement("hbox"));
   container2.setAttribute("pack", "end");
@@ -150,44 +150,66 @@ function showDeletePopup(doc) {
 
 function showError(win) {
   var doc = win.document;
-  var container = createArrowPanel(doc);
+  var container;
   var msg;
 
   switch (ErrorHandler.getCurrentError(doc)) {
     case "incompatible-extension":
-      msg = ["Error", "HTTP authentication not supported"];
+      var utils = util; // prevent: Exception calling callback: TypeError: util is undefined
+      ExtCompat.findIncompatibleExtensions(function(arr) {
+        for (var idx = 0; idx < arr.length; idx++) {
+          var desc = container.appendChild(doc.createElement("description"));
+          desc.setAttribute("style", "font-weight:bold");
+          desc.appendChild(doc.createTextNode(arr[idx]));
+        }
+      });
+      msg = utils.getText("icon.error-panel.extension.label", "${EXT_NAME}");
       break;
     case "www-authenticate":
     case "authorization":
-      msg = ["Error", "HTTP Basic authentication not supported"];
+      msg = util.getText("icon.error-panel.unsupported-feature.label", "${EXT_NAME}", "HTTP Basic authentication");
       break;
     case "indexedDB":
-      msg = ["Error", "indexedDB", util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}")];
+      msg = util.getText("icon.error-panel.unsupported-feature.label", "${EXT_NAME}", "indexedDB");
       break;
     case "sandbox":
-      msg = ["Error", util.getText("icon.panel.unsupported-general.label", "${EXT_NAME}")];
+      msg = util.getText("icon.error-panel.sandbox.label", "${EXT_NAME}");
       break;
     default:
-      msg = ["Error", ErrorHandler.getCurrentError(doc)];
+      msg = ErrorHandler.getCurrentError(doc);
       break;
   }
 
-  for (var idx = 0; idx < msg.length; idx++) {
-    var desc = container.appendChild(doc.createElement("description"));
-    desc.appendChild(doc.createTextNode(msg[idx]));
-  }
+  container = createArrowPanel(doc, "error");
+  var desc = container.appendChild(doc.createElement("description"));
+  desc.appendChild(doc.createTextNode(msg));
 }
 
 
-function createArrowPanel(doc) {
+function createArrowPanel(doc, icon) {
   var panel = doc.getElementById("mainPopupSet").appendChild(doc.createElement("panel"));
   panel.setAttribute("type", "arrow");
-  panel.openPopup(doc.getElementById("${CHROME_NAME}-button"), "bottomcenter topright");
 
-  var container = panel.appendChild(doc.createElement("vbox"));
-  container.style.margin = ".5ch .5ch";
-  container.style.width = "40ch";
-  return container;
+  var container = panel.appendChild(doc.createElement("hbox"));
+  var col1 = container.appendChild(doc.createElement("vbox"));
+  var img = col1.appendChild(doc.createElement("image"));
+  switch (icon) {
+    case "warning":
+      img.setAttribute("src", "chrome://global/skin/icons/warning-large.png");
+      break;
+    case "error":
+      img.setAttribute("src", "chrome://global/skin/icons/error-48.png");
+      break;
+    default:
+      throw new Error("createArrowPanel", icon);
+  }
+
+  var col2 = container.appendChild(doc.createElement("vbox"));
+  col2.setAttribute("flex", "1");
+  col2.setAttribute("style", "margin:.5ch .5ch; width:40ch");
+
+  panel.openPopup(doc.getElementById("${CHROME_NAME}-button"), "bottomcenter topright");
+  return col2;
 }
 
 
@@ -300,7 +322,7 @@ function appendErrorItem(menupopup) {
   item.setAttribute("command", "${CHROME_NAME}:cmd_show_error");
   item.setAttribute("label", util.getText("button.menuitem.error.label"));
   item.setAttribute("accesskey", util.getText("button.menuitem.error.accesskey"));
-  item.setAttribute("image", "chrome://global/skin/icons/warning-16.png");
+  item.setAttribute("image", "chrome://global/skin/icons/error-16.png");
   item.classList.add("menuitem-iconic");
 }
 
