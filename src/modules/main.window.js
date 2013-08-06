@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-var m_runner = null;
-
 const BrowserWindow = {
 
   register: function(win) {
@@ -21,6 +19,12 @@ const BrowserWindow = {
     Cu.import("${PATH_MODULE}/new-window.js", ns);
     if (ns.util.networkListeners.active === false) {
       // first multifox window!
+
+      var nsActions = {};
+      Components.utils.import("${PATH_MODULE}/actions.js", nsActions);
+      nsActions.migrateCookies();
+
+
       ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);
       DocStartScriptInjection.init();
       Cookies.start();

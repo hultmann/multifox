@@ -4,7 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["xulCommand", "removeData", "menuButtonShowing"];
+var EXPORTED_SYMBOLS = ["xulCommand", "removeData", "menuButtonShowing", "migrateCookies"];
 
 Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
@@ -155,7 +155,6 @@ function showError(win) {
 
   switch (ErrorHandler.getCurrentError(doc)) {
     case "incompatible-extension":
-      var utils = util; // prevent: Exception calling callback: TypeError: util is undefined
       ExtCompat.findIncompatibleExtensions(function(arr) {
         for (var idx = 0; idx < arr.length; idx++) {
           var desc = container.appendChild(doc.createElement("description"));
@@ -163,7 +162,7 @@ function showError(win) {
           desc.appendChild(doc.createTextNode(arr[idx]));
         }
       });
-      msg = utils.getText("icon.error-panel.extension.label", "${EXT_NAME}");
+      msg = util.getText("icon.error-panel.extension.label", "${EXT_NAME}");
       break;
     case "www-authenticate":
     case "authorization":
@@ -238,7 +237,7 @@ function removeData() {
 function removeProfile(profileId) {
   console.assert(Profile.isExtensionProfile(profileId), "cannot remove native profile", profileId);
 
-  var h = ".multifox-profile-" + profileId;
+  var h = "-" + profileId + ".multifox";
   var myCookies = [];
   var COOKIE = Ci.nsICookie2;
   var mgr = Services.cookies;
@@ -256,6 +255,53 @@ function removeProfile(profileId) {
     mgr.remove(cookie.host, cookie.name, cookie.path, false);
   }
 }
+
+
+function migrateCookies() {
+  var nsList = [];
+  var COOKIE = Ci.nsICookie2;
+  var cookie;
+  var mgr = Services.cookies;
+  var myHost;
+
+  // collect cookies
+  var all = mgr.enumerator;
+  while (all.hasMoreElements()) {
+    cookie = all.getNext().QueryInterface(COOKIE);
+    myHost = cookie.host;
+    if (myHost.indexOf(".multifox-profile-") === -1) {
+      continue;
+    }
+    var ns = myHost.substr(myHost.lastIndexOf(".") + 1);
+    if (ns.startsWith("multifox-profile-")) {
+      nsList.push(cookie);
+    }
+  }
+
+  // remove them
+  for (var idx = nsList.length - 1; idx > -1; idx--) {
+    cookie = nsList[idx];
+    mgr.remove(cookie.host, cookie.name, cookie.path, false);
+  }
+
+  // convert cookies to new host
+  for (var idx = nsList.length - 1; idx > -1; idx--) {
+    cookie = nsList[idx];
+    myHost = cookie.host;
+    var idxLastDot = myHost.lastIndexOf(".");
+    var realHost = myHost.substr(0, idxLastDot);
+    // 17="multifox-profile-".length
+    var profileId = parseInt(myHost.substr(idxLastDot + 1).substr(17), 10);
+    if (Number.isNaN(profileId)) {
+      continue;
+    }
+
+    var newHost = cookieInternalDomain(realHost, profileId);
+    mgr.add(newHost, cookie.path, cookie.name, cookie.value,
+            cookie.isSecure, cookie.isHttpOnly, cookie.isSession, cookie.expiry);
+  }
+}
+
 
 
 // menupopup show/hide
@@ -427,20 +473,17 @@ function getProfileList() {
   var COOKIE = Ci.nsICookie2;
   while (all.hasMoreElements()) {
     var h = all.getNext().QueryInterface(COOKIE).host;
-    if (h.indexOf(".multifox-profile-") === -1) {
+    if (h.endsWith(".multifox") === false) {
       continue;
     }
-    var ns = h.substr(h.lastIndexOf(".") + 1);
-    if (ns.startsWith("multifox-profile-")) {
-      if (nsList.indexOf(ns) === -1) {
-        nsList.push(ns);
-      }
+    var ns = h.substr(h.lastIndexOf("-") + 1);
+    if (nsList.indexOf(ns) === -1) {
+      nsList.push(ns); // "2.multifox"
     }
   }
 
   for (var idx = nsList.length - 1; idx > -1; idx--) {
-    var n = parseInt(nsList[idx].substr(17), 10);
-    // 17="multifox-profile-".length
+    var n = parseInt(nsList[idx].replace(".multifox", ""), 10);
     if (Number.isNaN(n) === false) { // Fx15+
       list.push(n);
     }

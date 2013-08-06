@@ -165,7 +165,49 @@ function toInternalUri(uri, sessionId) {
 
 
 function cookieInternalDomain(domain, id) {
-  return domain + ".multifox-profile-" + id;
+  // this scheme makes Multifox profiles to obey the
+  // cookie limits per TLD (network.cookie.maxPerHost)
+  var tld = getTldFromHost(domain).replace(".", "-", "g");
+  return domain + "." + tld + "-" + id + ".multifox";
+}
+
+
+function getTldFromHost(hostname) {
+  console.assert(typeof hostname === "string", "invalid hostname argument");
+  console.assert(hostname.length > 0, "empty hostname");
+  try {
+    return Services.eTLD.getBaseDomainFromHost(hostname);
+  } catch (ex) {
+    var Cr = Components.results;
+    switch (ex.result) {
+      case Cr.NS_ERROR_INSUFFICIENT_DOMAIN_LEVELS: // "localhost"?
+      case Cr.NS_ERROR_HOST_IS_IP_ADDRESS:         // literal ipv6? 3ffe:2a00:100:7031::1
+        return hostname;                           // literal ipv4? 127.0.0.1, 0x7f.0.0.1
+      case Cr.NS_ERROR_ILLEGAL_VALUE:              // ".foo.tld"?
+        break;
+      default:
+        console.log(ex, hostname);                 // ???
+        return hostname;
+    }
+  }
+
+  // NS_ERROR_ILLEGAL_VALUE
+  var firstDot = hostname.indexOf(".");
+  //  "local.host" ==> >0 OK
+  // ".localhost"  ==>  0 exception
+  // ".loc.al.ho.st" ==> 0 exception
+  //  "localhost" ==> -1 exception
+  if (firstDot === -1) {
+    console.log("NS_ERROR_ILLEGAL_VALUE firstDot=-1", hostname);
+    return hostname; // ???
+  }
+
+  // firstDot=0 ("...local.host") (e.g. from cookies)
+  // OBS "..local.host" returns "localhost"
+  if (firstDot === 0) {
+    return getTldFromHost(hostname.substr(1)); // recursive
+  }
+  return hostname;
 }
 
 
