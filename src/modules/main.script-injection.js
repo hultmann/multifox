@@ -51,8 +51,7 @@ var DocStartScriptInjection = {
     var enumWin = Services.wm.getEnumerator("navigator:browser");
     while (enumWin.hasMoreElements()) {
       var win = enumWin.getNext();
-      var id = Profile.getIdentity(win);
-      if (Profile.isNativeProfile(id)) {
+      if (Profile.isNativeProfile(Profile.getIdentity(win))) {
         continue;
       }
       var tabbrowser = win.getBrowser();

@@ -42,7 +42,7 @@ var Bootstrap = {
 
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
-      forEachWindow(addOverlay, enumWin.getNext());
+      forEachChromeWindow(addOverlay, enumWin.getNext());
     }
 
     enumWin = Services.wm.getEnumerator("navigator:browser");
@@ -72,7 +72,7 @@ var Bootstrap = {
     ExtCompat.uninstallAddonListener();
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
-      forEachWindow(disableExtension, enumWin.getNext());
+      forEachChromeWindow(disableExtension, enumWin.getNext());
     }
   },
 
@@ -94,10 +94,12 @@ var Bootstrap = {
 };
 
 
-function forEachWindow(fn, win) {
-  fn(win);
-  for (var idx = win.length - 1; idx > -1; idx--) {
-    forEachWindow(fn, win[idx]);
+function forEachChromeWindow(fn, win) {
+  if (win instanceof Ci.nsIDOMChromeWindow) {
+    fn(win);
+    for (var idx = win.length - 1; idx > -1; idx--) {
+      forEachChromeWindow(fn, win[idx]);
+    }
   }
 }
 

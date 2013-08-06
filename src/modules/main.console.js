@@ -152,7 +152,7 @@ var console = {
         if (obj instanceof Object) {
           return obj.toString() + ex;
         } else {
-          return "proto=null? " + obj + " " + ex;
+          return "proto=null? " + ex;
         }
       }
     }
