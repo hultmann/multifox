@@ -52,6 +52,13 @@ function getProfileIdFromMenuItem(evt) {
 }
 
 
+function getOuterWinId(win) {
+  return win.QueryInterface(Ci.nsIInterfaceRequestor)
+            .getInterface(Ci.nsIDOMWindowUtils)
+            .outerWindowID;
+}
+
+
 function selectProfileWindow(win, evt) {
   var newProfileId = getProfileIdFromMenuItem(evt);
   var arr = getProfileWindows(newProfileId);
@@ -67,13 +74,11 @@ function selectProfileWindow(win, evt) {
   }
 
   // focus next window
-  var domUtils = win.QueryInterface(Ci.nsIInterfaceRequestor)
-                    .getInterface(Ci.nsIDOMWindowUtils);
-  var idx = arr.indexOf(domUtils.outerWindowID) + 1;
+  var idx = arr.indexOf(getOuterWinId(win)) + 1;
   if (idx > (arr.length - 1)) {
     idx = 0;
   }
-  return domUtils.getOuterWindowWithId(arr[idx]).focus();
+  return Services.wm.getOuterWindowWithId(arr[idx]).focus();
 }
 
 
@@ -84,9 +89,7 @@ function getProfileWindows(profileId) {
   while (enumWin.hasMoreElements()) {
     var win = enumWin.getNext();
     if (Profile.getIdentity(win) === profileId) {
-      var domUtils = win.QueryInterface(Ci.nsIInterfaceRequestor)
-                        .getInterface(Ci.nsIDOMWindowUtils);
-      arr.push(domUtils.outerWindowID);
+      arr.push(getOuterWinId(win));
     }
   }
 

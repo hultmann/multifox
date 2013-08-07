@@ -72,7 +72,7 @@ var ErrorHandler = {
 
 
   updateButtonAsync: function(browser) {
-    browser.ownerDocument.defaultView.mozRequestAnimationFrame(function() {
+    browser.ownerDocument.defaultView.requestAnimationFrame(function() {
       ErrorHandler._updateButtonStatus(browser);
     });
   },

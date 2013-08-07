@@ -137,7 +137,7 @@ function onDOMContentLoaded(evt) {
 function onBrowserWinLoad(evt) {
   var win = evt.currentTarget;
   win.removeEventListener("load", onBrowserWinLoad, false);
-  win.mozRequestAnimationFrame(function() {
+  win.requestAnimationFrame(function() {
     BrowserOverlay.add(win);
   });
 }
