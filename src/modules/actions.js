@@ -455,14 +455,14 @@ function profilePopup(menupopup, doc, profileId) {
 
   item = menupopup.appendChild(doc.createElement("menuitem"));
   item.setAttribute("command", "${CHROME_NAME}:cmd_rename_profile_prompt");
-  item.setAttribute("label", util.getText("button.rename-profile.label"));
-  item.setAttribute("accesskey", util.getText("button.rename-profile.accesskey"));
+  item.setAttribute("label", util.getText("button.menuitem.rename.label"));
+  item.setAttribute("accesskey", util.getText("button.menuitem.rename.accesskey"));
   item.setAttribute("profile-id", profileId);
 
   item = menupopup.appendChild(doc.createElement("menuitem"));
   item.setAttribute("command", "${CHROME_NAME}:cmd_delete_profile_prompt");
-  item.setAttribute("label", util.getText("button.delete-profile.label"));
-  item.setAttribute("accesskey", util.getText("button.delete-profile.accesskey"));
+  item.setAttribute("label", util.getText("button.menuitem.delete.label"));
+  item.setAttribute("accesskey", util.getText("button.menuitem.delete.accesskey"));
   item.setAttribute("profile-id", profileId);
 }
 

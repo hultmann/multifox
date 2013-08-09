@@ -35,9 +35,9 @@ function populatePage() {
     var pHtml;
     switch (id) {
       case "author":
-        pHtml = ns.util.getTextFrom(pId, "about", "mailto:hultmann@gmail.com",
-                                                  "http://twitter.com/multifox",
-                                                  "https://github.com/hultmann/multifox/issues");
+        pHtml = ns.util.getTextFrom(pId, "about", "https://github.com/hultmann/multifox/issues",
+                                                  "https://twitter.com/multifox",
+                                                  "mailto:hultmann@gmail.com");
         break;
 
       case "source":

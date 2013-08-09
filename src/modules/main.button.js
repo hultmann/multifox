@@ -70,10 +70,10 @@ var ProfileAlias = {
 
     switch (profileId) {
       case Profile.DefaultIdentity:
-        return ns.util.getText("button.profile-default.label");
+        return ns.util.getText("button.menuitem.profile.default.label");
 
       case Profile.PrivateIdentity:
-        return ns.util.getText("button.profile-private.label");
+        return ns.util.getText("button.menuitem.profile.private.label");
 
       case Profile.UndefinedIdentity:
         throw new Error("unexpected Profile.UndefinedIdentity");
@@ -84,7 +84,7 @@ var ProfileAlias = {
       return this._alias[profileId];
     }
 
-    return ns.util.getText("button.profile-generic.label", profileId);
+    return ns.util.getText("button.menuitem.profile.extension.label", profileId);
   }
 };
 
