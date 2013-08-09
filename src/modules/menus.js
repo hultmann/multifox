@@ -61,6 +61,10 @@ function appMenu(menu) {
   cmd.setAttribute("accesskey", util.getText("appmenu.new.accesskey"));
   cmd.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+    cmd.setAttribute("disabled", "true");
+    cmd.removeAttribute("command");
+  }
   menu.insertBefore(cmd, position);
 
   var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
@@ -80,6 +84,10 @@ function fileMenu(menu) {
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
   cmd.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+    cmd.setAttribute("disabled", "true");
+    cmd.removeAttribute("command");
+  }
   menu.insertBefore(cmd, position);
 
   var sep = menu.insertBefore(doc.createElement("menuseparator"), position);

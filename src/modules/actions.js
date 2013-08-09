@@ -332,6 +332,10 @@ function menuButtonShowing(menupopup) {
   item.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   item.setAttribute("label", util.getText("button.menuitem.new.label"));
   item.setAttribute("accesskey", util.getText("button.menuitem.new.accesskey"));
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+    item.setAttribute("disabled", "true");
+    item.removeAttribute("command");
+  }
 
   var list = getProfileList();
 
@@ -385,6 +389,10 @@ function appendDefaultItems(menupopup, profileId) {
   item.setAttribute("label", ProfileAlias.format(Profile.DefaultIdentity));
   item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
   item.setAttribute("profile-id", Profile.DefaultIdentity);
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+    item.setAttribute("disabled", "true");
+    item.removeAttribute("command");
+  }
 
   var item2 = menupopup.appendChild(doc.createElement("menuitem"));
   item2.setAttribute("label", ProfileAlias.format(Profile.PrivateIdentity));
@@ -415,6 +423,10 @@ function appendProfileList(menupopup, list, profileId) {
     item.setAttribute("label", ProfileAlias.format(list[idx]));
     item.setAttribute("profile-id", list[idx]);
     item.setAttribute("command", "${CHROME_NAME}:cmd_select_window");
+    if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+      item.setAttribute("disabled", "true");
+      item.removeAttribute("command");
+    }
   }
 }
 
