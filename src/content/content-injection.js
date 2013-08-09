@@ -122,14 +122,23 @@ function initContext(win, doc, sentByChrome, sentByContent) {
 
   // remove unsupported features
 
-  if (win.globalStorage) {
-    delete win.globalStorage; // globalStorage will be removed by bug 687579
-  }
+  Object.defineProperty(win, "indexedDB", {
+    configurable: true,
+    enumerable: true,
+    get: function() {
+      sendCmd({from:"error", cmd:"indexedDB"});
+      return undefined;
+    }
+  });
 
-  if (win.mozIndexedDB) {     // TODO
-    delete win.mozIndexedDB;
-  } else if (win.indexedDB) {
-    delete win.indexedDB;
-  }
+
+  Object.defineProperty(win, "mozIndexedDB", {
+    configurable: true,
+    enumerable: true,
+    get: function() {
+      sendCmd({from:"error", cmd:"indexedDB"});
+      return undefined;
+    }
+  });
 
 }
