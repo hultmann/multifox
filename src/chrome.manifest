@@ -1,7 +1,7 @@
 content   ${EXT_HOST} content/
 
 locale  ${EXT_HOST}  en-US  locale/en-US/
-#locale  ${EXT_HOST}  pt-BR  locale/pt-BR/
+locale  ${EXT_HOST}  pt-BR  locale/pt-BR/
 #locale  ${EXT_HOST}  es-ES  locale/es-ES/
 #locale  ${EXT_HOST}  fr     locale/fr/
 #locale  ${EXT_HOST}  sv-SE  locale/sv-SE/
