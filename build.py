@@ -49,7 +49,7 @@ b.add_locale("sr")
 b.add_text("locale/${locale}/extension.properties")
 b.add_text("locale/${locale}/about-multifox.properties")
 
-b.set_var("EXT_VERSION", "2.0.1pre")
+b.set_var("EXT_VERSION", "2.0.1beta")
 verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
 
 if changeset == None:
