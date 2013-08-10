@@ -34,7 +34,7 @@ var Bootstrap = {
     console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
 
     if (installing) {
-      var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about");
+      var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
 
@@ -462,7 +462,7 @@ const util = {
   },
 
   getText: function(name) {
-    return this._getTextCore(name, "general", arguments, 1);
+    return this._getTextCore(name, "extension", arguments, 1);
   },
 
   getTextFrom: function(name, filename) {

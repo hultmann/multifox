@@ -30,18 +30,19 @@ function populatePage() {
   var items = ["author", "l10n", "source", "legal"];
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
-    var hHtml = ns.util.getTextFrom(id + ".h", "about");
+    var hHtml = ns.util.getTextFrom(id + ".h", "about-multifox");
     var pId = id + ".p";
     var pHtml;
     switch (id) {
       case "author":
-        pHtml = ns.util.getTextFrom(pId, "about", "https://github.com/hultmann/multifox/issues",
-                                                  "https://twitter.com/multifox",
-                                                  "mailto:hultmann@gmail.com");
+        pHtml = ns.util.getTextFrom(pId, "about-multifox",
+                                    "https://github.com/hultmann/multifox/issues",
+                                    "https://twitter.com/multifox",
+                                    "mailto:hultmann@gmail.com");
         break;
 
       case "source":
-        pHtml = ns.util.getTextFrom(pId, "about", "${EXT_NAME}", "${SOURCE_URL}");
+        pHtml = ns.util.getTextFrom(pId, "about-multifox", "${EXT_NAME}", "${SOURCE_URL}");
         break;
 
       case "l10n":
@@ -50,17 +51,17 @@ function populatePage() {
         var localeApp = reg.getSelectedLocale("global");
         var localeExt = reg.getSelectedLocale("${EXT_HOST}");
 
-        hHtml = ns.util.getTextFrom(id + ".h", "about", localeExt);
+        hHtml = ns.util.getTextFrom(id + ".h", "about-multifox", localeExt);
 
         if (hasExtensionLocale(localeApp)) {
-          pHtml = ns.util.getTextFrom(pId, "about").trim();
+          pHtml = ns.util.getTextFrom(pId, "about-multifox").trim();
         } else {
           pHtml = 'Multifox is not yet available in your language (<b>' + localeApp + '</b>). <a href="http://br.mozdev.org/multifox/l10n.html">Please join BabelZilla if you are interested in localizing it!</a>';
         }
         break;
 
       default:
-        pHtml = ns.util.getTextFrom(pId, "about");
+        pHtml = ns.util.getTextFrom(pId, "about-multifox");
         break;
     }
     if (pHtml.length > 0) {

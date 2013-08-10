@@ -46,8 +46,8 @@ b.add_locale("sr")
 """
 
 
-b.add_text("locale/${locale}/general.properties")
-b.add_text("locale/${locale}/about.properties")
+b.add_text("locale/${locale}/extension.properties")
+b.add_text("locale/${locale}/about-multifox.properties")
 
 b.set_var("EXT_VERSION", "2.0.1pre")
 verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
