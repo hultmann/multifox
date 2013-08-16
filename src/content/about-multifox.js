@@ -18,7 +18,7 @@ function populateDescription() {
   var jsm = {};
   Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
   jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
-    document.getElementById("desc").innerHTML = addon.description;
+    document.getElementById("desc").appendChild(document.createTextNode(addon.description));
   });
 }
 
@@ -31,18 +31,25 @@ function populatePage() {
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
     var hHtml = ns.util.getTextFrom(id + ".h", "about-multifox");
-    var pId = id + ".p";
     var pHtml;
+    var attrs = null;
+
     switch (id) {
       case "author":
-        pHtml = ns.util.getTextFrom(pId, "about-multifox",
-                                    "https://github.com/hultmann/multifox/issues",
-                                    "https://twitter.com/multifox",
-                                    "mailto:hultmann@gmail.com");
+        pHtml = ns.util.getTextFrom("author.text", "about-multifox",
+                                    "a1", "/a1",
+                                    "a2", "/a2",
+                                    "a3", "/a3");
+        attrs = {
+          "a1": "https://github.com/hultmann/multifox/issues",
+          "a2": "https://twitter.com/multifox",
+          "a3": "mailto:hultmann@gmail.com"
+        };
         break;
 
       case "source":
-        pHtml = ns.util.getTextFrom(pId, "about-multifox", "${EXT_NAME}", "${SOURCE_URL}");
+        pHtml = ns.util.getTextFrom("source.text", "about-multifox", "${EXT_NAME}", "a1", "/a1");
+        attrs = { "a1": "${SOURCE_URL}" };
         break;
 
       case "l10n":
@@ -54,19 +61,62 @@ function populatePage() {
         hHtml = ns.util.getTextFrom(id + ".h", "about-multifox", localeExt);
 
         if (hasExtensionLocale(localeApp)) {
-          pHtml = ns.util.getTextFrom(pId, "about-multifox").trim();
+          pHtml = ns.util.getTextFrom("l10n.p", "about-multifox").trim();
+          if (pHtml.length === 0) {
+            continue;
+          }
         } else {
-          pHtml = 'Multifox is not yet available in your language (<b>' + localeApp + '</b>). <a href="http://br.mozdev.org/multifox/l10n.html">Please join BabelZilla if you are interested in localizing it!</a>';
+          pHtml = 'Multifox is not yet available in your language (' + localeApp + '). <a1>Please join BabelZilla if you are interested in localizing it!</a1>';
         }
+
+        attrs = {
+          "a1": "http://br.mozdev.org/multifox/l10n.html"
+        };
+        break;
+
+      case "legal":
+        pHtml = ns.util.getTextFrom("legal.p", "about-multifox");
         break;
 
       default:
-        pHtml = ns.util.getTextFrom(pId, "about-multifox");
-        break;
+        throw new Error();
     }
-    if (pHtml.length > 0) {
-      document.getElementById(id + "-h").innerHTML = hHtml;
-      document.getElementById(id + "-p").innerHTML = pHtml;
+
+    // <h2>
+    document.getElementById(id + "-h").appendChild(document.createTextNode(hHtml));
+
+    // <p>
+    var elem = document.getElementById(id + "-p");
+    markupProcessor(pHtml, function(tag, text) {
+      if (tag.length === 0) {
+        elem.appendChild(document.createTextNode(text));
+      } else {
+        var a = elem.appendChild(document.createElement("a"));
+        a.appendChild(document.createTextNode(text));
+        a.setAttribute("href", attrs[tag]);
+      }
+    });
+
+  }
+}
+
+
+function markupProcessor(str, callback) {
+  var lastTag = null;
+  var frags = str.split("<");
+  for (var idx = 0, len = frags.length; idx < len; idx++) {
+    if (!frags[idx].contains(">")) {
+      callback("", frags[idx]);
+      continue;
+    }
+
+    var [tag, text] = frags[idx].split(">", 2);
+    if (tag[0] === "/") {
+      console.assert(("/" + lastTag) === tag, "no matching tag", lastTag, tag);
+      callback("", text);
+    } else {
+      lastTag = tag;
+      callback(tag, text);
     }
   }
 }
