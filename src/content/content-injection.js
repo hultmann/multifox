@@ -5,44 +5,21 @@
 
 "use strict";
 
-function initContext(win, doc, sentByChrome, sentByContent) {
-  function sendCmd(obj) {
-    var evt = doc.createEvent("MessageEvent");
-    evt.initMessageEvent(sentByContent, true, true, JSON.stringify(obj), null, null, null);
-    doc.dispatchEvent(evt);
-  }
+(function() {
 
-  function sendCmdRv(obj) {
-    var rv = null;
-    var hasReply = false;
-    function chromeListener(evt) {
-      hasReply = true;
-      rv = evt.data;
-      evt.stopPropagation();
-    };
-    win.addEventListener(sentByChrome, chromeListener, true);
-    sendCmd(obj); // set rv
-    win.removeEventListener(sentByChrome, chromeListener, true);
-    if (hasReply) {
-      return rv;
-    } else {
-      throw "Return value not received.";
-    }
-  }
-
-  Object.defineProperty(doc, "cookie", {
+  Object.defineProperty(document, "cookie", {
     configurable: true,
     enumerable: true,
     set: function(jsCookie) {
       sendCmd({from:"cookie", cmd:"set", value:jsCookie});
     },
     get: function() {
-      return sendCmdRv({from:"cookie", cmd:"get"});
+      return sendCmd({from:"cookie", cmd:"get"});
     }
   });
 
 
-  Object.defineProperty(win, "localStorage", {
+  Object.defineProperty(window, "localStorage", {
     configurable: true,
     enumerable: true,
     get: function() {
@@ -55,9 +32,9 @@ function initContext(win, doc, sentByChrome, sentByContent) {
         setItem: function(k, v) {setItemCore(k, v);},
         removeItem: function(k) {sendCmd({from:"localStorage", cmd:"removeItem", key:k});},
         clear: function() {      sendCmd({from:"localStorage", cmd:"clear"});},
-        getItem: function(k) {return sendCmdRv({from:"localStorage", cmd:"getItem", key:k});},
-        key: function(idx) {  return sendCmdRv({from:"localStorage", cmd:"key", index:idx});},
-        get length() {        return sendCmdRv({from:"localStorage", cmd:"length"});},
+        getItem: function(k) {return sendCmd({from:"localStorage", cmd:"getItem", key:k});},
+        key: function(idx) {  return sendCmd({from:"localStorage", cmd:"key", index:idx});},
+        get length() {        return sendCmd({from:"localStorage", cmd:"length"});},
 
         toString: function() { return "[object Storage]"; }
       };
@@ -93,7 +70,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
         get: function(receiver, key) { // var a = localStorage.foo
           return Storage.hasOwnProperty(key)
             ? Storage[key]
-            : sendCmdRv({from:"localStorage", cmd:"getItem", key:key});
+            : sendCmd({from:"localStorage", cmd:"getItem", key:key});
         },
 
         set: function(receiver, key, val) { // localStorage.foo = 1
@@ -107,7 +84,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
         }
       });
 
-      Object.defineProperty(win, "localStorage", {
+      Object.defineProperty(window, "localStorage", {
         configurable: true,
         enumerable: true,
         get: function() {
@@ -122,7 +99,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
 
   // remove unsupported features
 
-  Object.defineProperty(win, "indexedDB", {
+  Object.defineProperty(window, "indexedDB", {
     configurable: true,
     enumerable: true,
     get: function() {
@@ -132,7 +109,7 @@ function initContext(win, doc, sentByChrome, sentByContent) {
   });
 
 
-  Object.defineProperty(win, "mozIndexedDB", {
+  Object.defineProperty(window, "mozIndexedDB", {
     configurable: true,
     enumerable: true,
     get: function() {
@@ -141,4 +118,4 @@ function initContext(win, doc, sentByChrome, sentByContent) {
     }
   });
 
-}
+})();

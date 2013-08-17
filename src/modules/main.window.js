@@ -30,9 +30,6 @@ const BrowserWindow = {
       Cookies.start();
     }
 
-
-    win.addEventListener(DocStartScriptInjection.eventSentByContent, onContentEvent, false, true);
-
     // some MultifoxContentEvent_* listeners are not called when
     // there are "unload" listeners with useCapture=true. o_O
     // But they are called if event listener is an anonymous function.
@@ -52,7 +49,6 @@ const BrowserWindow = {
       return; // nothing to unregister
     }
 
-    win.removeEventListener(DocStartScriptInjection.eventSentByContent, onContentEvent, false);
     win.removeEventListener("unload", onUnloadChromeWindow, false);
     win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
@@ -93,37 +89,4 @@ function onUnloadChromeWindow(evt) {
 function tabSelected(evt) {
   var tab = evt.originalTarget;
   ErrorHandler.updateButtonAsync(tab.linkedBrowser);
-}
-
-
-function onContentEvent(evt) {
-  evt.stopPropagation();
-
-  var obj = JSON.parse(evt.data);
-  var contentDoc = evt.target;
-  var rv;
-
-  switch (obj.from) {
-    case "cookie":
-      rv = documentCookie(obj, contentDoc);
-      break;
-    case "localStorage":
-      rv = windowLocalStorage(obj, contentDoc);
-      break;
-    case "error":
-      ErrorHandler.addScriptError(contentDoc.defaultView, obj.cmd, "-");
-      break;
-    default:
-      throw obj.from;
-  }
-
-  if (rv === undefined) {
-    // no response
-    return;
-  }
-
-  // send data to content
-  var evt2 = contentDoc.createEvent("MessageEvent");
-  evt2.initMessageEvent(DocStartScriptInjection.eventSentByChrome, false, false, rv, null, null, null);
-  var success = contentDoc.dispatchEvent(evt2);
 }

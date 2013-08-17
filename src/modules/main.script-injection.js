@@ -8,15 +8,11 @@
 var DocStartScriptInjection = {
 
   _innerWindows: Object.create(null),
-  _sentByChrome: null,
-  _sentByContent: null,
   _loader: null,
 
 
   init: function() {
     console.assert(this._loader === null, "this._loader is already initialized");
-    this._sentByChrome  = "multifox-chrome_event-"  + Math.random().toString(36).substr(2);
-    this._sentByContent = "multifox-content_event-" + Math.random().toString(36).substr(2);
     this._loader = new ScriptSourceLoader();
     Services.obs.addObserver(this, "document-element-inserted", false);
     Services.obs.addObserver(this._onInnerDestroyed, "inner-window-destroyed", false);
@@ -62,14 +58,6 @@ var DocStartScriptInjection = {
     }
   },
 
-  get eventSentByChrome() {
-    return this._sentByChrome;
-  },
-
-  get eventSentByContent() {
-    return this._sentByContent;
-  },
-
 
   _onInnerDestroyed: {
     observe: function(subject, topic, data) {
@@ -106,15 +94,22 @@ var DocStartScriptInjection = {
         return;
     }
 
-    var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-content"});
+    var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-sandbox", wantComponents:false});
     sandbox.window = XPCNativeWrapper.unwrap(win);
     sandbox.document = XPCNativeWrapper.unwrap(win.document);
+    sandbox.sendCmd = function(obj) {
+      return cmdContent(obj, win.document);
+    };
 
     var src = this._loader.getScript();
     try {
+      // A sandbox is necessary for a proper localStorage emulation.
+      // Without a sandbox, localStorage would need to return a
+      // __exposedProps__ object declaring all property names.
+      // The property names are actually defined by web pages.
       Cu.evalInSandbox(src, sandbox);
     } catch (ex) {
-      ErrorHandler.addScriptError(win, "sandbox", subject.documentURI + " " + "//exception=" + ex);
+      ErrorHandler.addScriptError(win, "sandbox", win.document.documentURI + " " + "//exception=" + ex);
       Cu.nukeSandbox(sandbox);
       return;
     }
@@ -126,6 +121,24 @@ var DocStartScriptInjection = {
     this._innerWindows[innerId] = sandbox;
   }
 };
+
+
+function cmdContent(obj, contentDoc) {
+  var rv = null;
+  switch (obj.from) {
+    case "cookie":
+      return documentCookie(obj, contentDoc);
+      break;
+    case "localStorage":
+      return windowLocalStorage(obj, contentDoc);
+      break;
+    case "error":
+      ErrorHandler.addScriptError(contentDoc.defaultView, obj.cmd, "-");
+      break;
+    default:
+      throw obj.from;
+  }
+}
 
 
 function ScriptSourceLoader() {
@@ -147,8 +160,7 @@ ScriptSourceLoader.prototype = {
     var me = this;
     var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
     xhr.onload = function() {
-      me._src = xhr.responseText + "initContext(window, document, '"
-                                 + DocStartScriptInjection.eventSentByChrome + "','" + DocStartScriptInjection.eventSentByContent + "');";
+      me._src = xhr.responseText;
     };
     xhr.open("GET", "${PATH_CONTENT}/content-injection.js", async);
     xhr.overrideMimeType("text/plain");
