@@ -124,7 +124,6 @@ var DocStartScriptInjection = {
 
 
 function cmdContent(obj, contentDoc) {
-  var rv = null;
   switch (obj.from) {
     case "cookie":
       return documentCookie(obj, contentDoc);

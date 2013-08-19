@@ -59,6 +59,8 @@ const httpListeners = {
         return;
       }
 
+      // BUG cookies from multipart responses are lost
+
       var setCookies = myHeaders["set-cookie"];
       if (setCookies === null) {
         return;
