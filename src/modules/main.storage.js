@@ -15,24 +15,30 @@ function windowLocalStorage(obj, contentDoc) {
   var originalUri = stringToUri(contentDoc.location.href);
   var uri = toInternalUri(originalUri, profileId);
   var principal = Services.scriptSecurityManager.getNoAppCodebasePrincipal(uri);
-
-  var storage;
-  if ("createStorage" in Services.domStorageManager) {
-    storage = Services.domStorageManager.createStorage(principal, "");
-  } else {
-    storage = Services.domStorageManager.getLocalStorageForPrincipal(principal, "");
-  }
-
+  var storage = Services.domStorageManager.createStorage(principal, ""); // nsIDOMStorage
 
   var rv = undefined;
+  var oldVal;
+  var eventData = null;
   switch (obj.cmd) {
     case "clear":
+      if (storage.length > 0) {
+        eventData = ["", null, null];
+      }
       storage.clear();
       break;
     case "removeItem":
+      oldVal = storage.getItem(obj.key);
+      if (oldVal !== null) {
+        eventData = [obj.key, oldVal, null];
+      }
       storage.removeItem(obj.key);
       break;
     case "setItem":
+      oldVal = storage.getItem(obj.key);
+      if (oldVal !== obj.val) {
+        eventData = [obj.key, oldVal, obj.val];
+      }
       storage.setItem(obj.key, obj.val); // BUG it's ignoring https
       break;
     case "getItem":
@@ -45,11 +51,52 @@ function windowLocalStorage(obj, contentDoc) {
       rv = storage.length;
       break;
     default:
-      throw "localStorage interface unknown: " + obj.cmd;
+      throw new Error("localStorage interface unknown: " + obj.cmd);
+  }
+
+  if (eventData !== null) {
+    dispatchStorageEvent(eventData, profileId, contentDoc.defaultView);
   }
 
   console.log("localStorage", uri.spec, obj.cmd, obj.key, typeof rv);
   return rv;
+}
+
+
+
+function dispatchStorageEvent(data, profileId, srcWin) {
+
+  function forEachWindow(fn, win) {
+    fn(win);
+    for (var idx = win.length - 1; idx > -1; idx--) {
+      forEachWindow(fn, win[idx]);
+    }
+  }
+
+  function dispatchStorage(win) {
+    if ((win.location.origin === _origin) && (srcWin !== win)) {
+      if (_evt === null) {
+        _evt = srcWin.document.createEvent("StorageEvent");
+        _evt.initStorageEvent("storage", false, false, data[0], data[1], data[2], srcWin.location.href, null);
+      }
+      win.dispatchEvent(_evt);
+    }
+  }
+
+  var _origin = srcWin.location.origin;
+  var _evt = null;
+
+  var enumWin = Services.wm.getEnumerator("navigator:browser");
+  while (enumWin.hasMoreElements()) {
+    var win = enumWin.getNext();
+    if (Profile.getIdentity(win) === profileId) {
+      var tabList = win.getBrowser().tabs; // <tab> NodeList
+      for (var idx = tabList.length - 1; idx > -1; idx--) {
+        forEachWindow(dispatchStorage, tabList[idx].linkedBrowser.contentWindow);
+      }
+    }
+  }
+
 }
 
 
