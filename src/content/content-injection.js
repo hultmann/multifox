@@ -24,12 +24,8 @@
     enumerable: true,
     get: function() {
 
-      function setItemCore(k, v) {
-        sendCmd({from:"localStorage", cmd:"setItem", key:k, val:v});
-      }
-
-      const Storage = {
-        setItem: function(k, v) {setItemCore(k, v);},
+      var Storage = {
+        setItem: function(k, v) {sendCmd({from:"localStorage", cmd:"setItem", key:k, val:v});},
         removeItem: function(k) {sendCmd({from:"localStorage", cmd:"removeItem", key:k});},
         clear: function() {      sendCmd({from:"localStorage", cmd:"clear"});},
         getItem: function(k) {return sendCmd({from:"localStorage", cmd:"getItem", key:k});},
@@ -42,7 +38,7 @@
       var proxy = Proxy.create({
 
         enumerate: function() { // for (var k in localStorage) {}
-          return this.getOwnPropertyNames();
+          return this.keys();
         },
 
         getPropertyDescriptor: function(key) { // "foo" in localStorage
@@ -60,6 +56,10 @@
         },
 
         getOwnPropertyNames: function() { // Object.getOwnPropertyNames(localStorage);
+          return this.keys();
+        },
+
+        keys: function() { // Object.keys(localStorage);
           var rv = new Array(Storage.length);
           for (var idx = rv.length - 1; idx > -1; idx--) {
             rv[idx] = Storage.key(idx);
@@ -68,13 +68,11 @@
         },
 
         get: function(receiver, key) { // var a = localStorage.foo
-          return Storage.hasOwnProperty(key)
-            ? Storage[key]
-            : sendCmd({from:"localStorage", cmd:"getItem", key:key});
+          return Storage.hasOwnProperty(key) ? Storage[key] : Storage.getItem(key);
         },
 
         set: function(receiver, key, val) { // localStorage.foo = 1
-          setItemCore(key, val);
+          Storage.setItem(key, val);
           return true;
         },
 
