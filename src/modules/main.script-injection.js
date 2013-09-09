@@ -50,10 +50,10 @@ var DocStartScriptInjection = {
       if (Profile.isNativeProfile(Profile.getIdentity(win))) {
         continue;
       }
-      var tabbrowser = win.getBrowser();
-      for (var idx = tabbrowser.length - 1; idx > -1; idx--) {
+      var all = win.getBrowser().browsers;
+      for (var idx = all.length - 1; idx > -1; idx--) {
         this._forEachWindow(DocStartScriptInjection._initWindow,
-                            tabbrowser.browsers[idx].contentWindow);
+                            all[idx].contentWindow);
       }
     }
   },
@@ -101,7 +101,8 @@ var DocStartScriptInjection = {
       return cmdContent(obj, win.document);
     };
 
-    var src = this._loader.getScript();
+    var me = DocStartScriptInjection;
+    var src = me._loader.getScript();
     try {
       // A sandbox is necessary for a proper localStorage emulation.
       // Without a sandbox, localStorage would need to return a
@@ -117,8 +118,8 @@ var DocStartScriptInjection = {
     // keep a reference to Cu.nukeSandbox (Cu.getWeakReference won't work for that)
     var innerId = win.QueryInterface(Ci.nsIInterfaceRequestor)
                      .getInterface(Ci.nsIDOMWindowUtils).currentInnerWindowID.toString();
-    console.assert((innerId in this._innerWindows) === false, "dupe sandbox @", innerId)
-    this._innerWindows[innerId] = sandbox;
+    console.assert((innerId in me._innerWindows) === false, "dupe sandbox @", innerId)
+    me._innerWindows[innerId] = sandbox;
   }
 };
 
