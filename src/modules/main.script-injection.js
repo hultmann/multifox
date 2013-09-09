@@ -32,6 +32,13 @@ var DocStartScriptInjection = {
     for (var id in innerWindows) {
       var sandbox = innerWindows[id];
       console.assert(sandbox !== null, "sandbox cannot be null", id);
+
+      // avoid "can't access dead object" errors
+      delete sandbox.document.cookie;
+      delete sandbox.window.localStorage;
+      delete sandbox.window.indexedDB;
+      delete sandbox.window.mozIndexedDB;
+
       Cu.nukeSandbox(sandbox);
     }
   },
