@@ -36,14 +36,11 @@ b.add_text("modules/actions.js")
 
 b.add_locale("en-US")
 b.add_locale("pt-BR")
-"""
-b.add_locale("es-ES")
-b.add_locale("fr")
 b.add_locale("sv-SE")
 b.add_locale("zh-CN")
 b.add_locale("zh-TW")
 b.add_locale("sr")
-"""
+b.add_locale("pl")
 
 
 b.add_text("locale/${locale}/extension.properties")
