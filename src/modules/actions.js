@@ -32,7 +32,6 @@ function xulCommand(evt) {
       break;
     case "${CHROME_NAME}:cmd_set_profile_window":
       Profile.defineIdentity(win, getProfileIdFromMenuItem(evt));
-      updateButton(win);
       break;
     case "${CHROME_NAME}:cmd_select_window":
       selectProfileWindow(win, evt);
@@ -52,13 +51,6 @@ function getProfileIdFromMenuItem(evt) {
 }
 
 
-function getOuterWinId(win) {
-  return win.QueryInterface(Ci.nsIInterfaceRequestor)
-            .getInterface(Ci.nsIDOMWindowUtils)
-            .outerWindowID;
-}
-
-
 function selectProfileWindow(win, evt) {
   var newProfileId = getProfileIdFromMenuItem(evt);
   var arr = getProfileWindows(newProfileId);
@@ -74,7 +66,7 @@ function selectProfileWindow(win, evt) {
   }
 
   // focus next window
-  var idx = arr.indexOf(getOuterWinId(win)) + 1;
+  var idx = arr.indexOf(util.getOuterId(win)) + 1;
   if (idx > (arr.length - 1)) {
     idx = 0;
   }
@@ -89,7 +81,7 @@ function getProfileWindows(profileId) {
   while (enumWin.hasMoreElements()) {
     var win = enumWin.getNext();
     if (Profile.getIdentity(win) === profileId) {
-      arr.push(getOuterWinId(win));
+      arr.push(util.getOuterId(win));
     }
   }
 
@@ -115,7 +107,8 @@ function renameProfilePrompt(win, profileId) {
   while (enumWin.hasMoreElements()) {
     var win2 = enumWin.getNext();
     if (Profile.getIdentity(win2) === profileId) {
-      updateButton(win2);
+      var winId = util.getOuterId(win2).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
     }
   }
 }

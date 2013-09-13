@@ -68,7 +68,6 @@ const NewWindow = {
                     .getService(Ci.nsISessionStore)
                     .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
     Profile.defineIdentity(win, Profile.toInt(stringId));
-    updateButton(win);
   },
 
   _shouldBeDefault: function(win) {
@@ -138,7 +137,6 @@ const Profile = {
 
     if (tabbrowser.hasAttribute("${BASE_DOM_ID}-identity-id")) {
       var profileId = this.toInt(tabbrowser.getAttribute("${BASE_DOM_ID}-identity-id"));
-      console.assert(Profile.isExtensionProfile(profileId), "profileId expected", profileId);
       return profileId;
     } else {
       return PrivateBrowsingUtils.isWindowPrivate(chromeWin) ? Profile.PrivateIdentity
@@ -149,12 +147,19 @@ const Profile = {
   _save: function(win, id) {
     console.log("save " + id);
     var node = win.getBrowser();
-    if (this.isExtensionProfile(id)) {
-      node.setAttribute("${BASE_DOM_ID}-identity-id", id);
+    if (id !== Profile.DefaultIdentity) {
+      node.setAttribute("${BASE_DOM_ID}-identity-id", id); // UndefinedIdentity or profile
     } else {
       node.removeAttribute("${BASE_DOM_ID}-identity-id");
     }
     new SaveToSessionStore(win.document);
+
+    win.requestAnimationFrame(function() {
+      var ns = {}; // BUG util is undefined???
+      Cu.import("${PATH_MODULE}/new-window.js", ns);
+      var winId = ns.util.getOuterId(win).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+    });
   },
 
   activeIdentities: function(ignoreWin) {

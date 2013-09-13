@@ -40,6 +40,8 @@ var Bootstrap = {
 
     m_docObserver = new DocObserver();
 
+    Services.obs.addObserver(UpdateUI, "${BASE_DOM_ID}-id-changed", false);
+
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
       forEachChromeWindow(addOverlay, enumWin.getNext());
@@ -68,6 +70,7 @@ var Bootstrap = {
   },
 
   extensionShutdown: function() {
+    Services.obs.removeObserver("${BASE_DOM_ID}-id-changed", UpdateUI);
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
     var enumWin = Services.wm.getEnumerator(null);
@@ -100,6 +103,14 @@ function forEachChromeWindow(fn, win) {
     for (var idx = win.length - 1; idx > -1; idx--) {
       forEachChromeWindow(fn, win[idx]);
     }
+  }
+}
+
+
+var UpdateUI = {
+  observe: function(subject, topic, data) {
+    var win = Services.wm.getOuterWindowWithId(parseInt(data, 10));
+    updateButton(win);
   }
 }
 
@@ -459,6 +470,12 @@ const util = {
     var str = Cc["@mozilla.org/supports-string;1"].createInstance(CiS);
     str.data = val;
     Services.prefs.getBranch("extensions.${EXT_ID}.").setComplexValue(name, CiS, str);
+  },
+
+  getOuterId: function(win) {
+    return win.QueryInterface(Ci.nsIInterfaceRequestor)
+              .getInterface(Ci.nsIDOMWindowUtils)
+              .outerWindowID;
   },
 
   getText: function(name) {
