@@ -34,6 +34,7 @@ var Bootstrap = {
     console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
 
     if (installing) {
+      this._firstRun = true;
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -55,8 +56,12 @@ var Bootstrap = {
     this._incompatibilityCheck();
   },
 
+  get firstRun() {
+    return this._firstRun;
+  },
 
   _timer: null,
+  _firstRun: false,
 
   _incompatibilityCheck: function() {
     this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);

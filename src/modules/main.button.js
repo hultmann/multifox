@@ -142,6 +142,12 @@ function insertButton(doc) {
   }
 
   // add it to default position
+  var ns = {};
+  Cu.import("${PATH_MODULE}/new-window.js", ns); // BUG Bootstrap is undefined
+  if (ns.Bootstrap.firstRun === false) {
+    return;
+  }
+
   toolbar = doc.getElementById("nav-bar");
   toolbar.insertItem(buttonId);
   updateButton(doc.defaultView);
@@ -157,7 +163,7 @@ function createButtonElem(doc, buttonId) {
   button.setAttribute("type", "menu");
   button.setAttribute("class", "bookmark-item"); // show label beside its icon
   button.setAttribute("style", "list-style-image:url(${PATH_CONTENT}/favicon.ico);-moz-image-region:auto");
-  button.setAttribute("label", "");
+  button.setAttribute("label", "${EXT_NAME}");
   button.setAttribute("tooltiptext", "${EXT_NAME}");
   var menupopup = button.appendChild(doc.createElement("menupopup"));
   menupopup.addEventListener("popupshowing", onMenuPopupShowing, false);
