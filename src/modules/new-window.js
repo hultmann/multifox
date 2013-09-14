@@ -130,7 +130,6 @@ DocObserver.prototype = {
     Services.obs.removeObserver(this, "chrome-document-global-created");
   },
 
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(win, topic, data) {
     // win.location=about:blank
     win.addEventListener("DOMContentLoaded", onDOMContentLoaded, false);

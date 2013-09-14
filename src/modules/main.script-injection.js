@@ -74,7 +74,6 @@ var DocStartScriptInjection = {
   },
 
 
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
   observe: function(subject, topic, data) {
     var win = subject.defaultView;
     if (win !== null) { // xsl/xbl

@@ -5,8 +5,6 @@
 
 const httpListeners = {
   request: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
@@ -37,8 +35,6 @@ const httpListeners = {
   },
 
   response: {
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-
     // nsIObserver
     observe: function(aSubject, aTopic, aData) {
       var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
