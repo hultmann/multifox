@@ -29,12 +29,12 @@ var m_docObserver = null;
 
 var Bootstrap = {
 
-  extensionStartup: function(installing) {
+  extensionStartup: function(firstRun, reinstall) {
     console.assert(m_docObserver === null, "m_docObserver should be null");
     console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
 
-    if (installing) {
-      this._firstRun = true;
+    if (firstRun || reinstall) {
+      this._firstRun = firstRun;
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -75,7 +75,7 @@ var Bootstrap = {
   },
 
   extensionShutdown: function() {
-    Services.obs.removeObserver("${BASE_DOM_ID}-id-changed", UpdateUI);
+    Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
     var enumWin = Services.wm.getEnumerator(null);
