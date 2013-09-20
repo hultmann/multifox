@@ -33,8 +33,13 @@ var Bootstrap = {
     console.assert(m_docObserver === null, "m_docObserver should be null");
     console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
 
+    var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
+    if (prefs.prefHasUserValue("button-added") === false) {
+      prefs.setBoolPref("button-added", true);
+      this._showButtonByDefault = true;
+    }
+
     if (firstRun || reinstall) {
-      this._firstRun = firstRun;
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -56,12 +61,12 @@ var Bootstrap = {
     this._incompatibilityCheck();
   },
 
-  get firstRun() {
-    return this._firstRun;
+  get showButtonByDefault() {
+    return this._showButtonByDefault;
   },
 
   _timer: null,
-  _firstRun: false,
+  _showButtonByDefault: false,
 
   _incompatibilityCheck: function() {
     this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);

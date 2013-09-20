@@ -144,7 +144,7 @@ function insertButton(doc) {
   // add it to default position
   var ns = {};
   Cu.import("${PATH_MODULE}/new-window.js", ns); // BUG Bootstrap is undefined
-  if (ns.Bootstrap.firstRun === false) {
+  if (ns.Bootstrap.showButtonByDefault === false) {
     return;
   }
 
