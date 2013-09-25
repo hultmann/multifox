@@ -133,11 +133,14 @@ function insertButton(doc) {
      .palette.appendChild(createButtonElem(doc, buttonId));
 
   // add it to <toolbar>
-  var toolbar = findButtonLocation(doc, buttonId);
+  var toolbar = ButtonPersistence.findToolbar(doc, buttonId);
   if (toolbar != null) {
-    var button0 = getPrecedingButton(toolbar, buttonId);
+    if (fixToolbarBug(toolbar)) {
+      return;
+    }
+
+    var button0 = ButtonPersistence.getPrecedingButton(toolbar, buttonId);
     toolbar.insertItem(buttonId, button0, null, false);
-    updateButton(doc.defaultView);
     return;
   }
 
@@ -145,14 +148,34 @@ function insertButton(doc) {
   var ns = {};
   Cu.import("${PATH_MODULE}/new-window.js", ns); // BUG Bootstrap is undefined
   if (ns.Bootstrap.showButtonByDefault === false) {
-    return;
+    return; // keep button hidden
   }
 
   toolbar = doc.getElementById("nav-bar");
   toolbar.insertItem(buttonId);
-  updateButton(doc.defaultView);
+  ButtonPersistence.saveToolbar(toolbar);
+}
 
-  saveButtonSet(toolbar, toolbar.getAttribute("currentset") + "," + buttonId);
+
+// bug introduced in version 2.0.0...2.0.5
+function fixToolbarBug(toolbar) {
+  if (toolbar.id !== "nav-bar") {
+    return false;
+  }
+  if (toolbar.getAttribute("currentset") !== ",multifox-button") {
+    return false;
+  }
+
+  toolbar.setAttribute("currentset", "");
+  var doc = toolbar.ownerDocument;
+  doc.persist(toolbar.id, "currentset");
+
+  var ns = {};
+  Cu.import("${PATH_MODULE}/new-window.js", ns);
+  ns.Bootstrap.resetButton();
+
+  doc.getElementById("cmd_newNavigator").doCommand();
+  return true;
 }
 
 
@@ -171,55 +194,55 @@ function createButtonElem(doc, buttonId) {
 }
 
 
-function saveButtonSet(toolbar, newSet) {
-  toolbar.setAttribute("currentset", newSet);
-  toolbar.ownerDocument.persist(toolbar.id, "currentset");
-}
+var ButtonPersistence = {
+  saveToolbar: function(toolbar) {
+    toolbar.setAttribute("currentset", toolbar.currentSet);
+    toolbar.ownerDocument.persist(toolbar.id, "currentset");
+  },
 
-
-function removeFromButtonSet() {
-  var buttonId = "${CHROME_NAME}-button";
-  var enumWin = Services.wm.getEnumerator("navigator:browser");
-  while (enumWin.hasMoreElements()) {
-    var doc = enumWin.getNext().document;
-    var toolbar = findButtonLocation(doc, buttonId);
-    if (toolbar === null) {
-      continue;
+  removeButton: function(buttonId) {
+    var enumWin = Services.wm.getEnumerator("navigator:browser");
+    while (enumWin.hasMoreElements()) {
+      var doc = enumWin.getNext().document;
+      var toolbar = ButtonPersistence.findToolbar(doc, buttonId);
+      if (toolbar !== null) {
+        ButtonPersistence.saveToolbar(toolbar);
+      }
     }
-    var all = toolbar.getAttribute("currentset").split(",");
-    var removed = all.splice(all.indexOf(buttonId), 1);
-    console.assert(removed.length > 0, "button not found");
-    saveButtonSet(toolbar, all.join(","));
-  }
-}
+  },
 
-
-function findButtonLocation(doc, buttonId) {
-  var bars = doc.getElementsByTagName("toolbar");
-  for (var idx = bars.length - 1; idx > -1; idx--) {
-    var all = bars[idx].getAttribute("currentset").split(",");
-    if (all.indexOf(buttonId) > -1) {
-      return bars[idx];
+  findToolbar: function(doc, buttonId) {
+    var bars = doc.getElementsByTagName("toolbar");
+    for (var idx = bars.length - 1; idx > -1; idx--) {
+      var all = ButtonPersistence._getToolbarButtons(bars[idx]);
+      if (all.indexOf(buttonId) > -1) {
+        return bars[idx];
+      }
     }
-  }
-  return null;
-}
+    return null;
+  },
 
-
-function getPrecedingButton(toolbar, id) {
-  var all = toolbar.getAttribute("currentset").split(",");
-  var idxButton = all.indexOf(id);
-  if (idxButton === -1) {
-    throw new Error("button not found @ " + toolbar.id);
-  }
-  var doc = toolbar.ownerDocument;
-  for (var idx = idxButton + 1, len = all.length; idx < len; idx++) {
-    var beforeNode = doc.getElementById(all[idx]);
-    if (beforeNode !== null) {
-      return beforeNode;
+  getPrecedingButton: function(toolbar, id) {
+    var all = ButtonPersistence._getToolbarButtons(toolbar);
+    var idxButton = all.indexOf(id);
+    if (idxButton === -1) {
+      throw new Error("button not found @ " + toolbar.id);
     }
+    var doc = toolbar.ownerDocument;
+    for (var idx = idxButton + 1, len = all.length; idx < len; idx++) {
+      var beforeNode = doc.getElementById(all[idx]);
+      if (beforeNode !== null) {
+        return beforeNode;
+      }
+    }
+    return null;
+  },
+
+  _getToolbarButtons: function(toolbar) {
+    // it may be empty
+    return toolbar.getAttribute("currentset").split(",");
   }
-}
+};
 
 
 function destroyButton(doc) {
@@ -236,7 +259,7 @@ function destroyButton(doc) {
     var menu = button.firstChild;
     console.assert(menu.tagName === "menupopup", "wrong element: " + menu.tagName)
     menu.removeEventListener("popupshowing", onMenuPopupShowing, false);
-    button.parentNode.removeChild(button);
+    button.parentNode.removeChild(button); // button position is persisted until uninstall
   }
 }
 

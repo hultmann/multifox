@@ -5,7 +5,7 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
-                        "insertButton", "destroyButton", "updateButton", "removeFromButtonSet", "ProfileAlias",
+                        "insertButton", "destroyButton", "updateButton", "ButtonPersistence", "ProfileAlias",
                         "ErrorHandler", "ExtCompat",
                         "cookieInternalDomain", // migrateCookies
                         "Profile"

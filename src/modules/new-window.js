@@ -65,6 +65,14 @@ var Bootstrap = {
     return this._showButtonByDefault;
   },
 
+  resetButton: function() {
+    var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
+    if (prefs.prefHasUserValue("button-added") === false) {
+      prefs.clearUserPref("button-added");
+    }
+    this._showButtonByDefault = true;
+  },
+
   _timer: null,
   _showButtonByDefault: false,
 
@@ -254,6 +262,7 @@ const BrowserOverlay = {
 
     // insert into toolbar
     insertButton(doc);
+    updateButton(doc.defaultView);
   },
 
 
