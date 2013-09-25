@@ -110,10 +110,8 @@ var DocStartScriptInjection = {
     var me = DocStartScriptInjection;
     var src = me._loader.getScript();
     try {
-      // A sandbox is necessary for a proper localStorage emulation.
-      // Without a sandbox, localStorage would need to return a
-      // __exposedProps__ object declaring all property names.
-      // The property names are actually defined by web pages.
+      // window.localStorage will be replaced by a Proxy object.
+      // It seems it's only possible using a sandbox.
       Cu.evalInSandbox(src, sandbox);
     } catch (ex) {
       ErrorHandler.addScriptError(win, "sandbox", win.document.documentURI + " " + "//exception=" + ex);

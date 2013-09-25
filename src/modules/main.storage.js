@@ -58,7 +58,6 @@ function windowLocalStorage(obj, contentDoc) {
     dispatchStorageEvent(eventData, profileId, contentDoc.defaultView);
   }
 
-  console.log("localStorage", uri.spec, obj.cmd, obj.key, typeof rv);
   return rv;
 }
 
