@@ -25,9 +25,9 @@ const BrowserWindow = {
       nsActions.migrateCookies();
 
 
-      ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);
-      DocStartScriptInjection.init();
       Cookies.start();
+      DocStartScriptInjection.init();
+      ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);
     }
 
     // some MultifoxContentEvent_* listeners are not called when
