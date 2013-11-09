@@ -313,23 +313,33 @@ const FindIdentity = {
 
 const ContentWindow = {
   getContainerElement: function(contentWin) {
-    var chromeWin = this.getTopLevelWindow(contentWin);
-    if ((chromeWin !== null) && ("getBrowser" in chromeWin)) {
-      var elem = chromeWin.getBrowser();
-      switch (elem.tagName) {
-        case "tabbrowser":
-          var topDoc = contentWin.top.document;
-          var idx = elem.getBrowserIndexForDocument(topDoc);
-          if (idx > -1) {
-            return elem.browsers[idx];
-          }
-          break;
-        default: // view-source => tagName="browser"
-          console.log("getContainerElement=" + elem.tagName + " " +
-                      contentWin.location + " " +chromeWin.location);
-          break;
-      }
+    var browser = this.getParentBrowser(contentWin);
+    if (browser === null) {
+      return null;
     }
+    // browser.xul has browser elements all over the place
+    var t = browser.getAttribute("type");
+    return ((t === "content-targetable") || (t === "content-primary"))
+           ? browser : null;
+  },
+
+
+  getParentBrowser: function(win) {
+    var browser = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                     .getInterface(Ci.nsIWebNavigation)
+                     .QueryInterface(Ci.nsIDocShell)
+                     .chromeEventHandler;
+    if (browser === null) {
+      return null;
+    }
+    if (browser.tagName === "xul:browser") {
+      return browser;
+    }
+    if (browser.tagName === "browser") {
+      return browser;
+    }
+    // e.g. <iframe> chrome://browser/content/devtools/cssruleview.xhtml
+    console.log("not a browser element", browser.tagName, win, win.parent);
     return null;
   },
 
