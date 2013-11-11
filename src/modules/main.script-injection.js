@@ -132,13 +132,11 @@ function cmdContent(obj, contentDoc) {
   switch (obj.from) {
     case "cookie":
       return documentCookie(obj, contentDoc);
-      break;
     case "localStorage":
       return windowLocalStorage(obj, contentDoc);
-      break;
     case "error":
       ErrorHandler.addScriptError(contentDoc.defaultView, obj.cmd, "-");
-      break;
+      return undefined;
     default:
       throw obj.from;
   }

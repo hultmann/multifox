@@ -7,6 +7,15 @@
 
 (function() {
 
+  window.addEventListener("storage", function(evt) {
+    // storageArea=>initStorageEvent(storageAreaArg)
+    if ((evt.storageArea !== null) && (evt.storageArea.toString() === "[object Storage]")) {
+      // do not leak storage events from default profile to Multifox documents
+      evt.stopImmediatePropagation();
+    }
+  }, true);
+
+
   Object.defineProperty(document, "cookie", {
     configurable: true,
     enumerable: true,

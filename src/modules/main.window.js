@@ -35,9 +35,6 @@ const BrowserWindow = {
     // But they are called if event listener is an anonymous function.
     win.addEventListener("unload", onUnloadChromeWindow, false);
 
-    // suppress storage event
-    win.getBrowser().addEventListener("storage", onStorageEvent, true);
-
     // update icon status
     win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
   },
@@ -53,7 +50,6 @@ const BrowserWindow = {
     }
 
     win.removeEventListener("unload", onUnloadChromeWindow, false);
-    win.getBrowser().removeEventListener("storage", onStorageEvent, true);
     win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
 
     var ns = {}; // BUG util is undefined???
@@ -87,16 +83,6 @@ const BrowserWindow = {
 function onUnloadChromeWindow(evt) {
   var win = evt.currentTarget;
   BrowserWindow.unregister(win);
-}
-
-
-function onStorageEvent(evt) {
-  // this is a way to differentiate between a "native"
-  // event and a StorageEvent dispatched by Multifox
-  if (evt.storageArea.toString() === "[object Storage]") {
-    // do not leak storage events from default profile to Multifox documents
-    evt.stopImmediatePropagation();
-  }
 }
 
 
