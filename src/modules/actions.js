@@ -171,7 +171,11 @@ function showError(win) {
       msg = util.getText("icon.error-panel.sandbox.label", "${EXT_NAME}");
       break;
     default:
-      msg = ErrorHandler.getCurrentError(doc);
+      if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+        msg = '${EXT_NAME} won\'t work if "Never remember history" or "Always use private browsing mode" are enabled (Options>Privacy).';
+      } else {
+        msg = ErrorHandler.getCurrentError(doc);
+      }
       break;
   }
 
@@ -353,9 +357,9 @@ function menuButtonShowing(menupopup) {
   }
   appendCurrentProfileMenu(menupopup, list, profileId);
 
-
-  if (ErrorHandler.getCurrentError(doc).length > 0) {
-    appendErrorItem(menupopup, list, profileId);
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing ||
+     (ErrorHandler.getCurrentError(doc).length > 0)) {
+    appendErrorItem(menupopup);
   }
 }
 
