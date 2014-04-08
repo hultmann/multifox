@@ -34,7 +34,7 @@ function xulCommand(evt) {
       Profile.defineIdentity(win, getProfileIdFromMenuItem(evt));
       break;
     case "${CHROME_NAME}:cmd_select_window":
-      selectProfileWindow(win, evt);
+      selectProfileWindow(win, getProfileIdFromMenuItem(evt));
       break;
     case "${CHROME_NAME}:cmd_show_error":
       showError(win);
@@ -51,8 +51,7 @@ function getProfileIdFromMenuItem(evt) {
 }
 
 
-function selectProfileWindow(win, evt) {
-  var newProfileId = getProfileIdFromMenuItem(evt);
+function selectProfileWindow(win, newProfileId) {
   var arr = getProfileWindows(newProfileId);
   if (arr.length === 0) {
     // New window
@@ -348,10 +347,10 @@ function menuButtonShowing(menupopup) {
     }
   }
 
+  var profileId = Profile.getIdentity(doc.defaultView);
   appendDefaultItems(menupopup, profileId);
 
   list = ProfileAlias.sort(list); // sort formatted IDs
-  var profileId = Profile.getIdentity(doc.defaultView);
   if (list.length > 0) {
     appendProfileList(menupopup, list, profileId);
   }
