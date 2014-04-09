@@ -20,10 +20,9 @@ const BrowserWindow = {
     if (ns.util.networkListeners.active === false) {
       // first multifox window!
 
-      var nsActions = {};
-      Components.utils.import("${PATH_MODULE}/actions.js", nsActions);
-      nsActions.migrateCookies();
-
+      if (isDeprecatedVersion()) {
+        Cu.import("${PATH_MODULE}/actions.js", {}).migrateCookies();
+      }
 
       Cookies.start();
       DocStartScriptInjection.init();
@@ -89,4 +88,10 @@ function onUnloadChromeWindow(evt) {
 function tabSelected(evt) {
   var tab = evt.originalTarget;
   ErrorHandler.updateButtonAsync(tab.linkedBrowser);
+}
+
+
+function getDOMUtils(win) {
+  console.assert(typeof win === "object", "win should be an object", win);
+  return win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
 }

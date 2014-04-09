@@ -90,7 +90,7 @@ var ProfileAlias = {
 
 
 
-function updateButton(win) {
+function updateButtonDeprecated(win) {
   var doc = win.document;
   var button = getButtonElem(doc);
   if (button === null) { // visible?
@@ -115,8 +115,120 @@ function updateButton(win) {
 }
 
 
+function updateButton(win) {
+  var button = getButtonElem(win.document);
+  if (button !== null) { // null during onWidgetAdded? onCreated will update it
+    updateButtonCore(button);
+  }
+}
+
+
+function updateButtonCore(button) {
+  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", {}).CustomizableUI;
+  var placement = ui.getPlacementOfWidget("${CHROME_NAME}-button");
+  if (placement === null) {
+    return;
+  }
+
+  // update label
+  var txt = "";
+  var profileId = Profile.getIdentity(button.ownerDocument.defaultView);
+
+  if (placement.area === "PanelUI-contents") {
+    txt = ProfileAlias.format(profileId);
+  } else {
+    // toolbar
+    if (Profile.isExtensionProfile(profileId)) {
+      txt = ProfileAlias.hasAlias(profileId) ? ProfileAlias.format(profileId)
+                                             : profileId.toString();
+    }
+  }
+
+  // show/hide label
+  if (txt.length > 0) {
+    button.setAttribute("show-label", "true");
+  } else {
+    button.removeAttribute("show-label");
+  }
+
+  button.setAttribute("label", txt);
+}
+
+
+
 function getButtonElem(doc) {
   return doc.getElementById("${CHROME_NAME}-button");
+}
+
+
+function insertButtonView(doc) {
+  console.assert(doc.getElementById("${CHROME_NAME}-view-panel") === null, "panelview already exists");
+
+  var uri = Services.io.newURI("${PATH_CONTENT}/button.css", null, null);
+  getDOMUtils(doc.defaultView).loadSheet(uri, 1);
+
+  var panelView = doc.getElementById("PanelUI-multiView")
+                     .appendChild(doc.createElement("panelview"));
+  panelView.setAttribute("id", "${CHROME_NAME}-view-panel");
+  panelView.setAttribute("flex", "1");
+  panelView.classList.add("PanelUI-subView");
+}
+
+
+function registerButton(create) {
+  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", {}).CustomizableUI;
+  var buttonId = "${CHROME_NAME}-button";
+
+  if (create === false) {
+    ui.destroyWidget(buttonId);
+    return;
+  }
+
+
+  ui.createWidget({
+    defaultArea: ui.AREA_NAVBAR,
+    type: "view",
+    id: buttonId,
+    viewId: "${CHROME_NAME}-view-panel",
+    label: "${EXT_NAME}", // non-empty to avoid "Could not localize property" message
+    tooltiptext: "${EXT_NAME}",
+
+    onCreated: function(button) {
+      updateButtonCore(button);
+    },
+
+    onViewShowing : function(evt) {
+      emptyNode(evt.target);
+
+      var doc = evt.target.ownerDocument;
+      doc.defaultView.requestAnimationFrame(function() {
+        // it is hopefully the visible element, after the reinsertion
+        Cu.import("${PATH_MODULE}/commands.js", {}).renderMenu(doc);
+      });
+    },
+
+    onViewHiding : function(evt) {
+      emptyNode(evt.target);
+    }
+  });
+
+  ui.addListener({
+    onWidgetAdded: function(widgetId, area, position) {
+      if (widgetId === "${CHROME_NAME}-button") {
+        var enumWin = Services.wm.getEnumerator("navigator:browser");
+        while (enumWin.hasMoreElements()) {
+          updateButton(enumWin.getNext());
+        }
+      }
+    }
+  });
+}
+
+
+function emptyNode(node) {
+  while (node.firstChild !== null) {
+    node.removeChild(node.firstChild);
+  };
 }
 
 
@@ -245,7 +357,7 @@ var ButtonPersistence = {
 };
 
 
-function destroyButton(doc) {
+function destroyButtonDeprecated(doc) {
    doc.defaultView.removeEventListener("aftercustomization", customizeToolbar, false);
 
   var plt = doc.getElementById("navigator-toolbox").palette;
@@ -266,7 +378,16 @@ function destroyButton(doc) {
 
 function customizeToolbar(evt) {
   var toolbox = evt.target;
-  updateButton(toolbox.ownerDocument.defaultView);
+  updateButtonDeprecated(toolbox.ownerDocument.defaultView);
+}
+
+
+function destroyButton(doc) {
+  var panelView = doc.getElementById("${CHROME_NAME}-view-panel");
+  panelView.parentNode.removeChild(panelView);
+
+  var uri = Services.io.newURI("${PATH_CONTENT}/button.css", null, null);
+  getDOMUtils(doc.defaultView).removeSheet(uri, 1);
 }
 
 

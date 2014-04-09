@@ -6,6 +6,7 @@
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
                         "insertButton", "destroyButton", "updateButton", "ButtonPersistence", "ProfileAlias",
+                        "insertButtonView", "registerButton","destroyButtonDeprecated", "updateButtonDeprecated",
                         "ErrorHandler", "ExtCompat",
                         "cookieInternalDomain", // migrateCookies
                         "Profile"

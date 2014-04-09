@@ -1,0 +1,25 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+@-moz-document url("chrome://browser/content/browser.xul") {
+
+  #${CHROME_NAME}-button[show-label]:not([cui-areatype="menu-panel"]) .toolbarbutton-text {
+    display: -moz-box !important;
+    padding-left: 0 !important;
+  }
+
+  #${CHROME_NAME}-button:not([cui-areatype="menu-panel"]) {
+    list-style-image: url("${PATH_CONTENT}/favicon.ico");
+    max-width: 13em;
+  }
+
+  toolbarpaletteitem[place="palette"] > #${CHROME_NAME}-button,
+  #${CHROME_NAME}-button[cui-areatype="menu-panel"] {
+    list-style-image: url("${PATH_CONTENT}/icon.png");
+  }
+
+}

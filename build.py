@@ -17,6 +17,7 @@ b = build_tools.BuildExtension("src", "build")
 
 b.add_binary("icon.png")
 b.add_binary("content/favicon.ico")
+b.add_binary("content/icon.png")
 b.add_binary("content/logo-about.png")
 
 
@@ -27,11 +28,13 @@ b.add_text("bootstrap.js")
 b.add_text("content/content-injection.js")
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
+b.add_text("content/button.css")
 
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
 b.add_text("modules/menus.js")
 b.add_text("modules/actions.js")
+b.add_text("modules/commands.js")
 
 
 b.add_locale("en-US")
@@ -46,7 +49,7 @@ b.add_locale("pl")
 b.add_text("locale/${locale}/extension.properties")
 b.add_text("locale/${locale}/about-multifox.properties")
 
-b.set_var("EXT_VERSION", "2.0.7")
+b.set_var("EXT_VERSION", "2.1.0b2")
 verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
 
 if changeset == None:
@@ -59,8 +62,8 @@ else:
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
-b.set_var("APP_MIN_VERSION", "23.0")
-b.set_var("APP_MAX_VERSION", "24.*")
+b.set_var("APP_MIN_VERSION", "28.0")
+b.set_var("APP_MAX_VERSION", "31.*")
 b.set_var("CHROME_NAME",     "multifox")
 b.set_var("EXT_HOST",        "multifox-" + verEx)
 
@@ -82,7 +85,7 @@ b.build_xpi(xpi + "-amo.xpi")
 
 # website
 b.set_var("UPDATE_DATA", (
-"    <em:updateURL><![CDATA[" + b.get_var("EXT_SITE") + "update.html"
+"    <em:updateURL><![CDATA[http://br.mozdev.org/multifox/update.html"
        "?reqVersion=%REQ_VERSION%"
        "&extId=%ITEM_ID%"
        "&extVersion=%ITEM_VERSION%"

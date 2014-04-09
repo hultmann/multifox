@@ -120,8 +120,7 @@ var DocStartScriptInjection = {
     }
 
     // keep a reference to Cu.nukeSandbox (Cu.getWeakReference won't work for that)
-    var innerId = win.QueryInterface(Ci.nsIInterfaceRequestor)
-                     .getInterface(Ci.nsIDOMWindowUtils).currentInnerWindowID.toString();
+    var innerId = getDOMUtils(win).currentInnerWindowID.toString();
     console.assert((innerId in me._innerWindows) === false, "dupe sandbox @", innerId)
     me._innerWindows[innerId] = sandbox;
   }

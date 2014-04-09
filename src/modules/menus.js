@@ -82,8 +82,16 @@ function fileMenu(menu) {
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("menu.file.label"));
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
-  // "oncommand" works on OS X menu bar (while "command" doesn't)
-  cmd.setAttribute("oncommand", 'document.getElementById("${CHROME_NAME}:cmd_new_profile").doCommand()');
+
+  if (isDeprecatedVersion()) {
+    // "oncommand" works on OS X menu bar (while "command" doesn't)
+    cmd.setAttribute("oncommand", 'document.getElementById("${CHROME_NAME}:cmd_new_profile").doCommand()');
+  } else {
+    cmd.setAttribute("oncommand",
+      "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+      ".windowCommand(event,this,'cmd_new_profile')");
+  }
+
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
     cmd.setAttribute("disabled", "true");

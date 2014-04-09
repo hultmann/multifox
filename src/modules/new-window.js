@@ -5,7 +5,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "onXulCommand"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "onXulCommand", "isDeprecatedVersion"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -58,6 +58,10 @@ var Bootstrap = {
       BrowserOverlay.add(enumWin.getNext());
     }
 
+    if (isDeprecatedVersion() === false) {
+      registerButton(true); // call it only after inserting <panelview>
+    }
+
     this._incompatibilityCheck();
   },
 
@@ -88,6 +92,10 @@ var Bootstrap = {
   },
 
   extensionShutdown: function() {
+    if (isDeprecatedVersion() === false) {
+      registerButton(false);
+    }
+
     Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
@@ -107,9 +115,11 @@ var Bootstrap = {
     // prefs
     Services.prefs.getBranch("extensions.${EXT_ID}.").deleteBranch("");
 
-    var ns = {};
-    Components.utils.import("${PATH_MODULE}/actions.js", ns);
-    ns.removeData();
+    if (isDeprecatedVersion()) {
+      Components.utils.import("${PATH_MODULE}/actions.js", {}).removeData();
+    } else {
+      Components.utils.import("${PATH_MODULE}/commands.js", {}).removeData();
+    }
   }
 
 };
@@ -128,7 +138,11 @@ function forEachChromeWindow(fn, win) {
 var UpdateUI = {
   observe: function(subject, topic, data) {
     var win = Services.wm.getOuterWindowWithId(parseInt(data, 10));
-    updateButton(win);
+    if (isDeprecatedVersion()) {
+      updateButtonDeprecated(win);
+    } else {
+      updateButton(win);
+    }
   }
 }
 
@@ -171,11 +185,20 @@ function onBrowserWinLoad(evt) {
 }
 
 
+function isDeprecatedVersion() {
+  var ver = Cc["@mozilla.org/xpcom/version-comparator;1"].getService(Ci.nsIVersionComparator);
+  return ver.compare("29a", Services.appinfo.platformVersion) === 1;
+}
+
+
 function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
       setWindowProfile(win); // enable netwok listeners
       win.addEventListener("load", onBrowserWinLoad, false);
+      if (isDeprecatedVersion() === false) {
+        insertButtonView(win.document);
+      }
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
@@ -248,21 +271,32 @@ const BrowserOverlay = {
     doc.addEventListener("SSTabRestored", onTabRestored, false);
 
     // commands
-    appendXulCommands(doc);
+    if (isDeprecatedVersion()) {
+      appendXulCommands(doc);
+    }
 
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
     key.setAttribute("id", "key_${BASE_DOM_ID}-new-identity");
     key.setAttribute("modifiers", Services.appinfo.OS === "Darwin" ? "control,alt" : "accel,alt");
     key.setAttribute("key", "M");
-    key.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
+
+    if (isDeprecatedVersion()) {
+      key.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
+    } else {
+      key.setAttribute("oncommand",
+        "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+        ".windowCommand(event,this,'cmd_new_profile')");
+    }
 
     // menus
     addMenuListeners(doc);
 
-    // insert into toolbar
-    insertButton(doc);
-    updateButton(doc.defaultView);
+    if (isDeprecatedVersion()) {
+      // insert into toolbar
+      insertButton(doc);
+      updateButtonDeprecated(win);
+    }
   },
 
 
@@ -283,9 +317,15 @@ const BrowserOverlay = {
     key.parentNode.removeChild(key);
 
     // commands
-    removeXulCommands(doc);
+    if (isDeprecatedVersion()) {
+      removeXulCommands(doc);
+    }
 
-    destroyButton(doc);
+    if (isDeprecatedVersion()) {
+      destroyButtonDeprecated(doc);
+    } else {
+      destroyButton(doc);
+    }
   }
 };
 

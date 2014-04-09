@@ -72,6 +72,7 @@ function shutdown(data, reason) {
 
 
 function unloadModules() {
+  Cu.unload("${PATH_MODULE}/commands.js");
   Cu.unload("${PATH_MODULE}/actions.js");
   Cu.unload("${PATH_MODULE}/menus.js");
   Cu.unload("${PATH_MODULE}/popup.js");
