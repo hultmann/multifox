@@ -44,6 +44,7 @@ b.add_locale("zh-CN")
 b.add_locale("zh-TW")
 b.add_locale("sr")
 b.add_locale("pl")
+b.add_locale("ru")
 
 
 b.add_text("locale/${locale}/extension.properties")
