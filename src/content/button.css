@@ -15,6 +15,7 @@
   #${CHROME_NAME}-button:not([cui-areatype="menu-panel"]) {
     list-style-image: url("${PATH_CONTENT}/favicon.ico");
     max-width: 13em;
+    -moz-box-orient: horizontal !important; /* OS X */
   }
 
   toolbarpaletteitem[place="palette"] > #${CHROME_NAME}-button,
