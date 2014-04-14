@@ -67,7 +67,12 @@ var ErrorHandler = {
 
   getCurrentError: function(doc) {
     var button = getButtonElem(doc);
-    return button !== null ? button.getAttribute("tab-status") : "";
+    if (button === null) {
+      return "";
+    }
+    return button.hasAttribute("tab-status")
+         ? button.getAttribute("tab-status")
+         : "";
   },
 
 
@@ -104,16 +109,20 @@ var ErrorHandler = {
 
   _update: function(newStat, button) {
     var isError = newStat.length > 0;
-    var showingError = button.getAttribute("tab-status").length > 0;
+    var showingError = ErrorHandler.getCurrentError(button.ownerDocument).length > 0;
     if (isError === showingError) {
       return;
     }
+
+    if (isDeprecatedVersion()) {
+      button.setAttribute("image", isError ? "chrome://global/skin/icons/error-16.png"
+                                           : "${PATH_CONTENT}/favicon.ico");
+    }
+
     if (isError) {
-      button.setAttribute("image", "chrome://global/skin/icons/error-16.png");
       button.setAttribute("tab-status", newStat);
     } else {
-      button.setAttribute("image", "${PATH_CONTENT}/favicon.ico");
-      button.setAttribute("tab-status", "");
+      button.removeAttribute("tab-status");
     }
   },
 

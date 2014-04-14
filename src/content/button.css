@@ -7,20 +7,33 @@
 
 @-moz-document url("chrome://browser/content/browser.xul") {
 
-  #${CHROME_NAME}-button[show-label]:not([cui-areatype="menu-panel"]) .toolbarbutton-text {
+  /* toolbar */
+  #${CHROME_NAME}-button[show-label][cui-areatype="toolbar"] .toolbarbutton-text {
     display: -moz-box !important;
-    padding-left: 0 !important;
+    padding-left: 1px !important;
   }
 
-  #${CHROME_NAME}-button:not([cui-areatype="menu-panel"]) {
+  /* toolbar */
+  #${CHROME_NAME}-button[cui-areatype="toolbar"] {
     list-style-image: url("${PATH_CONTENT}/favicon.ico");
     max-width: 13em;
     -moz-box-orient: horizontal !important; /* OS X */
   }
 
-  toolbarpaletteitem[place="palette"] > #${CHROME_NAME}-button,
-  #${CHROME_NAME}-button[cui-areatype="menu-panel"] {
+  /* panel & customization */
+  #${CHROME_NAME}-button[cui-areatype="menu-panel"],
+  toolbarpaletteitem[place="palette"] > #${CHROME_NAME}-button {
     list-style-image: url("${PATH_CONTENT}/icon.png");
+  }
+
+  /* toolbar */
+  #${CHROME_NAME}-button[cui-areatype="toolbar"][tab-status] {
+    list-style-image: url("chrome://global/skin/icons/error-16.png");
+  }
+
+  /* panel */
+  #${CHROME_NAME}-button[cui-areatype="menu-panel"][tab-status] {
+    list-style-image: url("chrome://global/skin/icons/Error.png");
   }
 
 }

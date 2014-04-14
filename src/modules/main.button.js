@@ -167,11 +167,21 @@ function insertButtonView(doc) {
   var uri = Services.io.newURI("${PATH_CONTENT}/button.css", null, null);
   getDOMUtils(doc.defaultView).loadSheet(uri, 1);
 
+  doc.getElementById("PanelUI-popup")
+     .addEventListener("popupshowing", onPanelUIShow, false);
+
   var panelView = doc.getElementById("PanelUI-multiView")
                      .appendChild(doc.createElement("panelview"));
   panelView.setAttribute("id", "${CHROME_NAME}-view-panel");
   panelView.setAttribute("flex", "1");
   panelView.classList.add("PanelUI-subView");
+}
+
+
+function onPanelUIShow(evt) {
+  var win = evt.target.ownerDocument.defaultView;
+  ErrorHandler.updateButtonAsync(win.getBrowser().selectedBrowser);
+  updateButton(win);
 }
 
 
@@ -294,7 +304,6 @@ function fixToolbarBug(toolbar) {
 function createButtonElem(doc, buttonId) {
   var button = doc.createElement("toolbarbutton");
   button.setAttribute("id", buttonId);
-  button.setAttribute("tab-status", "");
   button.setAttribute("type", "menu");
   button.setAttribute("class", "bookmark-item"); // show label beside its icon
   button.setAttribute("style", "list-style-image:url(${PATH_CONTENT}/favicon.ico);-moz-image-region:auto");
@@ -383,6 +392,9 @@ function customizeToolbar(evt) {
 
 
 function destroyButton(doc) {
+  doc.getElementById("PanelUI-popup")
+     .removeEventListener("popupshowing", onPanelUIShow, false);
+
   var panelView = doc.getElementById("${CHROME_NAME}-view-panel");
   panelView.parentNode.removeChild(panelView);
 
