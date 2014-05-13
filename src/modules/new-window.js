@@ -5,7 +5,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow", "onXulCommand", "isDeprecatedVersion"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -33,12 +33,6 @@ var Bootstrap = {
     console.assert(m_docObserver === null, "m_docObserver should be null");
     console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
 
-    var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
-    if (prefs.prefHasUserValue("button-added") === false) {
-      prefs.setBoolPref("button-added", true);
-      this._showButtonByDefault = true;
-    }
-
     if (firstRun || reinstall) {
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
@@ -58,27 +52,13 @@ var Bootstrap = {
       BrowserOverlay.add(enumWin.getNext());
     }
 
-    if (isDeprecatedVersion() === false) {
-      registerButton(true); // call it only after inserting <panelview>
-    }
+    registerButton(true); // call it only after inserting <panelview>
 
     this._incompatibilityCheck();
   },
 
-  get showButtonByDefault() {
-    return this._showButtonByDefault;
-  },
-
-  resetButton: function() {
-    var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
-    if (prefs.prefHasUserValue("button-added") === false) {
-      prefs.clearUserPref("button-added");
-    }
-    this._showButtonByDefault = true;
-  },
 
   _timer: null,
-  _showButtonByDefault: false,
 
   _incompatibilityCheck: function() {
     this._timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
@@ -92,10 +72,6 @@ var Bootstrap = {
   },
 
   extensionShutdown: function() {
-    if (isDeprecatedVersion() === false) {
-      registerButton(false);
-    }
-
     Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
@@ -103,6 +79,7 @@ var Bootstrap = {
     while (enumWin.hasMoreElements()) {
       forEachChromeWindow(disableExtension, enumWin.getNext());
     }
+    registerButton(false);
   },
 
 
@@ -115,11 +92,8 @@ var Bootstrap = {
     // prefs
     Services.prefs.getBranch("extensions.${EXT_ID}.").deleteBranch("");
 
-    if (isDeprecatedVersion()) {
-      Components.utils.import("${PATH_MODULE}/actions.js", {}).removeData();
-    } else {
-      Components.utils.import("${PATH_MODULE}/commands.js", {}).removeData();
-    }
+    // cookies etc
+    Components.utils.import("${PATH_MODULE}/commands.js", {}).removeData();
   }
 
 };
@@ -138,11 +112,7 @@ function forEachChromeWindow(fn, win) {
 var UpdateUI = {
   observe: function(subject, topic, data) {
     var win = Services.wm.getOuterWindowWithId(parseInt(data, 10));
-    if (isDeprecatedVersion()) {
-      updateButtonDeprecated(win);
-    } else {
-      updateButton(win);
-    }
+    updateButton(win);
   }
 }
 
@@ -185,20 +155,12 @@ function onBrowserWinLoad(evt) {
 }
 
 
-function isDeprecatedVersion() {
-  var ver = Cc["@mozilla.org/xpcom/version-comparator;1"].getService(Ci.nsIVersionComparator);
-  return ver.compare("29a", Services.appinfo.platformVersion) === 1;
-}
-
-
 function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
       setWindowProfile(win); // enable netwok listeners
       win.addEventListener("load", onBrowserWinLoad, false);
-      if (isDeprecatedVersion() === false) {
-        insertButtonView(win.document);
-      }
+      insertButtonView(win.document);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
@@ -270,33 +232,18 @@ const BrowserOverlay = {
     doc.addEventListener("SSTabRestoring", onTabRestoring, false);
     doc.addEventListener("SSTabRestored", onTabRestored, false);
 
-    // commands
-    if (isDeprecatedVersion()) {
-      appendXulCommands(doc);
-    }
-
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
     key.setAttribute("id", "key_${BASE_DOM_ID}-new-identity");
     key.setAttribute("modifiers", Services.appinfo.OS === "Darwin" ? "control,alt" : "accel,alt");
     key.setAttribute("key", "M");
 
-    if (isDeprecatedVersion()) {
-      key.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
-    } else {
-      key.setAttribute("oncommand",
-        "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
-        ".windowCommand(event,this,'cmd_new_profile')");
-    }
+    key.setAttribute("oncommand",
+      "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+      ".windowCommand(event,this,'cmd_new_profile')");
 
     // menus
     addMenuListeners(doc);
-
-    if (isDeprecatedVersion()) {
-      // insert into toolbar
-      insertButton(doc);
-      updateButtonDeprecated(win);
-    }
   },
 
 
@@ -316,54 +263,9 @@ const BrowserOverlay = {
     var key = doc.getElementById("key_${BASE_DOM_ID}-new-identity");
     key.parentNode.removeChild(key);
 
-    // commands
-    if (isDeprecatedVersion()) {
-      removeXulCommands(doc);
-    }
-
-    if (isDeprecatedVersion()) {
-      destroyButtonDeprecated(doc);
-    } else {
-      destroyButton(doc);
-    }
+    destroyButton(doc);
   }
 };
-
-
-function appendXulCommands(doc) {
-  var commands = [
-    "${CHROME_NAME}:cmd_show_error",
-    "${CHROME_NAME}:cmd_new_profile",
-    "${CHROME_NAME}:cmd_rename_profile_prompt",
-    "${CHROME_NAME}:cmd_delete_profile_prompt",
-    "${CHROME_NAME}:cmd_delete_profile",
-    "${CHROME_NAME}:cmd_select_window",
-    "${CHROME_NAME}:cmd_set_profile_window"
-  ];
-
-  var js = "var jsm={};Cu.import('${PATH_MODULE}/new-window.js',jsm);jsm.onXulCommand(event)";
-  var cmdset = doc.documentElement.appendChild(doc.createElement("commandset"));
-
-  for (var idx = commands.length - 1; idx > -1; idx--) {
-    var cmd = cmdset.appendChild(doc.createElement("command"));
-    cmd.setAttribute("id", commands[idx]);
-    cmd.setAttribute("oncommand", js);
-  }
-}
-
-
-function removeXulCommands(doc) {
-  var cmdset = doc.getElementById("${CHROME_NAME}:cmd_new_profile").parentNode;
-  cmdset.parentNode.removeChild(cmdset);
-}
-
-
-function onXulCommand(evt) {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/actions.js", ns);
-  ns.xulCommand(evt);
-  Components.utils.unload("${PATH_MODULE}/actions.js");
-}
 
 
 var PlacesOverlay = {
@@ -480,38 +382,18 @@ function onTabRestored(evt) {
 
 
 function addMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
+  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup", "tabContextMenu"];
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).addEventListener("popupshowing", onMenuPopupShowing, false);
   }
-
-  doc.getElementById("tabContextMenu").addEventListener("popupshowing", onMenuPopupShowing, false);
-
-  var windowMenu = doc.getElementById("appmenu_newNavigator");
-  if (windowMenu === null) {
-    return;
-  }
-  var newTabPopup = windowMenu.parentNode;
-  newTabPopup.addEventListener("popupshowing", onMenuPopupShowing, false);
-  newTabPopup.setAttribute("multifox-id", "app-menu");
 }
 
 
 function removeMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
+  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup", "tabContextMenu"];
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).removeEventListener("popupshowing", onMenuPopupShowing, false);
   }
-
-  doc.getElementById("tabContextMenu").removeEventListener("popupshowing", onMenuPopupShowing, false);
-
-  var windowMenu = doc.getElementById("appmenu_newNavigator");
-  if (windowMenu === null) {
-    return;
-  }
-  var newTabPopup = windowMenu.parentNode;
-  newTabPopup.removeEventListener("popupshowing", onMenuPopupShowing, false);
-  newTabPopup.removeAttribute("multifox-id");
 }
 
 

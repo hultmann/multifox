@@ -20,10 +20,6 @@ const BrowserWindow = {
     if (ns.util.networkListeners.active === false) {
       // first multifox window!
 
-      if (isDeprecatedVersion()) {
-        Cu.import("${PATH_MODULE}/actions.js", {}).migrateCookies();
-      }
-
       Cookies.start();
       DocStartScriptInjection.init();
       ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);

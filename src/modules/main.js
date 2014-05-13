@@ -5,11 +5,10 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["NewWindow", "console",
-                        "insertButton", "destroyButton", "updateButton", "ButtonPersistence", "ProfileAlias",
-                        "insertButtonView", "registerButton","destroyButtonDeprecated", "updateButtonDeprecated",
+                        "registerButton", "updateButton",
+                        "insertButtonView", "destroyButton",
                         "ErrorHandler", "ExtCompat",
-                        "cookieInternalDomain", // migrateCookies
-                        "Profile"
+                        "ProfileAlias", "Profile"
                        ];
 
 var Cu = Components.utils;

@@ -231,7 +231,6 @@ function removeData() {
   for (var idx = list.length - 1; idx > -1; idx--) {
     removeProfile(list[idx]);
   }
-  ButtonPersistence.removeButton("${CHROME_NAME}-button");
 
   // remove error attributes
   var enumWin = Services.wm.getEnumerator("navigator:browser");

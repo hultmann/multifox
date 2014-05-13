@@ -33,7 +33,6 @@ b.add_text("content/button.css")
 b.add_text("modules/new-window.js")
 b.add_text("modules/main.js")
 b.add_text("modules/menus.js")
-b.add_text("modules/actions.js")
 b.add_text("modules/commands.js")
 
 

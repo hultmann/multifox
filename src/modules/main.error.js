@@ -114,11 +114,6 @@ var ErrorHandler = {
       return;
     }
 
-    if (isDeprecatedVersion()) {
-      button.setAttribute("image", isError ? "chrome://global/skin/icons/error-16.png"
-                                           : "${PATH_CONTENT}/favicon.ico");
-    }
-
     if (isError) {
       button.setAttribute("tab-status", newStat);
     } else {

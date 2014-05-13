@@ -12,7 +12,7 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 
 function menuShowing(evt) {
   var menu = evt.target;
-  switch (menu.id || menu.getAttribute("anonid") || menu.getAttribute("multifox-id")) {
+  switch (menu.id || menu.getAttribute("anonid")) {
     case "menu_FilePopup":
       fileMenu(menu);
       break;
@@ -24,9 +24,6 @@ function menuShowing(evt) {
       break;
     case "tabContextMenu":
       tabMenu(menu);
-      break;
-    case "app-menu":
-      appMenu(menu);
       break;
   }
 }
@@ -51,29 +48,6 @@ function onPopupHidden(evt) {
 }
 
 
-function appMenu(menu) {
-  var doc = menu.ownerDocument;
-  var position = doc.getElementById("appmenu_openFile");
-
-  var cmd = doc.createElement("menuitem");
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  cmd.setAttribute("label", util.getText("appmenu.new.label"));
-  cmd.setAttribute("accesskey", util.getText("appmenu.new.accesskey"));
-  cmd.setAttribute("command", "${CHROME_NAME}:cmd_new_profile");
-  cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
-  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-    cmd.setAttribute("disabled", "true");
-    cmd.removeAttribute("command");
-  }
-  menu.insertBefore(cmd, position);
-
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
-  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
-
-  menu.addEventListener("popuphidden", onPopupHidden, false);
-}
-
-
 function fileMenu(menu) {
   var doc = menu.ownerDocument;
   var position = doc.getElementById("menu_savePage");
@@ -82,15 +56,9 @@ function fileMenu(menu) {
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("menu.file.label"));
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
-
-  if (isDeprecatedVersion()) {
-    // "oncommand" works on OS X menu bar (while "command" doesn't)
-    cmd.setAttribute("oncommand", 'document.getElementById("${CHROME_NAME}:cmd_new_profile").doCommand()');
-  } else {
-    cmd.setAttribute("oncommand",
-      "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
-      ".windowCommand(event,this,'cmd_new_profile')");
-  }
+  cmd.setAttribute("oncommand",
+    "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+    ".windowCommand(event,this,'cmd_new_profile')");
 
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
