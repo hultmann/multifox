@@ -65,6 +65,20 @@ var ProfileAlias = {
       this._load();
     }
 
+    return profileId in this._alias
+         ? this._alias[profileId]
+         : this.formatDefault(profileId);
+  },
+
+
+  formatShort: function(profileId) {
+    return ProfileAlias.hasAlias(profileId)
+         ? ProfileAlias.format(profileId)
+         : profileId.toString();
+  },
+
+
+  formatDefault: function(profileId) {
     var ns = {}; // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", ns);
 
@@ -77,11 +91,6 @@ var ProfileAlias = {
 
       case Profile.UndefinedIdentity:
         throw new Error("unexpected Profile.UndefinedIdentity");
-    }
-    console.assert(Profile.isExtensionProfile(profileId), "profileId unexpected", profileId);
-
-    if (profileId in this._alias) {
-      return this._alias[profileId];
     }
 
     return ns.util.getText("button.menuitem.profile.extension.label", profileId);
@@ -105,21 +114,13 @@ function updateButtonCore(button) {
   }
 
   // update label
-  var txt = "";
   var profileId = Profile.getIdentity(button.ownerDocument.defaultView);
-
-  if (placement.area === "PanelUI-contents") {
-    txt = ProfileAlias.format(profileId);
-  } else {
-    // toolbar
-    if (Profile.isExtensionProfile(profileId)) {
-      txt = ProfileAlias.hasAlias(profileId) ? ProfileAlias.format(profileId)
-                                             : profileId.toString();
-    }
-  }
+  var txt = placement.area === "PanelUI-contents"
+          ? ProfileAlias.format(profileId)       // panel
+          : ProfileAlias.formatShort(profileId); // toolbar
 
   // show/hide label
-  if (txt.length > 0) {
+  if (Profile.isExtensionProfile(profileId)) {
     button.setAttribute("show-label", "true");
   } else {
     button.removeAttribute("show-label");
