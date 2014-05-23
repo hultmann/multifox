@@ -179,12 +179,42 @@ const Profile = {
 
   lowerAvailableId: function(ignoreWin) {
     var arr = this.activeIdentities(ignoreWin); //ignore win -- it doesn't have a session id yet
-    var id = Profile.DefaultIdentity;
+    arr = arr.concat(Profile.getProfileList()); // add Multifox profiles with cookies
+    var id = Profile.DefaultIdentity + 1;
     while (arr.indexOf(id) > -1) {
       id++;
     }
     return id; // id is available
   },
+
+
+  getProfileList: function() {
+    var list = [];
+    var nsList = [];
+
+    var all = Services.cookies.enumerator;
+    var COOKIE = Ci.nsICookie2;
+    while (all.hasMoreElements()) {
+      var h = all.getNext().QueryInterface(COOKIE).host;
+      if (h.endsWith(".multifox") === false) {
+        continue;
+      }
+      var ns = h.substr(h.lastIndexOf("-") + 1);
+      if (nsList.indexOf(ns) === -1) {
+        nsList.push(ns); // "2.multifox"
+      }
+    }
+
+    for (var idx = nsList.length - 1; idx > -1; idx--) {
+      var n = parseInt(nsList[idx].replace(".multifox", ""), 10);
+      if (Number.isNaN(n) === false) {
+        list.push(n);
+      }
+    }
+
+    return list;
+  },
+
 
   toInt: function(str) {
     var rv = parseInt(str, 10);

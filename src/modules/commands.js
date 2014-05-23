@@ -230,7 +230,7 @@ function createArrowPanel(doc, icon) {
 function removeData() {
   // TODO localStorage
   // cookies
-  var list = getProfileList();
+  var list = Profile.getProfileList();
   for (var idx = list.length - 1; idx > -1; idx--) {
     removeProfile(list[idx]);
   }
@@ -275,7 +275,7 @@ function renderMenu(doc) {
   var fragment = doc.createDocumentFragment();
   appendNew(fragment);
 
-  var list = getProfileList();
+  var list = Profile.getProfileList();
 
   // TODO var profiles = Profile.activeIdentities(win);
   // show profileId from all windows even if it's not in the profile list
@@ -440,32 +440,4 @@ function appendButton(node, label) {
 
 function appendSeparator(node) {
   node.appendChild(node.ownerDocument.createElement("toolbarseparator"));
-}
-
-
-function getProfileList() {
-  var list = [];
-  var nsList = [];
-
-  var all = Services.cookies.enumerator;
-  var COOKIE = Ci.nsICookie2;
-  while (all.hasMoreElements()) {
-    var h = all.getNext().QueryInterface(COOKIE).host;
-    if (h.endsWith(".multifox") === false) {
-      continue;
-    }
-    var ns = h.substr(h.lastIndexOf("-") + 1);
-    if (nsList.indexOf(ns) === -1) {
-      nsList.push(ns); // "2.multifox"
-    }
-  }
-
-  for (var idx = nsList.length - 1; idx > -1; idx--) {
-    var n = parseInt(nsList[idx].replace(".multifox", ""), 10);
-    if (Number.isNaN(n) === false) { // Fx15+
-      list.push(n);
-    }
-  }
-
-  return list;
 }
