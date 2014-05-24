@@ -140,16 +140,14 @@ function convertCookieDomain(cookieHeader, profileId) {
 
   for (var idx = 0; idx < len; idx++) {
     var myCookie = objCookies.getCookieByIndex(idx);
-    var realDomain = myCookie.getStringProperty("domain");
-    if (realDomain.length > 0) {
-      myCookie.defineMeta("domain", cookieInternalDomain(realDomain, profileId));
-      newCookies[idx] = myCookie.toHeaderLine();
-    } else {
-      newCookies[idx] = myCookie.raw;
+    if (myCookie.hasMeta("domain")) {
+      var newDomain = cookieInternalDomain(myCookie.getMeta("domain"), profileId);
+      myCookie.defineMeta("domain", newDomain);
     }
+    newCookies[idx] = myCookie.toString();
   }
 
-  return newCookies.join("\n");//objCookies.toHeader();
+  return newCookies.join("\n");
 }
 
 
@@ -212,95 +210,62 @@ function getTldFromHost(hostname) {
 
 
 
-function toLines(txt) {
-  return txt.split(/\r\n|\r|\n/);
-}
-
-
-function SetCookieParser(cookieHeader, isSetCookie) { // TODO remove isSetCookie
-  this.m_hasMeta = isSetCookie;
+function SetCookieParser(cookieHeader) {
   this._allCookies = [];
-  if (cookieHeader !== null) {
-    var lines = toLines(cookieHeader);
-    var len = lines.length;
-    if (isSetCookie) {
-      for (var idx = 0; idx < len; idx++) {
-        this.parseLineSetCookie(lines[idx]);
-      }
-    } else {
-      for (var idx = 0; idx < len; idx++) {
-        this.parseLineCookie(lines[idx]);
-      }
-    }
+  var lines = this._toLines(cookieHeader);
+  for (var idx = 0, len = lines.length; idx < len; idx++) {
+    this._parseLine(lines[idx]);
   }
 }
 
 SetCookieParser.prototype = {
-  parseLineSetCookie: function(headerLine) {
-    var unit = new CookieUnit(headerLine);
-    var items = headerLine.split(";");
+  _allCookies: null,
 
-    for (var idx = 0, len = items.length; idx < len; idx++) {
-      var pair = splitValueName(items[idx]);
-      var name = pair[0];
-      var value = pair[1]; // null ==> name=HttpOnly, secure etc
 
-      if (idx === 0) {
-        if (name.length > 0 && value !== null) {
-          unit.defineValue(name, value);
-        } else {
-          console.trace("_allCookies invalid", name, value, headerLine);
-          break;
-        }
-      } else {
-        unit.defineMeta(name, value);
+  _toLines: function(txt) {
+    return txt.split(/\r\n|\r|\n/);
+  },
+
+
+  _parseLine: function(rawSetCookie) {
+    var items = rawSetCookie.split(";");
+    var unit = new CookieBuilder(items[0]); // [0] "foo=bar"
+    var len = items.length;
+    if (len > 1) {
+      for (var idx = 1; idx < len; idx++) {
+        var pair = this._splitValueName(items[idx]);
+        unit.defineMeta(pair[0], pair[1]);
       }
     }
 
     this._allCookies.push(unit);
   },
 
-  parseLineCookie: function(headerLine) {
-    var items = headerLine.split(";");
-    for (var idx = 0, len = items.length; idx < len; idx++) {
-      var unit = CookieUnit(items[idx]);
-      var pair = splitValueName(items[idx]);
-      unit.defineValue(pair[0], pair[1]);
-      this._allCookies.push(unit);
+
+  _splitValueName: function(cookie) {
+    var idx = cookie.indexOf("=");
+    if (idx === -1) {
+      return [cookie, null];
     }
+
+    // "a=bcd=e".split("=",2) returns [a,bcd]
+    //   "abcde".split("=",2) returns [abcde]
+
+    // MY =
+    // 012^-----idx=3 length=4
+
+    // MY =a:1=6
+    // 012^-----idx=3 length=9
+
+    var nameValue = [cookie.substring(0, idx), ""];
+    idx++;
+    if (idx < cookie.length) {
+      nameValue[1] = cookie.substring(idx);
+    }
+
+    return nameValue;
   },
 
-  /*
-  toHeader: function() {
-    var allCookies = this._allCookies;
-    var len = allCookies.length;
-    //var buf = [];
-    var buf = new Array(len);
-    for (var idx = 0; idx < len; idx++) {
-      //if (allCookies[idx].value !== null) {
-      buf[idx] = allCookies[idx].toHeaderLine();
-      //}
-    }
-    return this.m_hasMeta ? buf.join("\n") : buf.join(";");
-  },
-
-  getCookie: function(name) {
-    var aCookie = this._allCookies;
-    for (var idx = 0, len = aCookie.length; idx < len; idx++) {
-      if (name === aCookie[idx].name) {
-        return aCookie[idx];
-      }
-    }
-    return null;
-  },
-
-  forEach: function(fn) {
-    var c = this._allCookies;
-    for (var idx = 0, len = c.length; idx < len; idx++) {
-      fn(c[idx]);
-    }
-  }
-  */
 
   get length() {
     return this._allCookies.length;
@@ -311,127 +276,44 @@ SetCookieParser.prototype = {
   }
 };
 
-function CookieUnit(line) {
-  this._data = {//instance value
-    "_src": line
-  };
+
+function CookieBuilder(cookie) {
+  this._cookie = cookie;
+  this._meta = Object.create(null);
 }
 
-CookieUnit.prototype = {
-  _data: null,
+CookieBuilder.prototype = {
+  _cookie: null,
+  _meta: null,
 
-  clone: function() {
-    var c = new CookieUnit();
-    for (var n in this._data) {
-      c._data[n] = this._data[n];
-    }
-    return c;
+
+  hasMeta: function(name) {
+    return name in this._meta;
   },
 
-  get name() {
-    var rv = this._data["_name"];
-    return rv ? rv : "";
+
+  getMeta: function(name) {
+    return name in this._meta ? this._meta[name] : null;
   },
 
-  get value() {
-    var rv = this._data["_value"];
-    return rv ? rv : "";
-  },
-
-  get raw() {
-    return this._data["_src"];
-  },
-
-  defineValue: function(name, val) {
-    this._data["_name"] = name;
-    this._data["_value"] = val;
-  },
-
-  //"secure":
-  //"httponly":
-  hasBooleanProperty: function(name) {
-    //name = name.toLowerCase();
-    return name in this._data;
-  },
-
-  setBooleanProperty: function(name, def) {
-    if (def) {
-      this._data[name] = null;
-    } else {
-      delete this._data[name];
-    }
-  },
-
-  //"expires":
-  //"domain":
-  //"path":
-  getStringProperty: function(name) {
-    var rv = this._data[name];
-    return rv ? rv : "";
-    //return rv || "";
-  },
 
   defineMeta: function(name, val) {
-    name = name.toLowerCase();
-    switch (name) {
-      case "expires":
-      case "domain":
-      case "path":
-      case "secure":
-      case "httponly":
-        this._data[name] = val;
-        break;
+    console.assert(name !== null, "_splitValueName doesn't return null names");
+    name = name.trim();
+    if (name.length === 0) {
+      return; // Set-Cookie:foo=bar;;;
     }
+    // val=null ==> name=HttpOnly, secure etc
+    this._meta[name.toLowerCase()] = val;
   },
 
-  toHeaderLine: function() {//toString()
-    var buf = [this.name + "=" + this.value];
-    var props;
 
-    props = ["secure", "httponly"];
-    for (var idx = 0, len = props.length; idx < len; idx++) {
-      var propName = props[idx];
-      if (this.hasBooleanProperty(propName)) {
-        buf.push(propName.toUpperCase());
-      }
+  toString: function() {
+    var buf = [this._cookie];
+    for (var name in this._meta) {
+      var val = this._meta[name];
+      buf.push(val === null ? name : name + "=" + val);
     }
-
-    props = ["expires", "path", "domain"];
-    for (var idx = 0, len = props.length; idx < len; idx++) {
-      var propName = props[idx];
-      var val = this.getStringProperty(propName);
-      if (val.length > 0) {
-        buf.push(propName.toUpperCase() + "=" + val);
-      }
-    }
-
     return buf.join(";");
   }
 };
-
-
-function splitValueName(cookie) {
-  var idx = cookie.indexOf("=");
-  if (idx === -1) {
-    return [cookie.trim(), null];
-  }
-
-  // "a=bcd=e".split("=",2) returns [a,bcd]
-  //   "abcde".split("=",2) returns [abcde]
-
-
-  // MY =
-  // 012^-----idx=3 length=4
-
-  // MY =a:1=6
-  // 012^-----idx=3 length=9
-
-  var pair = ["", ""];
-  pair[0] = cookie.substring(0, idx).trim();
-  idx++;
-  if (idx < cookie.length) {
-    pair[1] = cookie.substring(idx);
-  }
-
-  return pair;
-}
