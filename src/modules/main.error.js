@@ -19,7 +19,7 @@ var ErrorHandler = {
 
   // request/response
   addNetworkError: function(contentWin, errorCode) {
-    var browser = ContentWindow.getContainerElement(contentWin);
+    var browser = UIUtils.getContainerElement(contentWin);
     browser.setAttribute("multifox-tab-error-net", errorCode);
     this.updateButtonAsync(browser);
   },
@@ -39,25 +39,25 @@ var ErrorHandler = {
     msg.push("title=[" + contentWin.document.title + "]");
     console.log(msg.join("\n"));
 
-    var browser = ContentWindow.getContainerElement(contentWin);
+    var browser = UIUtils.getContainerElement(contentWin);
     browser.setAttribute("multifox-tab-error-script", errorCode);
     this.updateButtonAsync(browser);
   },
 
 
-  onNewWindow: function(win, browser) {
+  onNewWindow: function(browser) {
     // reset js error
-    if ((win === win.top) && (browser !== null)) {
-      if (browser.hasAttribute("multifox-tab-error-script")) {
-        browser.removeAttribute("multifox-tab-error-script");
-        this.updateButtonAsync(browser);
-      }
+    // BUG? browser from source view  will reset error?
+    if (browser.hasAttribute("multifox-tab-error-script")) {
+      browser.removeAttribute("multifox-tab-error-script");
+      this.updateButtonAsync(browser);
     }
   },
 
 
   onNewWindowRequest: function(browser) {
     // reset network error - BUG new win is chrome:// (no http-on-modify-request)
+    // BUG? browser from source view  will reset error?
     if (browser.hasAttribute("multifox-tab-error-net")) {
       browser.removeAttribute("multifox-tab-error-net");
       this.updateButtonAsync(browser);
@@ -77,8 +77,10 @@ var ErrorHandler = {
 
 
   updateButtonAsync: function(browser) {
-    browser.ownerDocument.defaultView.requestAnimationFrame(function() {
+    var win = browser.ownerDocument.defaultView;
+    win.requestAnimationFrame(function() {
       ErrorHandler._updateButtonStatus(browser);
+      updateButton(win);
     });
   },
 

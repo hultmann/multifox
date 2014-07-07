@@ -73,6 +73,14 @@ b.set_var("PATH_MODULE",     "resource://" + b.get_var("EXT_HOST"))
 
 b.set_var("BASE_DOM_ID",            "multifox-dom")
 
+b.set_var("PROFILE_SESSION",       "multifox-dom-identity-id-session")
+b.set_var("PROFILE_BROWSER_ATTR",  "multifox-dom-identity-id-browser")
+b.set_var("PROFILE_DISABLED_ATTR", "multifox-dom-identity-id-disabled")
+
+b.set_var("PROFILE_DEPRECATED_DISABLED", "multifox-dom-identity-id-tmp")
+b.set_var("PROFILE_DEPRECATED_SESSION",  "multifox-dom-identity-id")
+
+
 b.set_var("XPCOM_ABOUT_CLASS",      "{347c41b6-1417-411c-b87a-422bcfc1899a}")
 b.set_var("XPCOM_ABOUT_CONTRACT",   "@mozilla.org/network/protocol/about;1?what=multifox")
 

@@ -53,14 +53,11 @@ var DocStartScriptInjection = {
   _initCurrent: function() {
     var enumWin = Services.wm.getEnumerator("navigator:browser");
     while (enumWin.hasMoreElements()) {
-      var win = enumWin.getNext();
-      if (Profile.isNativeProfile(Profile.getIdentity(win))) {
-        continue;
-      }
-      var all = win.getBrowser().browsers;
-      for (var idx = all.length - 1; idx > -1; idx--) {
-        this._forEachWindow(DocStartScriptInjection._initWindow,
-                            all[idx].contentWindow);
+      for (var browser of UIUtils.getBrowserList(enumWin.getNext())) {
+        if (Profile.isExtensionProfile(Profile.getIdentity(browser))) {
+          this._forEachWindow(DocStartScriptInjection._initWindow,
+                              browser.contentWindow);
+        }
       }
     }
   },
@@ -83,13 +80,17 @@ var DocStartScriptInjection = {
 
 
   _initWindow: function(win) {
-    var winInfo = FindIdentity.fromContent(win);
-    if (Profile.isNativeProfile(winInfo.profileNumber)) {
+    var browser = UIUtils.findOriginBrowser(win);
+    if (browser === null) {
       return;
     }
 
-    if (winInfo.browserElement) {
-      ErrorHandler.onNewWindow(win, winInfo.browserElement);
+    if (win === win.top) {
+      ErrorHandler.onNewWindow(browser);
+    }
+
+    if (Profile.isNativeProfile(Profile.getIdentity(browser))) {
+      return;
     }
 
     switch (win.location.protocol) {
@@ -120,7 +121,7 @@ var DocStartScriptInjection = {
     }
 
     // keep a reference to Cu.nukeSandbox (Cu.getWeakReference won't work for that)
-    var innerId = getDOMUtils(win).currentInnerWindowID.toString();
+    var innerId = UIUtils.getDOMUtils(win).currentInnerWindowID.toString();
     console.assert((innerId in me._innerWindows) === false, "dupe sandbox @", innerId)
     me._innerWindows[innerId] = sandbox;
   }

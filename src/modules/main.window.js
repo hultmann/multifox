@@ -3,91 +3,148 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-const BrowserWindow = {
+var UIUtils = {
 
-  register: function(win) {
-    var profileId = Profile.getIdentity(win);
-
-    if (Profile.isNativeProfile(profileId)) {
-      console.log("BrowserWindow.register NOP");
-      return;
-    }
-
-    console.log("BrowserWindow.register " + profileId);
-
-    var ns = {}; // BUG util is undefined???
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
-    if (ns.util.networkListeners.active === false) {
-      // first multifox window!
-
-      Cookies.start();
-      DocStartScriptInjection.init();
-      ns.util.networkListeners.enable(httpListeners.request, httpListeners.response);
-    }
-
-    // some MultifoxContentEvent_* listeners are not called when
-    // there are "unload" listeners with useCapture=true. o_O
-    // But they are called if event listener is an anonymous function.
-    win.addEventListener("unload", onUnloadChromeWindow, false);
-
-    // update icon status
-    win.getBrowser().tabContainer.addEventListener("TabSelect", tabSelected, false);
+  isMainWindow: function(chromeWin) {
+    return this._getWindowType(chromeWin) === "navigator:browser";
   },
 
 
-  // should keep id for session restore?
-  unregister: function(win) {
-    var idw = Profile.getIdentity(win);
-    console.log("BrowserWindow.unregister " + idw);
-
-    if (Profile.isNativeProfile(idw)) {
-      return; // nothing to unregister
-    }
-
-    win.removeEventListener("unload", onUnloadChromeWindow, false);
-    win.getBrowser().tabContainer.removeEventListener("TabSelect", tabSelected, false);
-
-    var ns = {}; // BUG util is undefined???
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
-    if (ns.util.networkListeners.active) {
-      this._checkLastWin(win);
-    }
+  isSourceWindow: function(chromeWin) {
+    return this._getWindowType(chromeWin) === "navigator:view-source";
   },
 
 
-  _checkLastWin: function(win) {
-    var sessions = Profile.activeIdentities(win);
-    var onlyNative = true;
-    for (var idx = sessions.length - 1; idx > -1; idx--) {
-      if (Profile.isExtensionProfile(sessions[idx])) {
-        onlyNative = false;
-        break;
+  _getWindowType: function(chromeWin) {
+    return chromeWin.document.documentElement.getAttribute("windowtype");
+  },
+
+
+  getContentContainer: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
+    return chromeWin.gBrowser; // <tabbrowser>
+  },
+
+
+  getTabStripContainer: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
+    return chromeWin.gBrowser.tabContainer; // <tabs>
+  },
+
+
+  getTabList: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
+    return chromeWin.gBrowser.tabs; // <tab> NodeList
+  },
+
+
+  getBrowserList: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
+    return chromeWin.gBrowser.browsers; // <browser> Array
+  },
+
+
+  getSelectedTab: function(chromeWin) {
+    console.assert(this.isMainWindow(chromeWin), "Not a browser window", chromeWin);
+    return chromeWin.gBrowser.selectedTab; // <tab>
+  },
+
+
+  getLinkedTabFromBrowser: function(browser) { // TODO tabList[getDOMUtils(browser.contentWindow).outerWindowID]
+    var win = this.getTopLevelWindow(browser.ownerDocument.defaultView);
+    if (UIUtils.isMainWindow(win)) {
+      for (var tab of this.getTabList(win)) {
+        if (tab.linkedBrowser === browser) {
+          return tab; // <tab>
+        }
       }
     }
-    if (onlyNative) {
-      var ns = {}; // BUG util is undefined???
-      Cu.import("${PATH_MODULE}/new-window.js", ns);
-      ns.util.networkListeners.disable();
-      DocStartScriptInjection.stop();
-      Cookies.stop();
+    console.assert(false, "getLinkedTabFromBrowser: tab not found",
+                   browser, browser.contentWindow, browser.contentDocument);
+    throw new Error("tab not found", browser);
+  },
+
+
+  findOriginBrowser: function(contentWin) {
+    if (contentWin === null) {
+      return null;
     }
+
+    var browser = UIUtils.getContainerElement(contentWin);
+    if (browser !== null) {
+      if (UIUtils.isMainWindow(browser.ownerDocument.defaultView)) {
+        return browser;
+      }
+    }
+
+    // source-view?
+    var chromeWin = UIUtils.getTopLevelWindow(contentWin);
+    if (chromeWin && UIUtils.isSourceWindow(chromeWin)) {
+      var winOpener = chromeWin.opener;
+      if (winOpener && UIUtils.isMainWindow(winOpener)) {
+        return UIUtils.getSelectedTab(winOpener).linkedBrowser;
+      }
+    }
+
+    return null;
+  },
+
+
+  getContainerElement: function(contentWin) {
+    var browser = UIUtils.getParentBrowser(contentWin);
+    if (browser === null) {
+      return null;
+    }
+    // browser.xul has browser elements all over the place
+    var t = browser.getAttribute("type");
+    return ((t === "content-targetable") || (t === "content-primary"))
+           ? browser : null;
+  },
+
+
+  getParentBrowser: function(win) {
+    console.assert(win !== null, "getParentBrowser win=null");
+    var browser = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                     .getInterface(Ci.nsIWebNavigation)
+                     .QueryInterface(Ci.nsIDocShell)
+                     .chromeEventHandler;
+    if (browser === null) {
+      return null;
+    }
+    if (browser.localName === "browser") {
+      return browser;
+    }
+    // e.g. <iframe> chrome://browser/content/devtools/cssruleview.xhtml
+    //console.log("not a browser element", browser.localName, win, win.parent);
+    return null;
+  },
+
+
+  getTopLevelWindow: function(win) { // content or chrome windows
+    if ((!win) || (!win.QueryInterface)) {
+      console.trace("getTopLevelWindow win=" + win);
+      return null;
+    }
+
+    var topwin = win.QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIWebNavigation)
+                    .QueryInterface(Ci.nsIDocShellTreeItem)
+                    .rootTreeItem
+                    .QueryInterface(Ci.nsIInterfaceRequestor)
+                    .getInterface(Ci.nsIDOMWindow);
+
+    console.assert(topwin !== null, "getTopLevelWindow null", win);
+    console.assert(topwin !== undefined, "getTopLevelWindow undefined", win);
+    console.assert(topwin === topwin.top, "getTopLevelWindow should return a top window",
+                   UIUtils.getDOMUtils(topwin).currentInnerWindowID, topwin, topwin.top);
+    // unwrapped object allows access to gBrowser etc
+    return XPCNativeWrapper.unwrap(topwin);
+  },
+
+
+  getDOMUtils: function(win) {
+    console.assert(typeof win === "object", "win should be an object", win);
+    return win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
   }
+
 };
-
-
-function onUnloadChromeWindow(evt) {
-  var win = evt.currentTarget;
-  BrowserWindow.unregister(win);
-}
-
-
-function tabSelected(evt) {
-  var tab = evt.originalTarget;
-  ErrorHandler.updateButtonAsync(tab.linkedBrowser);
-}
-
-
-function getDOMUtils(win) {
-  console.assert(typeof win === "object", "win should be an object", win);
-  return win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils);
-}

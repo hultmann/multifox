@@ -47,7 +47,7 @@ var ProfileAlias = {
       this._load();
     }
     var me = this;
-    arr.sort(function(id1, id2) {
+    arr.sort(function(id1, id2) { // BUG Profile 10, 11, 2, ...
       return me.format(id1).localeCompare(me.format(id2));
     });
     return arr;
@@ -88,9 +88,6 @@ var ProfileAlias = {
 
       case Profile.PrivateIdentity:
         return ns.util.getText("button.menuitem.profile.private.label");
-
-      case Profile.UndefinedIdentity:
-        throw new Error("unexpected Profile.UndefinedIdentity");
     }
 
     return ns.util.getText("button.menuitem.profile.extension.label", profileId);
@@ -114,7 +111,8 @@ function updateButtonCore(button) {
   }
 
   // update label
-  var profileId = Profile.getIdentity(button.ownerDocument.defaultView);
+  var tab = UIUtils.getSelectedTab(button.ownerDocument.defaultView);
+  var profileId = Profile.getIdentity(tab.linkedBrowser);
   var txt = placement.area === "PanelUI-contents"
           ? ProfileAlias.format(profileId)       // panel
           : ProfileAlias.formatShort(profileId); // toolbar
@@ -140,7 +138,7 @@ function insertButtonView(doc) {
   console.assert(doc.getElementById("${CHROME_NAME}-view-panel") === null, "panelview already exists");
 
   var uri = Services.io.newURI("${PATH_CONTENT}/button.css", null, null);
-  getDOMUtils(doc.defaultView).loadSheet(uri, 1);
+  UIUtils.getDOMUtils(doc.defaultView).loadSheet(uri, 1);
 
   doc.getElementById("PanelUI-popup")
      .addEventListener("popupshowing", onPanelUIShow, false);
@@ -156,7 +154,7 @@ function insertButtonView(doc) {
 function onPanelUIShow(evt) {
   var win = evt.target.ownerDocument.defaultView;
   ErrorHandler.updateButtonAsync(win.getBrowser().selectedBrowser);
-  updateButton(win);
+  updateButton(win); // necessary only when placement.area === "PanelUI-contents"
 }
 
 
@@ -165,6 +163,7 @@ function registerButton(create) {
   var buttonId = "${CHROME_NAME}-button";
 
   if (create === false) {
+    ui.removeListener(WidgetListeners);
     ui.destroyWidget(buttonId);
     return;
   }
@@ -197,17 +196,20 @@ function registerButton(create) {
     }
   });
 
-  ui.addListener({
-    onWidgetAdded: function(widgetId, area, position) {
-      if (widgetId === "${CHROME_NAME}-button") {
-        var enumWin = Services.wm.getEnumerator("navigator:browser");
-        while (enumWin.hasMoreElements()) {
-          updateButton(enumWin.getNext());
-        }
+  ui.addListener(WidgetListeners);
+}
+
+
+var WidgetListeners = {
+  onWidgetAdded: function(widgetId, area, position) {
+    if (widgetId === "${CHROME_NAME}-button") {
+      var enumWin = Services.wm.getEnumerator("navigator:browser");
+      while (enumWin.hasMoreElements()) {
+        updateButton(enumWin.getNext());
       }
     }
-  });
-}
+  }
+};
 
 
 function emptyNode(node) {
@@ -225,5 +227,5 @@ function destroyButton(doc) {
   panelView.parentNode.removeChild(panelView);
 
   var uri = Services.io.newURI("${PATH_CONTENT}/button.css", null, null);
-  getDOMUtils(doc.defaultView).removeSheet(uri, 1);
+  UIUtils.getDOMUtils(doc.defaultView).removeSheet(uri, 1);
 }

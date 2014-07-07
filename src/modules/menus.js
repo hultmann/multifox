@@ -9,10 +9,11 @@ const EXPORTED_SYMBOLS = ["menuShowing"];
 
 Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");
+Components.utils.import("${PATH_MODULE}/main.js");
 
 function menuShowing(evt) {
   var menu = evt.target;
-  switch (menu.id || menu.getAttribute("anonid")) {
+  switch (menu.id) {
     case "menu_FilePopup":
       fileMenu(menu);
       break;
@@ -29,10 +30,11 @@ function menuShowing(evt) {
 }
 
 function onPopupHidden(evt) {
-  var menu = evt.currentTarget; // <popup> <menupopup>
+  var menu = evt.currentTarget;
   if (menu !== evt.target) {
     return;
   }
+  console.assert(menu.localName === "menupopup", "menu should be a menupopup element", menu);
   menu.removeEventListener("popuphidden", onPopupHidden, false);
 
   var doc = menu.ownerDocument;
@@ -158,11 +160,11 @@ function newIdentityCommand(evt, cmd) {
     throw new Error("Command not supported in a private window.");
   }
 
-  newPendingWindow();
+  queueNewProfile(Profile.lowerAvailableId());
 
   switch (cmd) {
     case "places":
-      win.goDoPlacesCommand("placesCmd_open:window");
+      win.goDoPlacesCommand("placesCmd_open:tab");
       break;
     case "tab":
       Components.utils.import("resource://gre/modules/Services.jsm");
@@ -174,7 +176,7 @@ function newIdentityCommand(evt, cmd) {
                     win.getBrowser().mContextTab);
       break;
     case "link":
-      win.gContextMenu.openLink();
+      win.gContextMenu.openLinkInTab();
       break;
     default:
       throw new Error("${EXT_NAME} - cmd unknown: " + cmd);

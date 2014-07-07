@@ -13,13 +13,14 @@ const httpListeners = {
         return;
       }
 
-      var winInfo = FindIdentity.fromContent(ctx.associatedWindow);
-      if (Profile.isNativeProfile(winInfo.profileNumber)) {
+      var profileId = Profile.getIdentityFromContent(ctx.associatedWindow);
+      if (Profile.isNativeProfile(profileId)) {
         return; // default/private window, favicon, updates
       }
 
       if (isTopWindowChannel(httpChannel, ctx.associatedWindow)) {
-        ErrorHandler.onNewWindowRequest(winInfo.browserElement);
+        var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+        ErrorHandler.onNewWindowRequest(browser);
       }
       /*
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
@@ -29,7 +30,7 @@ const httpListeners = {
       }
       */
 
-      var cook = Cookies.getCookie(false, httpChannel.URI, winInfo.profileNumber);
+      var cook = Cookies.getCookie(false, httpChannel.URI, profileId);
       httpChannel.setRequestHeader("Cookie", cook, false);
     }
   },
@@ -43,7 +44,7 @@ const httpListeners = {
         return;
       }
       var winChannel = ctx.associatedWindow;
-      var profileId = FindIdentity.fromContent(winChannel).profileNumber;
+      var profileId = Profile.getIdentityFromContent(winChannel);
       if (Profile.isNativeProfile(profileId)) {
         return;
       }

@@ -20,8 +20,8 @@ function windowCommand(evt, elem, cmd, param) {
       if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
         return;
       }
-      newPendingWindow();
-      win.OpenBrowserWindow();
+      queueNewProfile(Profile.lowerAvailableId());
+      win.BrowserOpenTab();
       break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
@@ -30,13 +30,17 @@ function windowCommand(evt, elem, cmd, param) {
       showDeletePopup(win.document);
       break;
     case "cmd_rename_profile_prompt":
-      renameProfilePrompt(win, Number.parseInt(param, 10));
+      renameProfilePrompt(win, Profile.toInt(param));
       break;
-    case "cmd_set_profile_window":
-      Profile.defineIdentity(win, Number.parseInt(param, 10));
+    case "cmd_set_profile_tab":
+      var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+      Profile.defineIdentity(browser, Profile.toInt(param));
+      reloadTab(browser);
+      var winId = util.getOuterId(win).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
       break;
-    case "cmd_select_window":
-      selectProfileWindow(win, Number.parseInt(param, 10));
+    case "cmd_select_tab":
+      openOrSelectTab(win, Profile.toInt(param));
       break;
     case "cmd_show_error":
       showError(win);
@@ -52,37 +56,132 @@ function windowCommand(evt, elem, cmd, param) {
 }
 
 
-function selectProfileWindow(win, newProfileId) {
-  var arr = getProfileWindows(newProfileId);
-  if (arr.length === 0) {
-    // New window
-    if (newProfileId === Profile.PrivateIdentity) {
-      win.document.getElementById("Tools:PrivateBrowsing").doCommand();
-    } else {
-      newPendingWindow(newProfileId);
-      win.OpenBrowserWindow();
-    }
-    return;
+function reloadTab(browser) {
+  var win = browser.contentWindow;
+  switch (win.location.protocol) {
+    case "http:":
+    case "https:":
+      break;
+    default:
+      return;
   }
 
-  // focus next window
-  var idx = arr.indexOf(util.getOuterId(win)) + 1;
-  if (idx > (arr.length - 1)) {
-    idx = 0;
+  var channel = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation)
+                   .QueryInterface(Ci.nsIDocShell).currentDocumentChannel
+                   .QueryInterface(Ci.nsIHttpChannel);
+
+  if (channel.requestMethod === "POST") {
+    browser.loadURI(win.location.href); // avoid POST prompt
+  } else {
+    browser.reload();
   }
-  return Services.wm.getOuterWindowWithId(arr[idx]).focus();
 }
 
 
-function getProfileWindows(profileId) {
+function openOrSelectTab(win, newProfileId) {
+  var allTabs = getTabs();
+
+  var len = allTabs.length;
+  var selectableTabs = new Array(len);
+  var currentTab = UIUtils.getSelectedTab(win);
+  var noTabs = true;
+  var idxCurrent = -1;
+
+  for (var idx = 0; idx < len; idx++) {
+    selectableTabs[idx] = null; // TODO Fx31: selectableTabs.fill(null);
+    var tab = allTabs[idx];
+    var isCurrent = tab === currentTab;
+    if (isCurrent) {
+      idxCurrent = idx;
+    }
+    if (Profile.getIdentity(tab.linkedBrowser) === newProfileId) {
+      if (isCurrent === false) {
+        noTabs = false;
+        selectableTabs[idx] = tab;
+      }
+    }
+  }
+
+  if (noTabs) {
+    if (Profile.getIdentity(UIUtils.getSelectedTab(win).linkedBrowser) !== newProfileId) {
+      openTab(newProfileId, win);
+    } // else { do nothing }
+    return;
+  }
+
+
+  // there are tabs to select
+  // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  //             last^
+  //                  first^
+  //                    ^idxCurrent (ignored)
+  for (var idx = idxCurrent + 1, counter = 1; counter < len; idx++, counter++) {
+    if (idx >= len) {
+      idx = 0;
+    }
+    if (selectableTabs[idx] !== null) {
+      selectTab(selectableTabs[idx]);
+      return;
+    }
+  }
+
+  throw new Error("openOrSelectTab");
+}
+
+
+function openTab(newProfileId, win) {
+  if (newProfileId === Profile.PrivateIdentity) {
+    // New window
+    win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+    return;
+  }
+
+  queueNewProfile(newProfileId);
+
+  if (PrivateBrowsingUtils.isWindowPrivate(win) === false) {
+    win.BrowserOpenTab(); // open tab
+    return;
+  }
+
+  // current window is private, find a non-private one
+  for (var winId of getSortedWindows()) {
+    var win2 = Services.wm.getOuterWindowWithId(winId);
+    if (PrivateBrowsingUtils.isWindowPrivate(win2) === false) {
+      win2.BrowserOpenTab(); // open tab
+      return;
+    }
+  }
+
+  // all windows are private
+  win.OpenBrowserWindow(); // open window
+}
+
+
+function selectTab(tab) {
+  var win = tab.ownerDocument.defaultView;
+  UIUtils.getContentContainer(win).selectedTab = tab;
+  win.focus();
+}
+
+
+function getTabs() {
+  var arr = [];
+  for (var winId of getSortedWindows()) {
+    var win = Services.wm.getOuterWindowWithId(winId);
+    for (var tab of UIUtils.getTabList(win)) {
+      arr.push(tab);
+    }
+  }
+  return arr;
+}
+
+
+function getSortedWindows() {
   var arr = [];
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
-    var win = enumWin.getNext();
-    if (Profile.getIdentity(win) === profileId) {
-      arr.push(util.getOuterId(win));
-    }
+    arr.push(util.getOuterId(enumWin.getNext()));
   }
 
   arr.sort(function(a, b) {
@@ -108,23 +207,24 @@ function renameProfilePrompt(win, profileId) {
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
-    var win2 = enumWin.getNext();
-    if (Profile.getIdentity(win2) === profileId) {
-      var winId = util.getOuterId(win2).toString();
-      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
-    }
+    var winId = util.getOuterId(enumWin.getNext()).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
   }
 }
 
 
 function deleteCurrentPopup(win) {
-  var profileId = Profile.getIdentity(win);
+  win.document.getElementById("${CHROME_NAME}-arrow-panel").hidePopup();
+
+  var profileId = Profile.getIdentity(UIUtils.getSelectedTab(win).linkedBrowser);
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
-    var win2 = enumWin.getNext();
-    if (Profile.getIdentity(win2) === profileId) {
-      win2.close();
+    for (var tab of UIUtils.getTabList(enumWin.getNext())) {
+      if (Profile.getIdentity(tab.linkedBrowser) === profileId) {
+        var tb = UIUtils.getContentContainer(tab.ownerDocument.defaultView);
+        tb.removeTab(tab, {animate: true});
+      }
     }
   }
 
@@ -189,8 +289,11 @@ function showError(win) {
 
 
 function createArrowPanel(doc, icon) {
+  console.assert(doc.getElementById("${CHROME_NAME}-arrow-panel") === null, "dupe panel");
+
   var fragment = doc.createDocumentFragment();
   var panel = fragment.appendChild(doc.createElement("panel"));
+  panel.setAttribute("id", "${CHROME_NAME}-arrow-panel");
   panel.setAttribute("type", "arrow");
 
   var container = panel.appendChild(doc.createElement("hbox"));
@@ -198,10 +301,11 @@ function createArrowPanel(doc, icon) {
   var img = col1.appendChild(doc.createElement("image"));
   switch (icon) {
     case "warning":
-      img.setAttribute("src", "chrome://global/skin/icons/warning-large.png");
+      img.setAttribute("src", "chrome://global/skin/icons/warning-large.png"); // 48px
       break;
     case "error":
-      img.setAttribute("src", "chrome://global/skin/icons/error-48.png");
+      // BUG OS X 404 "chrome://global/skin/icons/error-48.png"
+      img.setAttribute("src", "chrome://global/skin/icons/error-64.png");
       break;
     default:
       throw new Error("createArrowPanel", icon);
@@ -220,6 +324,12 @@ function createArrowPanel(doc, icon) {
   } else {
     button = doc.getElementById("${CHROME_NAME}-button");
   }
+
+  panel.addEventListener("popuphidden", function(evt) {
+    var myPanel = evt.target;
+    console.assert(myPanel.localName === "panel", "myPanel should be a panel element", myPanel);
+    myPanel.parentNode.removeChild(myPanel);
+  }, false);
 
   doc.getElementById("mainPopupSet").appendChild(fragment);
   panel.openPopup(button, "bottomcenter topright");
@@ -275,22 +385,9 @@ function renderMenu(doc) {
   var fragment = doc.createDocumentFragment();
   appendNew(fragment);
 
-  var list = Profile.getProfileList();
 
-  // TODO var profiles = Profile.activeIdentities(win);
-  // show profileId from all windows even if it's not in the profile list
-  var enumWin = Services.wm.getEnumerator("navigator:browser");
-  while (enumWin.hasMoreElements()) {
-    var id = Profile.getIdentity(enumWin.getNext());
-    if (Profile.isExtensionProfile(id)) {
-      if (list.indexOf(id) === -1) {
-        list.push(id);
-      }
-    }
-  }
-
-  list = ProfileAlias.sort(list); // sort formatted IDs
-  var profileId = Profile.getIdentity(doc.defaultView);
+  var list = ProfileAlias.sort(Profile.getProfileList());
+  var profileId = Profile.getIdentity(UIUtils.getSelectedTab(doc.defaultView).linkedBrowser);
   appendList(fragment, list, profileId);
 
   var fragment2 = doc.createDocumentFragment();
@@ -336,7 +433,7 @@ function appendList(fragment, list, profileId) {
   appendSeparator(fragment);
   appendMenuItem(fragment, Profile.DefaultIdentity, profileId);
   var item = appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
-  item.setAttribute("oncommand", formatCallCommand("cmd_select_window", Profile.PrivateIdentity));
+  item.setAttribute("oncommand", formatCallCommand("cmd_select_tab", Profile.PrivateIdentity));
 
   if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView)) {
     item.setAttribute("type", "radio");
@@ -368,7 +465,7 @@ function appendMenuItem(fragment, id, profileId) {
     return;
   }
 
-  var cmd = formatCallCommand("cmd_select_window", id);
+  var cmd = formatCallCommand("cmd_select_tab", id);
 
   if (id !== profileId) {
     appendButton(fragment, name).setAttribute("oncommand", cmd);
@@ -409,7 +506,7 @@ function panelEdit(fragment, list, profileId) {
 
   for (var idx = 0; idx < list.length; idx++) {
     var item = appendButton(fragment, ProfileAlias.format(list[idx]));
-    item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_window", list[idx]));
+    item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", list[idx]));
     if (profileId === list[idx]) {
       item.removeAttribute("oncommand");
       item.setAttribute("type", "radio");

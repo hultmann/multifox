@@ -4,7 +4,7 @@
 
 
 function windowLocalStorage(obj, contentDoc) {
-  var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
+  var profileId = Profile.getIdentityFromContent(contentDoc.defaultView);
 
   if (Profile.isNativeProfile(profileId)) {
     console.trace("windowLocalStorage", profileId);
@@ -87,11 +87,9 @@ function dispatchStorageEvent(data, profileId, srcWin) {
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
-    var win = enumWin.getNext();
-    if (Profile.getIdentity(win) === profileId) {
-      var tabList = win.getBrowser().tabs; // <tab> NodeList
-      for (var idx = tabList.length - 1; idx > -1; idx--) {
-        forEachWindow(dispatchStorage, tabList[idx].linkedBrowser.contentWindow);
+    for (var browser of UIUtils.getBrowserList(enumWin.getNext())) {
+      if (Profile.getIdentity(browser) === profileId) {
+        forEachWindow(dispatchStorage, browser.contentWindow);
       }
     }
   }

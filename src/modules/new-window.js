@@ -5,7 +5,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "console", "Bootstrap", "newPendingWindow"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "Bootstrap", "queueNewProfile", "updateEngineState"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -15,23 +15,14 @@ Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("${PATH_MODULE}/main.js");
 
 
-var m_pendingNewWindows = [];
-
-
-function newPendingWindow(profileId) {
-  if (profileId === undefined) {
-    profileId = Profile.UndefinedIdentity;
-  }
-  m_pendingNewWindows.push(profileId);
-}
-
+var m_pendingNewProfiles = [];
 var m_docObserver = null;
 
 var Bootstrap = {
 
   extensionStartup: function(firstRun, reinstall) {
     console.assert(m_docObserver === null, "m_docObserver should be null");
-    console.assert(m_pendingNewWindows.length === 0, "m_pendingNewWindows should be empty");
+    console.assert(m_pendingNewProfiles.length === 0, "m_pendingNewProfiles should be empty");
 
     if (firstRun || reinstall) {
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
@@ -44,12 +35,7 @@ var Bootstrap = {
 
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
-      forEachChromeWindow(addOverlay, enumWin.getNext());
-    }
-
-    enumWin = Services.wm.getEnumerator("navigator:browser");
-    while (enumWin.hasMoreElements()) {
-      BrowserOverlay.add(enumWin.getNext());
+      forEachChromeWindow(enableExtension, enumWin.getNext());
     }
 
     registerButton(true); // call it only after inserting <panelview>
@@ -111,7 +97,7 @@ function forEachChromeWindow(fn, win) {
 
 var UpdateUI = {
   observe: function(subject, topic, data) {
-    var win = Services.wm.getOuterWindowWithId(parseInt(data, 10));
+    var win = Services.wm.getOuterWindowWithId(Number.parseInt(data, 10));
     updateButton(win);
   }
 }
@@ -136,31 +122,18 @@ DocObserver.prototype = {
 
 function onDOMContentLoaded(evt) {
   var win = evt.currentTarget;
-  if (win.document === evt.target) {
+  if (win.document !== evt.target) {
     // avoid bubbled DOMContentLoaded events
-    win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
-    addOverlay(win);
+    return;
   }
-}
 
+  win.removeEventListener("DOMContentLoaded", onDOMContentLoaded, false);
 
-// DOMContentLoaded is too early for #navigator-toolbox.palette
-// load might be a bit late for network listeners
-function onBrowserWinLoad(evt) {
-  var win = evt.currentTarget;
-  win.removeEventListener("load", onBrowserWinLoad, false);
-  win.requestAnimationFrame(function() {
-    BrowserOverlay.add(win);
-  });
-}
-
-
-function addOverlay(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      setWindowProfile(win); // enable netwok listeners
-      win.addEventListener("load", onBrowserWinLoad, false);
-      insertButtonView(win.document);
+      BrowserOverlay.add(win);
+      // new window doesn't trigger TabOpen
+      setNewTabProfileId(UIUtils.getBrowserList(win)[0]);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
@@ -177,18 +150,60 @@ function addOverlay(win) {
 }
 
 
+function updateEngineState(closedBrowser = null) {
+  var isActive = util.networkListeners.active;
+  if (Profile.activeExtensionIdentities(closedBrowser).length > 0) {
+    if (isActive === false) {
+      Profile.enableEngine();
+    }
+  } else {
+    if (isActive) {
+      Profile.disableEngine();
+    }
+  }
+}
+
+
+function queueNewProfile(profileId) {
+  // TODO Fx32: Number.isSafeInteger
+  console.assert(Number.isInteger(profileId), "profileId not defined", profileId);
+  m_pendingNewProfiles.push(profileId);
+}
+
+
+function removeState(win) { // uninstalling
+  console.assert(win.location.href === "chrome://browser/content/browser.xul", "win should be a browser window");
+
+  var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+
+  // per-window version
+  ss.setWindowValue(win,    "${PROFILE_DEPRECATED_SESSION}", "");
+  ss.deleteWindowValue(win, "${PROFILE_DEPRECATED_SESSION}");
+  UIUtils.getContentContainer(win).removeAttribute("${PROFILE_DEPRECATED_DISABLED}");
+
+  for (var tab of UIUtils.getTabList(win)) {
+    // extension is disabled before uninstalling
+    tab.linkedBrowser.removeAttribute("${PROFILE_BROWSER_ATTR}");
+    ss.setTabValue(tab,    "${PROFILE_SESSION}", ""); // avoid exception
+    ss.deleteTabValue(tab, "${PROFILE_SESSION}");
+  }
+}
+
+
+function enableExtension(win) {
+  switch (win.location.href) {
+    case "chrome://browser/content/browser.xul":
+      BrowserOverlay.add(win);
+      restoreProfiles(win);
+      break;
+  }
+}
+
+
 function disableExtension(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      var node = win.getBrowser();
-      if (node.hasAttribute("${BASE_DOM_ID}-identity-id")) {
-        var id = node.getAttribute("${BASE_DOM_ID}-identity-id");
-        node.setAttribute("${BASE_DOM_ID}-identity-id-tmp", id);
-      } else {
-        node.removeAttribute("${BASE_DOM_ID}-identity-id-tmp");
-      }
-
-      Profile.defineIdentity(win, Profile.DefaultIdentity);
+      saveProfiles(win);
       BrowserOverlay.remove(win);
       break;
 
@@ -205,32 +220,138 @@ function disableExtension(win) {
 }
 
 
-function removeState(win) { // uninstalling
-  console.assert(win.location.href === "chrome://browser/content/browser.xul", "win should be a browser window");
+function saveProfiles(win) {
+  // update: profile id is preserved (for further enabling)
+  // by tab["${PROFILE_DISABLED_ATTR}"];
+  for (var tab of UIUtils.getTabList(win)) {
+    var browser = tab.linkedBrowser;
+    var id = Profile.getIdentity(browser);
+    Profile.defineIdentity(browser, Profile.DefaultIdentity);
 
-  var node = win.getBrowser();
-  node.removeAttribute("${BASE_DOM_ID}-identity-id");
-  node.removeAttribute("${BASE_DOM_ID}-identity-id-tmp");
-
-  var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
-  ss.deleteWindowValue(win, "${BASE_DOM_ID}-identity-id");
+    // save even DefaultIdentity, so we prevent bugs when enabling
+    tab.setAttribute("${PROFILE_DISABLED_ATTR}", id);
+  }
 }
+
+
+function restoreProfiles(win) {
+  // updating from a per window version?
+  var winId = -1;
+  var attrWin = "${PROFILE_DEPRECATED_DISABLED}";
+  if (UIUtils.getContentContainer(win).hasAttribute(attrWin)) {
+    var tb = UIUtils.getContentContainer(win);
+    winId = Profile.toInt(tb.getAttribute(attrWin));
+    tb.removeAttribute(attrWin);
+    console.log("updating window profile id", winId);
+  }
+
+  for (var tab of UIUtils.getTabList(win)) {
+    var browser = tab.linkedBrowser;
+    if (winId > -1) {
+      // copy window profile to all tabs
+      Profile.defineIdentity(browser, winId);
+    }
+    if (tab.hasAttribute("${PROFILE_DISABLED_ATTR}")) {
+      var id = Profile.toInt(tab.getAttribute("${PROFILE_DISABLED_ATTR}"));
+      tab.removeAttribute("${PROFILE_DISABLED_ATTR}");
+      Profile.defineIdentity(browser, id);
+    }
+  }
+}
+
+
+function setNewTabProfileId(browser) {
+  if (m_pendingNewProfiles.length > 0) {
+    Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
+    return;
+  }
+
+  // inherit identity profile
+  if (util.networkListeners.active) {
+    Profile.defineIdentity(browser, Profile.getNextProfile());
+    // BUG when "move to a new window" in a bg tab
+    // TODO keep a list with outer IDs => profile
+  }
+}
+
+
+var WinEvents = {
+
+  tabRestoring: function(evt) {
+    var tab = evt.target;
+    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+
+    var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+    var stringId = ss.getTabValue(tab, "${PROFILE_SESSION}");
+    if (stringId.length === 0) {
+      stringId = Profile.DefaultIdentity.toString();
+    }
+
+    Profile.defineIdentity(tab.linkedBrowser, Profile.toInt(stringId));
+
+    if (tab.selected) {
+      var winId = util.getOuterId(tab.ownerDocument.defaultView).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+    }
+  },
+
+
+  tabOpen: function(evt) {
+    var tab = evt.target;
+    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+    setNewTabProfileId(tab.linkedBrowser);
+  },
+
+
+  winActivate: function(evt) {
+    var win = evt.currentTarget;
+    console.assert(win instanceof Ci.nsIDOMChromeWindow, "win should be a xul window", win);
+    var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+    Profile.setNextTabProfileId(Profile.getIdentity(browser));
+  },
+
+
+  tabSelected: function(evt) {
+    var tab = evt.target;
+    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+
+    var browser = tab.linkedBrowser;
+    Profile.setNextTabProfileId(Profile.getIdentity(browser));
+    ErrorHandler.updateButtonAsync(browser);
+  },
+
+
+  winUnload: function(evt) {
+    var win = evt.currentTarget;
+    console.assert(win instanceof Ci.nsIDOMChromeWindow, "win should be a xul window", win);
+    BrowserOverlay.remove(win);
+    updateEngineState();
+  },
+
+
+  tabClose: function(evt) {
+    var tab = evt.target;
+    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+    updateEngineState(tab.linkedBrowser);
+  }
+};
 
 
 const BrowserOverlay = {
   add: function(win) {
-    console.assert(win.location.href === "chrome://browser/content/browser.xul",
-                   "win should be a browser window", win.location.href);
-
-    win.addEventListener("unload", BrowserOverlay._unload, false);
-
-
     var doc = win.document;
-    //if ((doc instanceof Ci.nsIDOMDocument) === false) {
+    insertButtonView(doc);
+
+    win.addEventListener("unload",   WinEvents.winUnload,   false);
+    win.addEventListener("activate", WinEvents.winActivate, false);
 
     // detect session restore
-    doc.addEventListener("SSTabRestoring", onTabRestoring, false);
-    doc.addEventListener("SSTabRestored", onTabRestored, false);
+    doc.addEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
+
+    var container = UIUtils.getTabStripContainer(win);
+    container.addEventListener("TabOpen",   WinEvents.tabOpen,     false);
+    container.addEventListener("TabClose",  WinEvents.tabClose,    false);
+    container.addEventListener("TabSelect", WinEvents.tabSelected, false);
 
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));
@@ -244,19 +365,27 @@ const BrowserOverlay = {
 
     // menus
     addMenuListeners(doc);
+
+    var winId = util.getOuterId(win).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
   },
 
-
-  _unload: function(evt) {
-    // do not set window to DefaultIdentity, it can be restored
-    var win = evt.currentTarget;
-    BrowserOverlay.remove(win);
-  },
 
   remove: function(win) {
-    win.removeEventListener("unload", BrowserOverlay._unload, false);
+    console.assert(win instanceof Ci.nsIDOMChromeWindow, "win should be a xul window", win);
+
+    win.removeEventListener("unload", WinEvents.winUnload, false);
+    win.removeEventListener("activate", WinEvents.winActivate, false);
 
     var doc = win.document;
+    doc.removeEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
+
+    var container = UIUtils.getTabStripContainer(win);
+    container.removeEventListener("TabOpen",   WinEvents.tabOpen,     false);
+    container.removeEventListener("TabClose",  WinEvents.tabClose,    false);
+    container.removeEventListener("TabSelect", WinEvents.tabSelected, false);
+
+    updateEngineState();
     removeMenuListeners(doc);
 
     // key
@@ -310,75 +439,6 @@ var AboutOverlay = {
     root.setAttribute("hidden", "true");
   }
 };
-
-
-function setWindowProfile(newWin) {
-  var node = newWin.getBrowser();
-  var nameTmp = "${BASE_DOM_ID}-identity-id-tmp";
-
-  if (node.hasAttribute(nameTmp)) {
-    // updating/enabling the extension
-    var tmp = node.getAttribute(nameTmp);
-    node.removeAttribute(nameTmp);
-    var savedId = Profile.toInt(tmp);
-    console.assert(Profile.isExtensionProfile(savedId), "not a profile id", savedId);
-    Profile.defineIdentity(newWin, savedId);
-
-  } else if (m_pendingNewWindows.length > 0) {
-    var profileId = m_pendingNewWindows.pop();
-    if (profileId !== Profile.UndefinedIdentity) {
-      Profile.defineIdentity(newWin, profileId);
-    } else {
-      // new identity profile
-      NewWindow.newId(newWin);
-    }
-
-  } else {
-    // inherit identity profile
-    if (util.networkListeners.active) {
-      NewWindow.inheritId(newWin);
-    } else {
-      // no Multifox window
-      console.log("setWindowProfile NOP => util.networkListeners.active=false");
-    }
-  }
-}
-
-
-function onTabRestoring(evt) {
-  var doc = evt.currentTarget;
-  var win = doc.defaultView;
-
-  var stringId = Cc["@mozilla.org/browser/sessionstore;1"]
-                  .getService(Ci.nsISessionStore)
-                  .getWindowValue(win, "${BASE_DOM_ID}-identity-id");
-
-  if (util.networkListeners.active === false && stringId.length === 0) {
-    // default scenario
-    console.log("first tab restoring NOP");
-    return;
-  }
-
-  console.log("first tab restoring", stringId);
-
-  // add icon; sync id — override any previous profile id
-  NewWindow.applyRestore(win);
-}
-
-
-function onTabRestored(evt) {
-  var doc = evt.currentTarget;
-  var win = doc.defaultView;
-  var tab = evt.originalTarget;
-
-  // we need to [re]configure identity window id,
-  // only the first restored tab is necessary.
-  if (tab.linkedBrowser.currentURI.spec !== "about:sessionrestore") {
-    console.log("removeEventListener SSTabRestored+SSTabRestoring");
-    doc.removeEventListener("SSTabRestoring", onTabRestoring, false);
-    doc.removeEventListener("SSTabRestored", onTabRestored, false);
-  }
-}
 
 
 function addMenuListeners(doc) {

@@ -17,7 +17,7 @@ function documentCookie(obj, contentDoc) {
 
 
 function documentCookieGetter(obj, contentDoc) {
-  var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
+  var profileId = Profile.getIdentityFromContent(contentDoc.defaultView);
   if (Profile.isExtensionProfile(profileId)) {
     var uri = stringToUri(contentDoc.location.href);
     var cookie2 = Cookies.getCookie(true, uri, profileId);
@@ -28,7 +28,7 @@ function documentCookieGetter(obj, contentDoc) {
 
 
 function documentCookieSetter(obj, contentDoc) {
-  var profileId = FindIdentity.fromContent(contentDoc.defaultView).profileNumber;
+  var profileId = Profile.getIdentityFromContent(contentDoc.defaultView);
   if (Profile.isExtensionProfile(profileId)) {
     var originalUri = stringToUri(contentDoc.location.href);
     Cookies.setCookie(profileId, originalUri, obj.value, true);
