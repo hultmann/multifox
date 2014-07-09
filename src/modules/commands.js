@@ -17,11 +17,7 @@ function windowCommand(evt, elem, cmd, param) {
   var win = elem.ownerDocument.defaultView.top;
   switch (cmd) {
     case "cmd_new_profile":
-      if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-        return;
-      }
-      queueNewProfile(Profile.lowerAvailableId());
-      win.BrowserOpenTab();
+      openNewProfileTab(win);
       break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
@@ -40,7 +36,7 @@ function windowCommand(evt, elem, cmd, param) {
       Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
       break;
     case "cmd_select_tab":
-      openOrSelectTab(win, Profile.toInt(param));
+      openOrSelectTab(win, Profile.toInt(elem.getAttribute("profile-id")));
       break;
     case "cmd_show_error":
       showError(win);
@@ -52,6 +48,37 @@ function windowCommand(evt, elem, cmd, param) {
       break;
     default:
       throw new Error("${EXT_NAME} - cmd unknown: " + cmd);
+  }
+}
+
+
+function handleMiddleClick(evt) {
+  if ((evt.button !== 1) || (evt.detail !== 1)) {
+    // allow only middle clicks/single clicks
+    return;
+  }
+
+  var button = evt.target;
+  if (button.localName !== "toolbarbutton") {
+    return;
+  }
+
+  if (button.hasAttribute("disabled") && (button.getAttribute("disabled") === "true")) {
+    // ignore disabled items
+    return;
+  }
+  if (button.hasAttribute("profile-id") === false) {
+    return;
+  }
+
+  findParentPanel(button).hidePopup();
+
+  var win = button.ownerDocument.defaultView;
+  var id = button.getAttribute("profile-id");
+  if (id.length > 0) {
+    openTab(Profile.toInt(id), win);
+  } else {
+    openNewProfileTab(win);
   }
 }
 
@@ -129,6 +156,15 @@ function openOrSelectTab(win, newProfileId) {
 }
 
 
+function openNewProfileTab(win) {
+  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+    return;
+  }
+  queueNewProfile(Profile.lowerAvailableId());
+  win.BrowserOpenTab();
+}
+
+
 function openTab(newProfileId, win) {
   if (newProfileId === Profile.PrivateIdentity) {
     // New window
@@ -161,6 +197,15 @@ function selectTab(tab) {
   var win = tab.ownerDocument.defaultView;
   UIUtils.getContentContainer(win).selectedTab = tab;
   win.focus();
+}
+
+
+function findParentPanel(elem) {
+  var e = elem;
+  while (e.localName !== "panel") {
+    e = e.parentNode;
+  }
+  return e;
 }
 
 
@@ -407,6 +452,7 @@ function renderMenu(doc) {
   deck.selectedIndex = "0";
 
   var ph = deck.appendChild(doc.createElement("vbox"));
+  ph.addEventListener("click", handleMiddleClick);
   ph.classList.add("panel-subview-body");
   ph.appendChild(fragment);
 
@@ -423,6 +469,7 @@ function appendNew(fragment) {
   item.setAttribute("key", keyId);
   item.setAttribute("shortcut", ShortcutUtils.prettifyShortcut(key));
   item.setAttribute("oncommand", formatCallCommand("cmd_new_profile"));
+  item.setAttribute("profile-id", "");
   if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
     item.setAttribute("disabled", "true");
   }
@@ -433,7 +480,8 @@ function appendList(fragment, list, profileId) {
   appendSeparator(fragment);
   appendMenuItem(fragment, Profile.DefaultIdentity, profileId);
   var item = appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
-  item.setAttribute("oncommand", formatCallCommand("cmd_select_tab", Profile.PrivateIdentity));
+  item.setAttribute("oncommand", formatCallCommand("cmd_select_tab"));
+  item.setAttribute("profile-id", Profile.PrivateIdentity);
 
   if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView)) {
     item.setAttribute("type", "radio");
@@ -465,10 +513,12 @@ function appendMenuItem(fragment, id, profileId) {
     return;
   }
 
-  var cmd = formatCallCommand("cmd_select_tab", id);
+  var cmd = formatCallCommand("cmd_select_tab");
 
   if (id !== profileId) {
-    appendButton(fragment, name).setAttribute("oncommand", cmd);
+    var item = appendButton(fragment, name);
+    item.setAttribute("oncommand", cmd);
+    item.setAttribute("profile-id", id);
     return;
   }
 
@@ -479,6 +529,7 @@ function appendMenuItem(fragment, id, profileId) {
   item.setAttribute("checked", "true");
   item.setAttribute("flex", "1");
   item.setAttribute("oncommand", cmd);
+  item.setAttribute("profile-id", id);
 
   appendButton(items, util.getText("button.menuitem.edit.label"))
     .setAttribute("onclick", formatCallCommand("toggle-edit"));
