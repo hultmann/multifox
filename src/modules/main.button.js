@@ -153,7 +153,7 @@ function insertButtonView(doc) {
 
 function onPanelUIShow(evt) {
   var win = evt.target.ownerDocument.defaultView;
-  ErrorHandler.updateButtonAsync(win.getBrowser().selectedBrowser);
+  ErrorHandler.updateButtonAsync(UIUtils.getSelectedTab(win).linkedBrowser);
   updateButton(win); // necessary only when placement.area === "PanelUI-contents"
 }
 

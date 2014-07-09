@@ -12,7 +12,7 @@ var ErrorHandler = {
     ErrorHandler._incompatibility = true;
     var enumWin = Services.wm.getEnumerator("navigator:browser");
     while (enumWin.hasMoreElements()) {
-      ErrorHandler.updateButtonAsync(enumWin.getNext().getBrowser().selectedBrowser);
+      ErrorHandler.updateButtonAsync(UIUtils.getSelectedTab(enumWin.getNext()).linkedBrowser);
     }
   },
 
@@ -86,11 +86,12 @@ var ErrorHandler = {
 
 
   _updateButtonStatus: function(browser) {
-    if (browser.getTabBrowser().selectedBrowser !== browser) {
+    var doc = browser.ownerDocument;
+    if (UIUtils.getSelectedTab(doc.defaultView).linkedBrowser !== browser) {
       return;
     }
 
-    var button = getButtonElem(browser.ownerDocument);
+    var button = getButtonElem(doc);
     if (button === null) { // view-source?
       return;
     }
