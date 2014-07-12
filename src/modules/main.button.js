@@ -187,7 +187,9 @@ function registerButton(create) {
       var doc = evt.target.ownerDocument;
       doc.defaultView.requestAnimationFrame(function() {
         // it is hopefully the visible element, after the reinsertion
-        Cu.import("${PATH_MODULE}/commands.js", {}).renderMenu(doc);
+        Cu.import("${PATH_MODULE}/commands.js", null).
+          getProfileListMenu().
+          renderToolbarMenu(doc);
       });
     },
 

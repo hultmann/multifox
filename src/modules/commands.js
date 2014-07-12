@@ -4,7 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["windowCommand", "renderMenu", "removeData"];
+var EXPORTED_SYMBOLS = ["windowCommand", "removeData", "getProfileListMenu"];
 
 Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
@@ -16,9 +16,6 @@ Components.utils.import("${PATH_MODULE}/main.js");
 function windowCommand(evt, elem, cmd, param) {
   var win = elem.ownerDocument.defaultView.top;
   switch (cmd) {
-    case "cmd_new_profile":
-      openNewProfileTab(win);
-      break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
       break;
@@ -35,8 +32,17 @@ function windowCommand(evt, elem, cmd, param) {
       var winId = util.getOuterId(win).toString();
       Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
       break;
-    case "cmd_select_tab":
-      openOrSelectTab(win, Profile.toInt(elem.getAttribute("profile-id")));
+    case "cmd_new_profile":
+      openNewProfileTab(win, elem);
+      break;
+    case "cmd_new_tab":
+      var profileId = Profile.toInt(elem.getAttribute("profile-id"));
+      if (elem.getAttribute("cmd-mode") === "toolbar") {
+        openOrSelectTab(win, profileId);
+      } else {
+        queueNewProfile(profileId);
+        win.gContextMenu.openLinkInTab();
+      }
       break;
     case "cmd_show_error":
       showError(win);
@@ -63,6 +69,10 @@ function handleMiddleClick(evt) {
     return;
   }
 
+  if (button.getAttribute("cmd-mode") !== "toolbar") {
+    return;
+  }
+
   if (button.hasAttribute("disabled") && (button.getAttribute("disabled") === "true")) {
     // ignore disabled items
     return;
@@ -78,7 +88,7 @@ function handleMiddleClick(evt) {
   if (id.length > 0) {
     openTab(Profile.toInt(id), win);
   } else {
-    openNewProfileTab(win);
+    openNewProfileTab(win, button);
   }
 }
 
@@ -130,7 +140,7 @@ function openOrSelectTab(win, newProfileId) {
   }
 
   if (noTabs) {
-    if (Profile.getIdentity(UIUtils.getSelectedTab(win).linkedBrowser) !== newProfileId) {
+    if (getCurrentProfile(win) !== newProfileId) {
       openTab(newProfileId, win);
     } // else { do nothing }
     return;
@@ -156,12 +166,18 @@ function openOrSelectTab(win, newProfileId) {
 }
 
 
-function openNewProfileTab(win) {
+function openNewProfileTab(win, menuItem) {
   if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
     return;
   }
+
   queueNewProfile(Profile.lowerAvailableId());
-  win.BrowserOpenTab();
+
+  if (menuItem.getAttribute("cmd-mode") === "toolbar") {
+    win.BrowserOpenTab();
+  } else {
+    win.gContextMenu.openLinkInTab();
+  }
 }
 
 
@@ -200,12 +216,25 @@ function selectTab(tab) {
 }
 
 
+function getCurrentProfile(win) {
+  return Profile.getIdentity(UIUtils.getSelectedTab(win).linkedBrowser);
+}
+
+
 function findParentPanel(elem) {
   var e = elem;
   while (e.localName !== "panel") {
     e = e.parentNode;
   }
   return e;
+}
+
+
+function formatCallCommand(...args) {
+  return [
+    "Components.utils.import('${PATH_MODULE}/commands.js',{})",
+    ".windowCommand(event,this,'" + args.join("','") + "')"
+  ].join("");
 }
 
 
@@ -261,7 +290,7 @@ function renameProfilePrompt(win, profileId) {
 function deleteCurrentPopup(win) {
   win.document.getElementById("${CHROME_NAME}-arrow-panel").hidePopup();
 
-  var profileId = Profile.getIdentity(UIUtils.getSelectedTab(win).linkedBrowser);
+  var profileId = getCurrentProfile(win);
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
@@ -426,166 +455,212 @@ function removeProfile(profileId) {
 }
 
 
-function renderMenu(doc) {
-  var fragment = doc.createDocumentFragment();
-  appendNew(fragment);
-
-
-  var list = ProfileAlias.sort(Profile.getProfileList());
-  var profileId = Profile.getIdentity(UIUtils.getSelectedTab(doc.defaultView).linkedBrowser);
-  appendList(fragment, list, profileId);
-
-  var fragment2 = doc.createDocumentFragment();
-  panelEdit(fragment2, list, profileId);
-
-
-  var panelView = doc.getElementById("${CHROME_NAME}-view-panel");
-
-  var h = panelView.appendChild(doc.createElement("label"));
-  h.classList.add("panel-subview-header");
-  h.setAttribute("value", "${EXT_NAME}");
-
-
-  var deck = panelView.appendChild(doc.createElement("deck"));
-  deck.setAttribute("id", "${CHROME_NAME}-view-deck");
-  deck.setAttribute("flex", "1"); // panel won't shrink
-  deck.selectedIndex = "0";
-
-  var ph = deck.appendChild(doc.createElement("vbox"));
-  ph.addEventListener("click", handleMiddleClick);
-  ph.classList.add("panel-subview-body");
-  ph.appendChild(fragment);
-
-  var ph = deck.appendChild(doc.createElement("vbox"));
-  ph.classList.add("panel-subview-body");
-  ph.appendChild(fragment2);
+function getProfileListMenu() {
+  return new ProfileListMenu();
 }
 
 
-function appendNew(fragment) {
-  var item = appendButton(fragment, util.getText("button.menuitem.new.label"));
-  var keyId = "key_${BASE_DOM_ID}-new-identity";
-  var key = fragment.ownerDocument.getElementById(keyId);
-  item.setAttribute("key", keyId);
-  item.setAttribute("shortcut", ShortcutUtils.prettifyShortcut(key));
-  item.setAttribute("oncommand", formatCallCommand("cmd_new_profile"));
-  item.setAttribute("profile-id", "");
-  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-    item.setAttribute("disabled", "true");
-  }
+function ProfileListMenu() {
 }
 
 
-function appendList(fragment, list, profileId) {
-  appendSeparator(fragment);
-  appendMenuItem(fragment, Profile.DefaultIdentity, profileId);
-  var item = appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
-  item.setAttribute("oncommand", formatCallCommand("cmd_select_tab"));
-  item.setAttribute("profile-id", Profile.PrivateIdentity);
+ProfileListMenu.prototype = {
 
-  if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView)) {
+  _init: function(doc, isPanel) {
+    this._isPanelUI = isPanel;
+    this._currentProfile = getCurrentProfile(doc.defaultView);
+    this._profileList = ProfileAlias.sort(Profile.getProfileList());
+  },
+
+
+  renderLinkMenu: function(fragment) {
+    this._init(fragment.ownerDocument, false);
+    this._panelList(fragment);
+  },
+
+
+  renderToolbarMenu: function(doc) {
+    this._init(doc, true);
+
+    var fragmentMenu = doc.createDocumentFragment();
+    var fragmentEdit = doc.createDocumentFragment();
+
+    this._panelList(fragmentMenu);
+    this._panelEdit(fragmentEdit);
+
+    var panelView = doc.getElementById("${CHROME_NAME}-view-panel");
+
+    var h = panelView.appendChild(doc.createElement("label"));
+    h.classList.add("panel-subview-header");
+    h.setAttribute("value", "${EXT_NAME}");
+
+
+    var deck = panelView.appendChild(doc.createElement("deck"));
+    deck.setAttribute("id", "${CHROME_NAME}-view-deck");
+    deck.setAttribute("flex", "1"); // panel won't shrink
+    deck.selectedIndex = "0";
+
+    var ph = deck.appendChild(doc.createElement("vbox"));
+    ph.addEventListener("click", handleMiddleClick);
+    ph.classList.add("panel-subview-body");
+    ph.appendChild(fragmentMenu);
+
+    var ph = deck.appendChild(doc.createElement("vbox"));
+    ph.classList.add("panel-subview-body");
+    ph.appendChild(fragmentEdit);
+  },
+
+
+  _panelList: function(fragment) {
+    // New
+    this._appendNew(fragment);
+    this._appendSeparator(fragment);
+
+    // Default
+    this._appendMenuItem(fragment, Profile.DefaultIdentity);
+
+    // Private
+    if (this._isPanelUI) {
+      var item = this._appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
+      item.setAttribute("oncommand", formatCallCommand("cmd_new_tab"));
+      item.setAttribute("profile-id", Profile.PrivateIdentity);
+      item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+
+      if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView)) {
+        item.setAttribute("type", "radio");
+        item.setAttribute("checked", "true");
+      }
+    }
+
+    // User profiles
+    var list = this._profileList;
+    if (list.length > 0) {
+      this._appendSeparator(fragment);
+      for (var idx = 0; idx < list.length; idx++) {
+        this._appendMenuItem(fragment, list[idx]);
+      }
+    }
+
+    if (this._isPanelUI === false) {
+      return;
+    }
+
+    var doc = fragment.ownerDocument;
+    if (PrivateBrowsingUtils.permanentPrivateBrowsing ||
+       (ErrorHandler.getCurrentError(doc).length > 0)) {
+      this._appendSeparator(fragment);
+      var item = this._appendButton(fragment, util.getText("button.menuitem.error.label"));
+      item.setAttribute("image", "chrome://global/skin/icons/error-16.png");
+      item.setAttribute("oncommand", formatCallCommand("cmd_show_error"));
+    }
+  },
+
+
+  _appendNew: function(fragment) {
+    var item = this._appendButton(fragment, util.getText("button.menuitem.new.label"));
+    item.setAttribute("oncommand", formatCallCommand("cmd_new_profile"));
+    item.setAttribute("profile-id", "");
+    item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+    if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+      item.setAttribute("disabled", "true");
+    }
+    if (this._isPanelUI === false) {
+      return;
+    }
+    var keyId = "key_${BASE_DOM_ID}-new-identity";
+    var key = fragment.ownerDocument.getElementById(keyId);
+    item.setAttribute("key", keyId);
+    item.setAttribute("shortcut", ShortcutUtils.prettifyShortcut(key));
+  },
+
+
+  _appendMenuItem: function(fragment, id) {
+    var name = ProfileAlias.format(id);
+    if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+      this._appendButton(fragment, name).setAttribute("disabled", "true");
+      return;
+    }
+
+    var cmd = formatCallCommand("cmd_new_tab");
+
+    // not the current profile
+    if (id !== this._currentProfile) {
+      var item = this._appendButton(fragment, name);
+      item.setAttribute("oncommand", cmd);
+      item.setAttribute("profile-id", id);
+      item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+      return;
+    }
+
+    // current profile
+    var items = fragment.appendChild(fragment.ownerDocument.createElement("toolbaritem"));
+
+    var item = this._appendButton(items, name);
     item.setAttribute("type", "radio");
     item.setAttribute("checked", "true");
-  }
-
-  if (list.length > 0) {
-    appendSeparator(fragment);
-    for (var idx = 0, len = list.length; idx < len; idx++) {
-      appendMenuItem(fragment, list[idx], profileId);
-    }
-  }
-
-  var doc = fragment.ownerDocument;
-  if (PrivateBrowsingUtils.permanentPrivateBrowsing ||
-     (ErrorHandler.getCurrentError(doc).length > 0)) {
-    appendSeparator(fragment);
-    var item = appendButton(fragment, util.getText("button.menuitem.error.label"));
-    item.setAttribute("image", "chrome://global/skin/icons/error-16.png");
-    item.setAttribute("oncommand", formatCallCommand("cmd_show_error"));
-  }
-}
-
-
-function appendMenuItem(fragment, id, profileId) {
-  var name = ProfileAlias.format(id);
-  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-    appendButton(fragment, name).setAttribute("disabled", "true");
-    return;
-  }
-
-  var cmd = formatCallCommand("cmd_select_tab");
-
-  if (id !== profileId) {
-    var item = appendButton(fragment, name);
+    item.setAttribute("flex", "1");
     item.setAttribute("oncommand", cmd);
     item.setAttribute("profile-id", id);
-    return;
-  }
+    item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
 
-  var items = fragment.appendChild(fragment.ownerDocument.createElement("toolbaritem"));
-
-  var item = appendButton(items, name);
-  item.setAttribute("type", "radio");
-  item.setAttribute("checked", "true");
-  item.setAttribute("flex", "1");
-  item.setAttribute("oncommand", cmd);
-  item.setAttribute("profile-id", id);
-
-  appendButton(items, util.getText("button.menuitem.edit.label"))
-    .setAttribute("onclick", formatCallCommand("toggle-edit"));
-}
-
-
-function panelEdit(fragment, list, profileId) {
-  var item;
-
-  item = appendButton(fragment, String.fromCharCode(0x2190)); // ←
-  item.setAttribute("onclick", formatCallCommand("toggle-edit"));
-
-  appendSeparator(fragment);
-
-  item = appendButton(fragment, util.getText("button.menuitem.rename.label"));
-  item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", profileId));
-
-  item = appendButton(fragment, util.getText("button.menuitem.delete.label"));
-  item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", profileId));
-  if (Profile.isExtensionProfile(profileId) === false) {
-    item.setAttribute("disabled", "true");
-  }
-
-  appendSeparator(fragment);
-
-  for (var idx = 0; idx < list.length; idx++) {
-    var item = appendButton(fragment, ProfileAlias.format(list[idx]));
-    item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", list[idx]));
-    if (profileId === list[idx]) {
-      item.removeAttribute("oncommand");
-      item.setAttribute("type", "radio");
-      item.setAttribute("checked", "true");
+    // [Edit]
+    if (this._isPanelUI) {
+      this._appendButton(items, util.getText("button.menuitem.edit.label"))
+        .setAttribute("onclick", formatCallCommand("toggle-edit"));
     }
+  },
+
+
+  _panelEdit: function(fragment) {
+    var profileId = this._currentProfile;
+    var item;
+
+    item = this._appendButton(fragment, String.fromCharCode(0x2190)); // ←
+    item.setAttribute("onclick", formatCallCommand("toggle-edit"));
+
+    this._appendSeparator(fragment);
+
+    item = this._appendButton(fragment, util.getText("button.menuitem.rename.label"));
+    item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", profileId));
+
+    item = this._appendButton(fragment, util.getText("button.menuitem.delete.label"));
+    item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", profileId));
     if (Profile.isExtensionProfile(profileId) === false) {
       item.setAttribute("disabled", "true");
     }
+
+    this._appendSeparator(fragment);
+
+    var list = this._profileList;
+    for (var idx = 0; idx < list.length; idx++) {
+      item = this._appendButton(fragment, ProfileAlias.format(list[idx]));
+      item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", list[idx]));
+      if (profileId === list[idx]) {
+        item.removeAttribute("oncommand");
+        item.setAttribute("type", "radio");
+        item.setAttribute("checked", "true");
+      }
+      if (Profile.isExtensionProfile(profileId) === false) {
+        item.setAttribute("disabled", "true");
+      }
+    }
+  },
+
+
+  _appendButton: function(node, label) {
+    var name = this._isPanelUI ? "toolbarbutton" : "menuitem";
+    var elem = node.appendChild(node.ownerDocument.createElement(name));
+    elem.setAttribute("label", label);
+    if (this._isPanelUI) {
+      elem.classList.add("subviewbutton");
+    }
+    return elem;
+  },
+
+
+  _appendSeparator: function(node) {
+    var name = this._isPanelUI ? "toolbarseparator" : "menuseparator";
+    node.appendChild(node.ownerDocument.createElement(name));
   }
-}
 
-
-function formatCallCommand(...args) {
-  return [
-    "Components.utils.import('${PATH_MODULE}/commands.js',{})",
-    ".windowCommand(event,this,'" + args.join("','") + "')"
-  ].join("");
-}
-
-
-function appendButton(node, label) {
-  var elem = node.appendChild(node.ownerDocument.createElement("toolbarbutton"));
-  elem.setAttribute("label", label);
-  elem.classList.add("subviewbutton");
-  return elem;
-}
-
-
-function appendSeparator(node) {
-  node.appendChild(node.ownerDocument.createElement("toolbarseparator"));
-}
+};

@@ -114,14 +114,21 @@ function contentMenu(menu) {
   var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
 
-  var cmd = doc.createElement("menuitem");
+  var cmd = doc.createElement("menu");
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  cmd.setAttribute("label", util.getText("context.link.label"));
-  cmd.setAttribute("accesskey", util.getText("context.link.accesskey"));
-  cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "link");}, false);
+  cmd.setAttribute("label", util.getText("context.link2.label"));
+  cmd.setAttribute("accesskey", util.getText("context.link2.accesskey"));
+
   if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
     cmd.setAttribute("disabled", "true");
+    return;
   }
+
+  var fragment = doc.createDocumentFragment();
+  Components.utils.import("${PATH_MODULE}/commands.js", null).
+    getProfileListMenu().
+    renderLinkMenu(fragment);
+  cmd.appendChild(doc.createElement("menupopup")).appendChild(fragment);
 
   menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
