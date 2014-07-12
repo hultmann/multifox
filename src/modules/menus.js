@@ -23,9 +23,6 @@ function menuShowing(evt) {
     case "contentAreaContextMenu":
       contentMenu(menu);
       break;
-    case "tabContextMenu":
-      tabMenu(menu);
-      break;
   }
 }
 
@@ -129,32 +126,6 @@ function contentMenu(menu) {
     getProfileListMenu().
     renderLinkMenu(fragment);
   cmd.appendChild(doc.createElement("menupopup")).appendChild(fragment);
-
-  menu.insertBefore(cmd, position);
-  menu.addEventListener("popuphidden", onPopupHidden, false);
-}
-
-
-function tabMenu(menu) {
-  var doc = menu.ownerDocument;
-  var item = doc.getElementById("context_openTabInWindow");
-  if (item === null || item.hidden) {
-    item = doc.getElementById("tm-copyTabUrl"); // TMP?
-  }
-
-  var position = item === null ? null : item.nextSibling;
-
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
-  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
-
-  var cmd = doc.createElement("menuitem");
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  cmd.setAttribute("label", util.getText("context.tab.label"));
-  cmd.setAttribute("accesskey", util.getText("context.tab.accesskey"));
-  cmd.addEventListener("command", function(evt) {evt, newIdentityCommand(evt, "tab");}, false);
-  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
-    cmd.setAttribute("disabled", "true");
-  }
 
   menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);

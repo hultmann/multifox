@@ -442,7 +442,7 @@ var AboutOverlay = {
 
 
 function addMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup", "tabContextMenu"];
+  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).addEventListener("popupshowing", onMenuPopupShowing, false);
   }
@@ -450,7 +450,7 @@ function addMenuListeners(doc) {
 
 
 function removeMenuListeners(doc) {
-  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup", "tabContextMenu"];
+  var ids = ["contentAreaContextMenu", "placesContext", "menu_FilePopup"];
   for (var idx = ids.length - 1; idx > -1; idx--) {
     doc.getElementById(ids[idx]).removeEventListener("popupshowing", onMenuPopupShowing, false);
   }
