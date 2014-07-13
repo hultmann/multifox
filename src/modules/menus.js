@@ -74,51 +74,40 @@ function fileMenu(menu) {
 
 
 function placesMenu(menu) {
-  var doc = menu.ownerDocument;
-
-  var item = doc.getElementById("placesContext_open:newwindow");
-  if (item === null || item.hidden) {
-    return;
-  }
-
-  var position = doc.getElementById("placesContext_openSeparator");
-
-  var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
-  sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
-
-  var cmd = doc.createElement("menuitem");
-  cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  cmd.setAttribute("label", util.getText("context.places.label"));
-  cmd.setAttribute("accesskey", util.getText("context.places.accesskey"));
-  cmd.addEventListener("command", function(evt) {newIdentityCommand(evt, "places");}, false);
-  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
-    cmd.setAttribute("disabled", "true");
-  }
-  menu.insertBefore(cmd, position);
-  menu.addEventListener("popuphidden", onPopupHidden, false);
+  appendProfileMenu(menu, "placesContext_open:newwindow",
+                          "placesContext_openSeparator",
+                          "context.places2.label",
+                          "context.places2.accesskey");
 }
 
 
 function contentMenu(menu) {
+  appendProfileMenu(menu, "context-openlinkintab",
+                          "context-sep-open",
+                          "context.link2.label",
+                          "context.link2.accesskey");
+}
+
+
+function appendProfileMenu(menu, testId, posId, label, accesskey) {
   var doc = menu.ownerDocument;
-  var item = doc.getElementById("context-openlinkintab");
+  var item = doc.getElementById(testId);
   if (item === null || item.hidden) {
     return;
   }
 
-  var position = doc.getElementById("context-sep-open");
+  var position = doc.getElementById(posId);
 
   var sep = menu.insertBefore(doc.createElement("menuseparator"), position);
   sep.setAttribute("id", "${BASE_DOM_ID}-link-sep");
 
   var cmd = doc.createElement("menu");
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
-  cmd.setAttribute("label", util.getText("context.link2.label"));
-  cmd.setAttribute("accesskey", util.getText("context.link2.accesskey"));
+  cmd.setAttribute("label", util.getText(label));
+  cmd.setAttribute("accesskey", util.getText(accesskey));
 
   if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
     cmd.setAttribute("disabled", "true");
-    return;
   }
 
   var fragment = doc.createDocumentFragment();
@@ -129,34 +118,4 @@ function contentMenu(menu) {
 
   menu.insertBefore(cmd, position);
   menu.addEventListener("popuphidden", onPopupHidden, false);
-}
-
-
-function newIdentityCommand(evt, cmd) {
-  var win = evt.currentTarget.ownerDocument.defaultView.top; // defaultView=history-panel.xul/browser.xul
-  if (PrivateBrowsingUtils.isWindowPrivate(win)) {
-    throw new Error("Command not supported in a private window.");
-  }
-
-  queueNewProfile(Profile.lowerAvailableId());
-
-  switch (cmd) {
-    case "places":
-      win.goDoPlacesCommand("placesCmd_open:tab");
-      break;
-    case "tab":
-      Components.utils.import("resource://gre/modules/Services.jsm");
-      Services.ww.openWindow(
-                    win,
-                    "chrome://browser/content/browser.xul",
-                    null,
-                    "chrome,dialog=no,all",
-                    win.getBrowser().mContextTab);
-      break;
-    case "link":
-      win.gContextMenu.openLinkInTab();
-      break;
-    default:
-      throw new Error("${EXT_NAME} - cmd unknown: " + cmd);
-  }
 }

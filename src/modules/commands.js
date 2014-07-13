@@ -16,6 +16,18 @@ Components.utils.import("${PATH_MODULE}/main.js");
 function windowCommand(evt, elem, cmd, param) {
   var win = elem.ownerDocument.defaultView.top;
   switch (cmd) {
+    case "cmd_new_profile":
+      openNewProfileTab(win, elem);
+      break;
+    case "cmd_new_tab":
+      var profileId = Profile.toInt(elem.getAttribute("profile-id"));
+      if (elem.getAttribute("cmd-mode") === "toolbar") {
+        openOrSelectTab(win, profileId);
+      } else {
+        queueNewProfile(profileId);
+        openLink(win);
+      }
+      break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
       break;
@@ -31,18 +43,6 @@ function windowCommand(evt, elem, cmd, param) {
       reloadTab(browser);
       var winId = util.getOuterId(win).toString();
       Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
-      break;
-    case "cmd_new_profile":
-      openNewProfileTab(win, elem);
-      break;
-    case "cmd_new_tab":
-      var profileId = Profile.toInt(elem.getAttribute("profile-id"));
-      if (elem.getAttribute("cmd-mode") === "toolbar") {
-        openOrSelectTab(win, profileId);
-      } else {
-        queueNewProfile(profileId);
-        win.gContextMenu.openLinkInTab();
-      }
       break;
     case "cmd_show_error":
       showError(win);
@@ -176,7 +176,18 @@ function openNewProfileTab(win, menuItem) {
   if (menuItem.getAttribute("cmd-mode") === "toolbar") {
     win.BrowserOpenTab();
   } else {
+    openLink(win);
+  }
+}
+
+
+function openLink(win) {
+  if (win.gContextMenu) {
+    // page
     win.gContextMenu.openLinkInTab();
+  } else {
+    // bookmark/history
+    win.goDoPlacesCommand("placesCmd_open:tab");
   }
 }
 
@@ -468,7 +479,7 @@ ProfileListMenu.prototype = {
 
   _init: function(doc, isPanel) {
     this._isPanelUI = isPanel;
-    this._currentProfile = getCurrentProfile(doc.defaultView);
+    this._currentProfile = getCurrentProfile(doc.defaultView.top);
     this._profileList = ProfileAlias.sort(Profile.getProfileList());
   },
 
@@ -526,7 +537,7 @@ ProfileListMenu.prototype = {
       item.setAttribute("profile-id", Profile.PrivateIdentity);
       item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
 
-      if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView)) {
+      if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView.top)) {
         item.setAttribute("type", "radio");
         item.setAttribute("checked", "true");
       }
