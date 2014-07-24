@@ -63,8 +63,8 @@ else:
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
-b.set_var("APP_MIN_VERSION", "30.0")
-b.set_var("APP_MAX_VERSION", "33.*")
+b.set_var("APP_MIN_VERSION", "31.0")
+b.set_var("APP_MAX_VERSION", "34.*")
 b.set_var("CHROME_NAME",     "multifox")
 b.set_var("EXT_HOST",        "multifox-" + verEx)
 

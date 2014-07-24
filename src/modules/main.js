@@ -32,7 +32,7 @@ Cu.import("${PATH_MODULE}/new-window.js");
 const Profile = {
   PrivateIdentity:   0,
   DefaultIdentity:   1,
-  MaxIdentity:       999999999999999, // TODO Fx31: Number.MAX_SAFE_INTEGER
+  MaxIdentity:       Number.MAX_SAFE_INTEGER,
   _nextProfile:     -1,
 
   defineIdentity: function(browser, id) {

@@ -140,7 +140,6 @@ function openOrSelectTab(win, newProfileId) {
   var idxCurrent = -1;
 
   for (var idx = 0; idx < len; idx++) {
-    selectableTabs[idx] = null; // TODO Fx31: selectableTabs.fill(null);
     var tab = allTabs[idx];
     var isCurrent = tab === currentTab;
     if (isCurrent) {
@@ -171,7 +170,7 @@ function openOrSelectTab(win, newProfileId) {
     if (idx >= len) {
       idx = 0;
     }
-    if (selectableTabs[idx] !== null) {
+    if (selectableTabs[idx] !== undefined) {
       selectTab(selectableTabs[idx]);
       return;
     }
