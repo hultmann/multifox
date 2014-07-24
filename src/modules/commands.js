@@ -15,17 +15,29 @@ Components.utils.import("${PATH_MODULE}/main.js");
 
 function windowCommand(evt, elem, cmd, param) {
   var win = elem.ownerDocument.defaultView.top;
+
+  if (cmd === "cmd_show_error") {
+   showError(win);
+   return;
+  }
+
+  console.assert(PrivateBrowsingUtils.permanentPrivateBrowsing === false,
+                 "permanentPrivateBrowsing unexpected");
+
+  var isLink = elem.getAttribute("cmd-context") === "link";
+
   switch (cmd) {
     case "cmd_new_profile":
-      openNewProfileTab(win, elem);
+      queueNewProfile(Profile.lowerAvailableId());
+      openTab(win, isLink ? "link": "blank");
       break;
     case "cmd_new_tab":
       var profileId = Profile.toInt(elem.getAttribute("profile-id"));
-      if (elem.getAttribute("cmd-mode") === "toolbar") {
-        openOrSelectTab(win, profileId);
-      } else {
+      if (isLink) {
         queueNewProfile(profileId);
-        openLink(win);
+        openTab(win, "link");
+      } else {
+        openOrSelectTab(win, profileId);
       }
       break;
     case "cmd_delete_profile":
@@ -43,9 +55,6 @@ function windowCommand(evt, elem, cmd, param) {
       reloadTab(browser);
       var winId = util.getOuterId(win).toString();
       Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
-      break;
-    case "cmd_show_error":
-      showError(win);
       break;
     case "toggle-edit":
       evt.preventDefault();
@@ -69,7 +78,7 @@ function handleMiddleClick(evt) {
     return;
   }
 
-  if (button.getAttribute("cmd-mode") !== "toolbar") {
+  if (button.getAttribute("cmd-context") !== "toolbar") {
     return;
   }
 
@@ -77,18 +86,24 @@ function handleMiddleClick(evt) {
     // ignore disabled items
     return;
   }
+
   if (button.hasAttribute("profile-id") === false) {
+    return;
+  }
+
+  var win = button.ownerDocument.defaultView;
+  if (PrivateBrowsingUtils.isWindowPrivate(win)) {
     return;
   }
 
   findParentPanel(button).hidePopup();
 
-  var win = button.ownerDocument.defaultView;
   var id = button.getAttribute("profile-id");
   if (id.length > 0) {
-    openTab(Profile.toInt(id), win);
+    openSelectedProfileTab(Profile.toInt(id), win, "dupe");
   } else {
-    openNewProfileTab(win, button);
+    queueNewProfile(Profile.lowerAvailableId());
+    openTab(win, "dupe");
   }
 }
 
@@ -141,7 +156,7 @@ function openOrSelectTab(win, newProfileId) {
 
   if (noTabs) {
     if (getCurrentProfile(win) !== newProfileId) {
-      openTab(newProfileId, win);
+      openSelectedProfileTab(newProfileId, win, "blank");
     } // else { do nothing }
     return;
   }
@@ -166,57 +181,82 @@ function openOrSelectTab(win, newProfileId) {
 }
 
 
-function openNewProfileTab(win, menuItem) {
-  if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-    return;
-  }
+function openTab(win, urlSource) {
+  console.assert(PrivateBrowsingUtils.isWindowPrivate(win) === false,
+                 "isWindowPrivate unexpected");
 
-  queueNewProfile(Profile.lowerAvailableId());
-
-  if (menuItem.getAttribute("cmd-mode") === "toolbar") {
-    win.BrowserOpenTab();
-  } else {
-    openLink(win);
+  switch (urlSource) {
+    case "blank":
+      win.BrowserOpenTab();
+      break;
+    case "dupe":
+      dupeTab(win, win);
+      break;
+    case "link":
+      if (win.gContextMenu) {
+        // page
+        win.gContextMenu.openLinkInTab();
+      } else {
+        // bookmark/history
+        win.goDoPlacesCommand("placesCmd_open:tab");
+      }
+      break;
+    default:
+      throw new Error(urlSource);
   }
 }
 
 
-function openLink(win) {
-  if (win.gContextMenu) {
-    // page
-    win.gContextMenu.openLinkInTab();
-  } else {
-    // bookmark/history
-    win.goDoPlacesCommand("placesCmd_open:tab");
-  }
-}
+function openSelectedProfileTab(newProfileId, win, mode) {
+  var winIsPrivate = PrivateBrowsingUtils.isWindowPrivate(win);
 
-
-function openTab(newProfileId, win) {
   if (newProfileId === Profile.PrivateIdentity) {
-    // New window
-    win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+    var privWin = winIsPrivate ? win : findPrivateWindow();
+    if (privWin === null) {
+      // New window
+      win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+    } else {
+      dupeTab(win, privWin);
+    }
     return;
   }
 
   queueNewProfile(newProfileId);
 
-  if (PrivateBrowsingUtils.isWindowPrivate(win) === false) {
-    win.BrowserOpenTab(); // open tab
+  // win is not private
+  if (winIsPrivate === false) {
+    openTab(win, mode);
     return;
   }
 
-  // current window is private, find a non-private one
+  // win is private, find a non-private one
   for (var winId of getSortedWindows()) {
     var win2 = Services.wm.getOuterWindowWithId(winId);
     if (PrivateBrowsingUtils.isWindowPrivate(win2) === false) {
-      win2.BrowserOpenTab(); // open tab
+      openTab(win2, mode);
       return;
     }
   }
 
   // all windows are private
   win.OpenBrowserWindow(); // open window
+}
+
+
+function findPrivateWindow() {
+  for (var winId of getSortedWindows()) {
+    var win = Services.wm.getOuterWindowWithId(winId);
+    if (PrivateBrowsingUtils.isWindowPrivate(win)) {
+      return win;
+    }
+  }
+  return null;
+}
+
+
+function dupeTab(srcWin, targetWin) {
+  var browser = UIUtils.getSelectedTab(srcWin).linkedBrowser;
+  targetWin.openUILinkIn(browser.contentWindow.location.href, "tab");
 }
 
 
@@ -535,7 +575,7 @@ ProfileListMenu.prototype = {
       var item = this._appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
       item.setAttribute("oncommand", formatCallCommand("cmd_new_tab"));
       item.setAttribute("profile-id", Profile.PrivateIdentity);
-      item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+      item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
 
       if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView.top)) {
         item.setAttribute("type", "radio");
@@ -571,7 +611,7 @@ ProfileListMenu.prototype = {
     var item = this._appendButton(fragment, util.getText("button.menuitem.new.label"));
     item.setAttribute("oncommand", formatCallCommand("cmd_new_profile"));
     item.setAttribute("profile-id", "");
-    item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+    item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
     if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
       item.setAttribute("disabled", "true");
     }
@@ -599,7 +639,7 @@ ProfileListMenu.prototype = {
       var item = this._appendButton(fragment, name);
       item.setAttribute("oncommand", cmd);
       item.setAttribute("profile-id", id);
-      item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+      item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
       return;
     }
 
@@ -612,7 +652,7 @@ ProfileListMenu.prototype = {
     item.setAttribute("flex", "1");
     item.setAttribute("oncommand", cmd);
     item.setAttribute("profile-id", id);
-    item.setAttribute("cmd-mode", this._isPanelUI ? "toolbar" : "link");
+    item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
 
     // [Edit]
     if (this._isPanelUI) {
