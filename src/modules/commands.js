@@ -28,8 +28,7 @@ function windowCommand(evt, elem, cmd, param) {
 
   switch (cmd) {
     case "cmd_new_profile":
-      queueNewProfile(Profile.lowerAvailableId());
-      openTab(win, isLink ? "link": "blank");
+      openSelectedProfileTab(win, isLink ? "link": "blank", Profile.lowerAvailableId());
       break;
     case "cmd_new_tab":
       var profileId = Profile.toInt(elem.getAttribute("profile-id"));
@@ -100,7 +99,7 @@ function handleMiddleClick(evt) {
 
   var id = button.getAttribute("profile-id");
   if (id.length > 0) {
-    openSelectedProfileTab(Profile.toInt(id), win, "dupe");
+    openSelectedProfileTab(win, "dupe", Profile.toInt(id));
   } else {
     queueNewProfile(Profile.lowerAvailableId());
     openTab(win, "dupe");
@@ -155,7 +154,7 @@ function openOrSelectTab(win, newProfileId) {
 
   if (noTabs) {
     if (getCurrentProfile(win) !== newProfileId) {
-      openSelectedProfileTab(newProfileId, win, "blank");
+      openSelectedProfileTab(win, "blank", newProfileId);
     } // else { do nothing }
     return;
   }
@@ -181,9 +180,6 @@ function openOrSelectTab(win, newProfileId) {
 
 
 function openTab(win, urlSource) {
-  console.assert(PrivateBrowsingUtils.isWindowPrivate(win) === false,
-                 "isWindowPrivate unexpected");
-
   switch (urlSource) {
     case "blank":
       win.BrowserOpenTab();
@@ -206,7 +202,7 @@ function openTab(win, urlSource) {
 }
 
 
-function openSelectedProfileTab(newProfileId, win, mode) {
+function openSelectedProfileTab(win, urlSource, newProfileId) {
   var winIsPrivate = PrivateBrowsingUtils.isWindowPrivate(win);
 
   if (newProfileId === Profile.PrivateIdentity) {
@@ -224,7 +220,7 @@ function openSelectedProfileTab(newProfileId, win, mode) {
 
   // win is not private
   if (winIsPrivate === false) {
-    openTab(win, mode);
+    openTab(win, urlSource);
     return;
   }
 
@@ -232,7 +228,7 @@ function openSelectedProfileTab(newProfileId, win, mode) {
   for (var winId of getSortedWindows()) {
     var win2 = Services.wm.getOuterWindowWithId(winId);
     if (PrivateBrowsingUtils.isWindowPrivate(win2) === false) {
-      openTab(win2, mode);
+      openTab(win2, urlSource);
       return;
     }
   }
