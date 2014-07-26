@@ -662,37 +662,52 @@ ProfileListMenu.prototype = {
 
 
   _panelEdit: function(fragment) {
-    var profileId = this._currentProfile;
     var item;
 
+    // Back
     item = this._appendButton(fragment, String.fromCharCode(0x2190)); // ←
     item.setAttribute("onclick", formatCallCommand("toggle-edit"));
 
+    // Rename
+    var currentId = this._currentProfile;
     this._appendSeparator(fragment);
-
     item = this._appendButton(fragment, util.getText("button.menuitem.rename.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", profileId));
+    item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", currentId));
 
+    // Delete
     item = this._appendButton(fragment, util.getText("button.menuitem.delete.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", profileId));
-    if (Profile.isExtensionProfile(profileId) === false) {
+    item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", currentId));
+    if (Profile.isExtensionProfile(currentId) === false) {
       item.setAttribute("disabled", "true");
     }
 
+    // set Default
     this._appendSeparator(fragment);
+    this._appendEditItem(fragment, Profile.DefaultIdentity);
 
-    var list = this._profileList;
-    for (var idx = 0; idx < list.length; idx++) {
-      item = this._appendButton(fragment, ProfileAlias.format(list[idx]));
-      item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", list[idx]));
-      if (profileId === list[idx]) {
-        item.removeAttribute("oncommand");
-        item.setAttribute("type", "radio");
-        item.setAttribute("checked", "true");
+    // private id doesn't have an Edit menu
+
+    // set other profile
+    var len = this._profileList.length;
+    if (len > 0) {
+      this._appendSeparator(fragment);
+      for (var idx = 0; idx < len; idx++) {
+        this._appendEditItem(fragment, this._profileList[idx]);
       }
-      if (Profile.isExtensionProfile(profileId) === false) {
-        item.setAttribute("disabled", "true");
-      }
+    }
+  },
+
+
+  _appendEditItem: function(fragment, profileId) {
+    var item = this._appendButton(fragment, ProfileAlias.format(profileId));
+    item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", profileId));
+    if (this._currentProfile === profileId) {
+      item.removeAttribute("oncommand");
+      item.setAttribute("type", "radio");
+      item.setAttribute("checked", "true");
+    }
+    if (this._currentProfile === Profile.PrivateIdentity) {
+      item.setAttribute("disabled", "true");
     }
   },
 
