@@ -312,11 +312,8 @@ function getSortedWindows() {
 
 
 function renameProfilePrompt(win, profileId) {
-  var title = util.getText("dialog.rename.title", "${EXT_NAME}");
-  // TODO reword dialog.rename.label:
-  //     Choose a name for profile %1$S. Leave empty to use “%1$S”.
-  // ==> Choose a name for %1$S. Leave empty to use “%2$S”.
-  var desc = util.getText("dialog.rename.label", profileId);
+  var title = "${EXT_NAME}";
+  var desc = util.getText("dialog.rename2.label", ProfileAlias.format(profileId), profileId);
   var newName = {value: ProfileAlias.hasAlias(profileId)
                       ? ProfileAlias.format(profileId) : ""};
   if (Services.prompt.prompt(win, title, desc, newName, null, {value:false}) === false) {
@@ -395,7 +392,7 @@ function showError(win) {
       break;
     default:
       if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
-        msg = '${EXT_NAME} won\'t work if "Never remember history" or "Always use private browsing mode" are enabled (Options>Privacy).';
+        msg = util.getText("icon.error-panel.permanent-private.label", "${EXT_NAME}");
       } else {
         msg = ErrorHandler.getCurrentError(doc);
       }
