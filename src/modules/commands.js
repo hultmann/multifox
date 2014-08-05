@@ -24,6 +24,12 @@ function windowCommand(evt, elem, cmd, param) {
   console.assert(PrivateBrowsingUtils.permanentPrivateBrowsing === false,
                  "permanentPrivateBrowsing unexpected");
 
+  if (evt.ctrlKey) {
+    parseButtonMenuMiddleClick(elem);
+    return;
+  }
+
+
   var isLink = elem.getAttribute("cmd-context") === "link";
 
   switch (cmd) {
@@ -73,6 +79,11 @@ function handleMiddleClick(evt) {
   }
 
   var button = evt.target;
+  parseButtonMenuMiddleClick(button);
+}
+
+
+function parseButtonMenuMiddleClick(button) {
   if (button.localName !== "toolbarbutton") {
     return;
   }
