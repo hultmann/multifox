@@ -217,10 +217,12 @@ function openSelectedProfileTab(win, urlSource, newProfileId) {
   var winIsPrivate = PrivateBrowsingUtils.isWindowPrivate(win);
 
   if (newProfileId === Profile.PrivateIdentity) {
+    console.assert(urlSource === "dupe", "urlSource unexpected", urlSource);
     var privWin = winIsPrivate ? win : findPrivateWindow();
     if (privWin === null) {
       // New window
-      win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+      var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+      win.openLinkIn(browser.contentWindow.location.href, "window", {private: true});
     } else {
       dupeTab(win, privWin);
     }
