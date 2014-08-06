@@ -25,7 +25,6 @@ b.add_text("install.rdf")
 b.add_text("chrome.manifest")
 b.add_text("bootstrap.js")
 
-b.add_text("content/content-injection.js")
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
 b.add_text("content/button.css")

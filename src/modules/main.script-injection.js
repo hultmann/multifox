@@ -8,12 +8,12 @@
 var DocStartScriptInjection = {
 
   _innerWindows: Object.create(null),
-  _loader: null,
+  _src: null,
 
 
   init: function() {
-    console.assert(this._loader === null, "this._loader is already initialized");
-    this._loader = new ScriptSourceLoader();
+    console.assert(this._src === null, "this._src is already initialized");
+    this._src = "(" + contentScriptSource.toSource() + ")()";
     Services.obs.addObserver(this, "document-element-inserted", false);
     Services.obs.addObserver(this._onInnerDestroyed, "inner-window-destroyed", false);
     this._initCurrent();
@@ -23,7 +23,7 @@ var DocStartScriptInjection = {
   stop: function() {
     Services.obs.removeObserver(this, "document-element-inserted");
     Services.obs.removeObserver(this._onInnerDestroyed, "inner-window-destroyed");
-    this._loader = null;
+    this._src = null;
 
     var innerWindows = this._innerWindows;
     this._innerWindows = Object.create(null);
@@ -109,11 +109,10 @@ var DocStartScriptInjection = {
     };
 
     var me = DocStartScriptInjection;
-    var src = me._loader.getScript();
     try {
       // window.localStorage will be replaced by a Proxy object.
       // It seems it's only possible using a sandbox.
-      Cu.evalInSandbox(src, sandbox);
+      Cu.evalInSandbox(me._src, sandbox);
     } catch (ex) {
       ErrorHandler.addScriptError(win, "sandbox", win.document.documentURI + " " + "//exception=" + ex);
       Cu.nukeSandbox(sandbox);
@@ -141,31 +140,3 @@ function cmdContent(obj, contentDoc) {
       throw obj.from;
   }
 }
-
-
-function ScriptSourceLoader() {
-  this._src = null;
-  this._load(true);
-}
-
-
-ScriptSourceLoader.prototype = {
-
-  getScript: function() {
-    if (this._src === null) {
-      this._load(false);
-    }
-    return this._src;
-  },
-
-  _load: function(async) {
-    var me = this;
-    var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
-    xhr.onload = function() {
-      me._src = xhr.responseText;
-    };
-    xhr.open("GET", "${PATH_CONTENT}/content-injection.js", async);
-    xhr.overrideMimeType("text/plain");
-    xhr.send(null);
-  }
-};

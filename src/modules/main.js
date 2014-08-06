@@ -22,6 +22,7 @@ Cu.import("${PATH_MODULE}/new-window.js");
 #include "main.window.js"
 #include "main.button.js"
 #include "main.script-injection.js"
+#include "main.script-source.js"
 #include "main.network.js"
 #include "main.cookies.js"
 #include "main.storage.js"
