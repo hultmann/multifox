@@ -361,7 +361,7 @@ const BrowserOverlay = {
 
     key.setAttribute("oncommand",
       "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
-      ".windowCommand(event,this,'cmd_new_profile')");
+      ".windowCommand(event,this,'cmd_select_profile')");
 
     // menus
     addMenuListeners(doc);

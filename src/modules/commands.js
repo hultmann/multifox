@@ -17,33 +17,17 @@ function windowCommand(evt, elem, cmd, param) {
   var win = elem.ownerDocument.defaultView.top;
 
   if (cmd === "cmd_show_error") {
-   showError(win);
-   return;
+    showError(win);
+    return;
   }
 
   console.assert(PrivateBrowsingUtils.permanentPrivateBrowsing === false,
                  "permanentPrivateBrowsing unexpected");
 
-  if (evt.ctrlKey) {
-    parseButtonMenuMiddleClick(elem);
-    return;
-  }
-
-
-  var isLink = elem.getAttribute("cmd-context") === "link";
-
   switch (cmd) {
-    case "cmd_new_profile":
-      openSelectedProfileTab(win, isLink ? "link": "blank", Profile.lowerAvailableId());
-      break;
-    case "cmd_new_tab":
-      var profileId = Profile.toInt(elem.getAttribute("profile-id"));
-      if (isLink) {
-        queueNewProfile(profileId);
-        openTab(win, "link");
-      } else {
-        openOrSelectTab(win, profileId);
-      }
+    case "cmd_select_profile":
+      var middleClick = evt.ctrlKey && (elem.localName !== "key");
+      SelectProfile.parseProfileCmd(elem, middleClick);
       break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
@@ -53,13 +37,6 @@ function windowCommand(evt, elem, cmd, param) {
       break;
     case "cmd_rename_profile_prompt":
       renameProfilePrompt(win, Profile.toInt(param));
-      break;
-    case "cmd_set_profile_tab":
-      var browser = UIUtils.getSelectedTab(win).linkedBrowser;
-      Profile.defineIdentity(browser, Profile.toInt(param));
-      reloadTab(browser);
-      var winId = util.getOuterId(win).toString();
-      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
       break;
     case "toggle-edit":
       evt.preventDefault();
@@ -79,200 +56,325 @@ function handleMiddleClick(evt) {
   }
 
   var button = evt.target;
-  parseButtonMenuMiddleClick(button);
-}
-
-
-function parseButtonMenuMiddleClick(button) {
-  if (button.localName !== "toolbarbutton") {
-    return;
-  }
-
-  if (button.getAttribute("cmd-context") !== "toolbar") {
-    return;
-  }
-
-  if (button.hasAttribute("disabled") && (button.getAttribute("disabled") === "true")) {
-    // ignore disabled items
-    return;
-  }
-
-  if (button.hasAttribute("profile-id") === false) {
-    return;
-  }
-
-  var win = button.ownerDocument.defaultView;
-  if (PrivateBrowsingUtils.isWindowPrivate(win)) {
-    return;
-  }
-
   findParentPanel(button).hidePopup();
-
-  var id = button.getAttribute("profile-id");
-  if (id.length > 0) {
-    openSelectedProfileTab(win, "dupe", Profile.toInt(id));
-  } else {
-    queueNewProfile(Profile.lowerAvailableId());
-    openTab(win, "dupe");
-  }
+  SelectProfile.parseProfileCmd(button, true);
 }
 
 
-function reloadTab(browser) {
-  var win = browser.contentWindow;
-  switch (win.location.protocol) {
-    case "http:":
-    case "https:":
-      break;
-    default:
-      return;
-  }
+/*
+| menu | click  | current tab    | selected profile |
+===============================================================================
+| main |  left  |  non-private   |   non-private    | reload tab (same id? select next)
+| main |  left  |  non-private   |     private      | find priv win, open tab
+| main |  left  |    private     |   non-private    | find non-priv win, open tab
+| main |  left  |    private     |     private      | sel next tab
 
-  var channel = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation)
-                   .QueryInterface(Ci.nsIDocShell).currentDocumentChannel
-                   .QueryInterface(Ci.nsIHttpChannel);
+| main | middle |  non-private   |   non-private    | duplicate tab
+| main | middle |  non-private   |     private      | find priv win, duplicate tab
+| main | middle |    private     |   non-private    | find non-priv win, duplicate tab
+| main | middle |    private     |     private      | duplicate tab
 
-  if (channel.requestMethod === "POST") {
-    browser.loadURI(win.location.href); // avoid POST prompt
-  } else {
-    browser.reload();
-  }
-}
+| link |  left  |  non-private   |   non-private    | open tab
+| link |  left  |  non-private   |     private      | find priv win, open tab (DISABLED*)
+| link |  left  |    private     |   non-private    | find non-priv win, open tab (DISABLED*)
+| link |  left  |    private     |     private      | open tab
 
+| link | middle |  non-private   |   non-private    | nop
+| link | middle |  non-private   |     private      | nop
+| link | middle |    private     |   non-private    | nop
+| link | middle |    private     |     private      | nop
 
-function openOrSelectTab(win, newProfileId) {
-  var allTabs = getTabs();
+(*) disabled for history/bookmarks and links from private to non-private profiles.
+    for links from, pages a window will be opened instead of a tab.
+*/
 
-  var len = allTabs.length;
-  var selectableTabs = new Array(len);
-  var currentTab = UIUtils.getSelectedTab(win);
-  var noTabs = true;
-  var idxCurrent = -1;
+var SelectProfile = {
 
-  for (var idx = 0; idx < len; idx++) {
-    var tab = allTabs[idx];
-    var isCurrent = tab === currentTab;
-    if (isCurrent) {
-      idxCurrent = idx;
+  parseProfileCmd: function(elem, middleClick = false) {
+    // elem = <key> or <toolbarbutton>
+    var id = elem.hasAttribute("profile-id") ? elem.getAttribute("profile-id")
+                                             : "";
+    var newProfileId = id.length > 0 ? Profile.toInt(id)
+                                     : Profile.lowerAvailableId();
+
+    var win = elem.ownerDocument.defaultView.top;
+
+    var priv = PrivateBrowsingUtils.isWindowPrivate(win) ? "tab-pvt    "
+                                                         : "tab-non-pvt";
+    var profile = newProfileId === Profile.PrivateIdentity ? "id-pvt"
+                                                           : "id-non-pvt";
+    var isToolbar = elem.getAttribute("cmd-context") ===
+                    ProfileListMenu.prototype.LocationToolbar;
+
+    var cmdPos = isToolbar ? "main" : "link";
+    var click = middleClick ? "middle" : "left  ";
+
+    switch ([cmdPos, click, priv, profile].join(" ")) {
+      case "main left   tab-non-pvt id-non-pvt":
+        if (getCurrentProfile(win) !== newProfileId) {
+          this._setTabProfile(win, newProfileId);
+        } else {
+          this._selectNextTab(win, newProfileId);
+        }
+        break;
+
+      case "main middle tab-non-pvt id-non-pvt":
+        queueNewProfile(newProfileId);
+        this._openTabFromUrl(win, win);
+        break;
+
+      case "main middle tab-pvt     id-pvt":
+        this._openTabFromUrl(win, win);
+        break;
+
+      case "main left   tab-pvt     id-pvt":
+        this._selectNextTab(win, newProfileId);
+        break;
+
+      case "main left   tab-non-pvt id-pvt":
+      case "main middle tab-non-pvt id-pvt":
+        this._privateTabFromNormal(win, "tab");
+        break;
+
+      case "main left   tab-pvt     id-non-pvt":
+      case "main middle tab-pvt     id-non-pvt":
+        this._normalTabFromPvtWin(win, "tab", newProfileId);
+        break;
+
+      case "link left   tab-non-pvt id-non-pvt":
+        queueNewProfile(newProfileId);
+        this._openTabFromLink(win);
+        break;
+
+      case "link left   tab-pvt     id-pvt":
+        this._openTabFromLink(win);
+        break;
+
+      case "link left   tab-non-pvt id-pvt":
+        this._privateTabFromNormal(win, "link");
+        break;
+
+      case "link left   tab-pvt     id-non-pvt":
+        this._normalTabFromPvtWin(win, "link", newProfileId);
+        break;
+
+      case "link middle tab-non-pvt id-pvt":
+      case "link middle tab-non-pvt id-non-pvt":
+      case "link middle tab-pvt     id-pvt":
+      case "link middle tab-pvt     id-non-pvt":
+      default:
+        throw new Error("unexpected");
     }
-    if (Profile.getIdentity(tab.linkedBrowser) === newProfileId) {
-      if (isCurrent === false) {
-        noTabs = false;
-        selectableTabs[idx] = tab;
-      }
+  },
+
+
+  _setTabProfile: function(win, profileId) {
+    var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+    Profile.defineIdentity(browser, profileId);
+    this._reloadTab(browser);
+    var winId = util.getOuterId(win).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+  },
+
+
+  _reloadTab: function(browser) {
+    var win = browser.contentWindow;
+    switch (win.location.protocol) {
+      case "http:":
+      case "https:":
+        break;
+      default:
+        return;
     }
-  }
 
-  if (noTabs) {
-    if (getCurrentProfile(win) !== newProfileId) {
-      openSelectedProfileTab(win, "blank", newProfileId);
-    } // else { do nothing }
-    return;
-  }
+    var channel = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation)
+                     .QueryInterface(Ci.nsIDocShell).currentDocumentChannel
+                     .QueryInterface(Ci.nsIHttpChannel);
 
-
-  // there are tabs to select
-  // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  //             last^
-  //                  first^
-  //                    ^idxCurrent (ignored)
-  for (var idx = idxCurrent + 1, counter = 1; counter < len; idx++, counter++) {
-    if (idx >= len) {
-      idx = 0;
-    }
-    if (selectableTabs[idx] !== undefined) {
-      selectTab(selectableTabs[idx]);
-      return;
-    }
-  }
-
-  throw new Error("openOrSelectTab");
-}
-
-
-function openTab(win, urlSource) {
-  switch (urlSource) {
-    case "blank":
-      win.BrowserOpenTab();
-      break;
-    case "dupe":
-      dupeTab(win, win);
-      break;
-    case "link":
-      if (win.gContextMenu) {
-        // page
-        win.gContextMenu.openLinkInTab();
-      } else {
-        // bookmark/history
-        win.goDoPlacesCommand("placesCmd_open:tab");
-      }
-      break;
-    default:
-      throw new Error(urlSource);
-  }
-}
-
-
-function openSelectedProfileTab(win, urlSource, newProfileId) {
-  var winIsPrivate = PrivateBrowsingUtils.isWindowPrivate(win);
-
-  if (newProfileId === Profile.PrivateIdentity) {
-    console.assert(urlSource === "dupe", "urlSource unexpected", urlSource);
-    var privWin = winIsPrivate ? win : findPrivateWindow();
-    if (privWin === null) {
-      // New window
-      var browser = UIUtils.getSelectedTab(win).linkedBrowser;
-      win.openLinkIn(browser.contentWindow.location.href, "window", {private: true});
+    if (channel.requestMethod === "POST") {
+      browser.loadURI(win.location.href); // avoid POST prompt
     } else {
-      dupeTab(win, privWin);
+      browser.reload();
     }
-    return;
-  }
+  },
 
-  queueNewProfile(newProfileId);
 
-  // win is not private
-  if (winIsPrivate === false) {
-    openTab(win, urlSource);
-    return;
-  }
+  _openWindowFromUrl: function(win, isPrivate) {
+    var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+    win.openLinkIn(browser.contentWindow.location.href,
+                   "window",
+                   {private: isPrivate});
+  },
 
-  // win is private, find a non-private one
-  for (var winId of getSortedWindows()) {
-    var win2 = Services.wm.getOuterWindowWithId(winId);
-    if (PrivateBrowsingUtils.isWindowPrivate(win2) === false) {
-      openTab(win2, urlSource);
-      return;
+
+  _openWindowFromLink: function(win, isPrivate) {
+    // page context menu
+    if (win.gContextMenu) {
+      // page
+      if (isPrivate) {
+        win.gContextMenu.openLinkInPrivateWindow();
+      } else {
+        // BUG openLinkIn always opens a private window if win is private
+        win.gContextMenu.openLink();
+      }
+    // places context menu
+    } else {
+      if (isPrivate) {
+        // BUG there is no way to open a private window from a link
+        win.goDoPlacesCommand("placesCmd_open:window");
+      } else {
+        // BUG placesCmd_open:window always open a private
+        // window from a private window
+        win.goDoPlacesCommand("placesCmd_open:window");
+      }
     }
-  }
-
-  // all windows are private
-  win.OpenBrowserWindow(); // open window
-}
+  },
 
 
-function findPrivateWindow() {
-  for (var winId of getSortedWindows()) {
-    var win = Services.wm.getOuterWindowWithId(winId);
-    if (PrivateBrowsingUtils.isWindowPrivate(win)) {
-      return win;
+  _openTabFromUrl: function(srcWin, targetWin) {
+    var browser = UIUtils.getSelectedTab(srcWin).linkedBrowser;
+    targetWin.openUILinkIn(browser.contentWindow.location.href, "tab");
+    targetWin.focus();
+  },
+
+
+  _openTabFromLink: function(win) {
+    if (win.gContextMenu) {
+      // page
+      win.gContextMenu.openLinkInTab();
+    } else {
+      // bookmark/history
+      win.goDoPlacesCommand("placesCmd_open:tab");
     }
+  },
+
+
+  _privateTabFromNormal: function(win, urlSource) {
+    switch (urlSource) {
+      case "tab":
+        var privWin = this._find1stWindow(true);
+        if (privWin !== null) {
+          this._openTabFromUrl(win, privWin);
+        } else {
+          this._openWindowFromUrl(win, true);
+        }
+        break;
+      case "link":
+        // there is no easy way to add, from a link, a tab
+        // in a different window. Open a window instead.
+        this._openWindowFromLink(win, true);
+        break;
+    }
+  },
+
+
+  _normalTabFromPvtWin: function(privWin, urlSource, profileId) {
+    queueNewProfile(profileId);
+    switch (urlSource) {
+      case "tab":
+        var win = this._find1stWindow(false);
+        if (win !== null) {
+          this._openTabFromUrl(win, win);
+        } else {
+          this._openWindowFromUrl(privWin, false);
+        }
+      case "link":
+        // BUG windows from a private window are always private
+        throw new Error("unexpected");
+    }
+  },
+
+
+  _selectNextTab: function(win, newProfileId) {
+    var allTabs = this._getTabs();
+
+    var len = allTabs.length;
+    var selectableTabs = new Array(len);
+    var currentTab = UIUtils.getSelectedTab(win);
+    var noTabs = true;
+    var idxCurrent = -1;
+
+    for (var idx = 0; idx < len; idx++) {
+      var tab = allTabs[idx];
+      var isCurrent = tab === currentTab;
+      if (isCurrent) {
+        idxCurrent = idx;
+      }
+      if (Profile.getIdentity(tab.linkedBrowser) === newProfileId) {
+        if (isCurrent === false) {
+          noTabs = false;
+          selectableTabs[idx] = tab;
+        }
+      }
+    }
+
+    if (noTabs === false) {
+      this._selectTab(selectableTabs, idxCurrent);
+    }
+  },
+
+
+  _selectTab: function(selectableTabs, idxCurrent) {
+    // there are tabs to select
+    // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    //             last^
+    //                  first^
+    //                    ^idxCurrent (ignored)
+    var len = selectableTabs.length;
+    for (var idx = idxCurrent + 1, counter = 1; counter < len; idx++, counter++) {
+      if (idx >= len) {
+        idx = 0;
+      }
+      if (selectableTabs[idx] !== undefined) {
+        var tab = selectableTabs[idx];
+        var win = tab.ownerDocument.defaultView;
+        UIUtils.getContentContainer(win).selectedTab = tab;
+        win.focus();
+        return;
+      }
+    }
+
+    throw new Error("_selectTab");
+  },
+
+
+  _find1stWindow: function(isPrivate) {
+    for (var winId of this._getSortedWindows()) {
+      var win = Services.wm.getOuterWindowWithId(winId);
+      if (PrivateBrowsingUtils.isWindowPrivate(win) === isPrivate) {
+        return win;
+      }
+    }
+    return null;
+  },
+
+
+  _getTabs: function() {
+    var arr = [];
+    for (var winId of this._getSortedWindows()) {
+      var win = Services.wm.getOuterWindowWithId(winId);
+      for (var tab of UIUtils.getTabList(win)) {
+        arr.push(tab);
+      }
+    }
+    return arr;
+  },
+
+
+  _getSortedWindows: function() {
+    var arr = [];
+
+    var enumWin = Services.wm.getEnumerator("navigator:browser");
+    while (enumWin.hasMoreElements()) {
+      arr.push(util.getOuterId(enumWin.getNext()));
+    }
+
+    arr.sort(function(a, b) {
+      return a - b;
+    });
+    return arr;
   }
-  return null;
-}
-
-
-function dupeTab(srcWin, targetWin) {
-  var browser = UIUtils.getSelectedTab(srcWin).linkedBrowser;
-  targetWin.openUILinkIn(browser.contentWindow.location.href, "tab");
-}
-
-
-function selectTab(tab) {
-  var win = tab.ownerDocument.defaultView;
-  UIUtils.getContentContainer(win).selectedTab = tab;
-  win.focus();
-}
+};
 
 
 function getCurrentProfile(win) {
@@ -294,33 +396,6 @@ function formatCallCommand(...args) {
     "Components.utils.import('${PATH_MODULE}/commands.js',{})",
     ".windowCommand(event,this,'" + args.join("','") + "')"
   ].join("");
-}
-
-
-function getTabs() {
-  var arr = [];
-  for (var winId of getSortedWindows()) {
-    var win = Services.wm.getOuterWindowWithId(winId);
-    for (var tab of UIUtils.getTabList(win)) {
-      arr.push(tab);
-    }
-  }
-  return arr;
-}
-
-
-function getSortedWindows() {
-  var arr = [];
-
-  var enumWin = Services.wm.getEnumerator("navigator:browser");
-  while (enumWin.hasMoreElements()) {
-    arr.push(util.getOuterId(enumWin.getNext()));
-  }
-
-  arr.sort(function(a, b) {
-    return a - b;
-  });
-  return arr;
 }
 
 
@@ -522,21 +597,26 @@ function ProfileListMenu() {
 
 ProfileListMenu.prototype = {
 
-  _init: function(doc, isPanel) {
-    this._isPanelUI = isPanel;
+  LocationToolbar: "toolbar",
+  LocationPlaces:  "places",
+  LocationLink:    "link",
+
+  _init: function(doc, location) {
+    this._location = location;
     this._currentProfile = getCurrentProfile(doc.defaultView.top);
     this._profileList = ProfileAlias.sort(Profile.getProfileList());
   },
 
 
-  renderLinkMenu: function(fragment) {
-    this._init(fragment.ownerDocument, false);
+  renderLinkMenu: function(fragment, isPlacesMenu = false) {
+    this._init(fragment.ownerDocument, isPlacesMenu ? this.LocationPlaces
+                                                    : this.LocationLink);
     this._panelList(fragment);
   },
 
 
   renderToolbarMenu: function(doc) {
-    this._init(doc, true);
+    this._init(doc, "toolbar");
 
     var fragmentMenu = doc.createDocumentFragment();
     var fragmentEdit = doc.createDocumentFragment();
@@ -576,16 +656,15 @@ ProfileListMenu.prototype = {
     this._appendMenuItem(fragment, Profile.DefaultIdentity);
 
     // Private
-    if (this._isPanelUI) {
-      var item = this._appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
-      item.setAttribute("oncommand", formatCallCommand("cmd_new_tab"));
-      item.setAttribute("profile-id", Profile.PrivateIdentity);
-      item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
+    var item = this._appendButton(fragment, ProfileAlias.format(Profile.PrivateIdentity));
+    this._disableDueToBug(true, item);
+    item.setAttribute("oncommand", formatCallCommand("cmd_select_profile"));
+    item.setAttribute("profile-id", Profile.PrivateIdentity);
+    item.setAttribute("cmd-context", this._location);
 
-      if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView.top)) {
-        item.setAttribute("type", "radio");
-        item.setAttribute("checked", "true");
-      }
+    if (PrivateBrowsingUtils.isWindowPrivate(fragment.ownerDocument.defaultView.top)) {
+      item.setAttribute("type", "radio");
+      item.setAttribute("checked", "true");
     }
 
     // User profiles
@@ -597,10 +676,11 @@ ProfileListMenu.prototype = {
       }
     }
 
-    if (this._isPanelUI === false) {
+    if (this._location !== this.LocationToolbar) {
       return;
     }
 
+    // Show error
     var doc = fragment.ownerDocument;
     if (PrivateBrowsingUtils.permanentPrivateBrowsing ||
        (ErrorHandler.getCurrentError(doc).length > 0)) {
@@ -614,13 +694,13 @@ ProfileListMenu.prototype = {
 
   _appendNew: function(fragment) {
     var item = this._appendButton(fragment, util.getText("button.menuitem.new.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_new_profile"));
-    item.setAttribute("profile-id", "");
-    item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
+    this._disableDueToBug(false, item);
+    item.setAttribute("oncommand", formatCallCommand("cmd_select_profile"));
+    item.setAttribute("cmd-context", this._location);
     if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
       item.setAttribute("disabled", "true");
     }
-    if (this._isPanelUI === false) {
+    if (this._location !== this.LocationToolbar) {
       return;
     }
     var keyId = "key_${BASE_DOM_ID}-new-identity";
@@ -637,14 +717,15 @@ ProfileListMenu.prototype = {
       return;
     }
 
-    var cmd = formatCallCommand("cmd_new_tab");
+    var cmd = formatCallCommand("cmd_select_profile");
 
     // not the current profile
     if (id !== this._currentProfile) {
       var item = this._appendButton(fragment, name);
+      this._disableDueToBug(false, item);
       item.setAttribute("oncommand", cmd);
       item.setAttribute("profile-id", id);
-      item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
+      item.setAttribute("cmd-context", this._location);
       return;
     }
 
@@ -657,10 +738,10 @@ ProfileListMenu.prototype = {
     item.setAttribute("flex", "1");
     item.setAttribute("oncommand", cmd);
     item.setAttribute("profile-id", id);
-    item.setAttribute("cmd-context", this._isPanelUI ? "toolbar" : "link");
+    item.setAttribute("cmd-context", this._location);
 
     // [Edit]
-    if (this._isPanelUI) {
+    if (this._location === this.LocationToolbar) {
       this._appendButton(items, util.getText("button.menuitem.edit.label"))
         .setAttribute("onclick", formatCallCommand("toggle-edit"));
     }
@@ -686,43 +767,32 @@ ProfileListMenu.prototype = {
     if (Profile.isExtensionProfile(currentId) === false) {
       item.setAttribute("disabled", "true");
     }
-
-    // set Default
-    this._appendSeparator(fragment);
-    this._appendEditItem(fragment, Profile.DefaultIdentity);
-
-    // private id doesn't have an Edit menu
-
-    // set other profile
-    var len = this._profileList.length;
-    if (len > 0) {
-      this._appendSeparator(fragment);
-      for (var idx = 0; idx < len; idx++) {
-        this._appendEditItem(fragment, this._profileList[idx]);
-      }
-    }
   },
 
 
-  _appendEditItem: function(fragment, profileId) {
-    var item = this._appendButton(fragment, ProfileAlias.format(profileId));
-    item.setAttribute("oncommand", formatCallCommand("cmd_set_profile_tab", profileId));
-    if (this._currentProfile === profileId) {
-      item.removeAttribute("oncommand");
-      item.setAttribute("type", "radio");
-      item.setAttribute("checked", "true");
-    }
-    if (this._currentProfile === Profile.PrivateIdentity) {
-      item.setAttribute("disabled", "true");
+  // disable command (see SelectProfile comments)
+  _disableDueToBug: function(idIsPrivate, item) {
+    var tabPrivate = this._currentProfile === Profile.PrivateIdentity
+                   ? "tab-priv" : "tab-non-priv";
+
+    var profile = idIsPrivate ? "id-pvt" : "id-non-pvt";
+
+    switch ([this._location, tabPrivate, profile].join(" ")) {
+      case "places tab-priv id-non-pvt":
+      case "places tab-non-priv id-pvt":
+      case "link tab-priv id-non-pvt":
+        item.setAttribute("disabled", "true");
+        break;
     }
   },
 
 
   _appendButton: function(node, label) {
-    var name = this._isPanelUI ? "toolbarbutton" : "menuitem";
+    var isToolbar = this._location === this.LocationToolbar;
+    var name = isToolbar ? "toolbarbutton" : "menuitem";
     var elem = node.appendChild(node.ownerDocument.createElement(name));
     elem.setAttribute("label", label);
-    if (this._isPanelUI) {
+    if (isToolbar) {
       elem.classList.add("subviewbutton");
     }
     return elem;
@@ -730,7 +800,8 @@ ProfileListMenu.prototype = {
 
 
   _appendSeparator: function(node) {
-    var name = this._isPanelUI ? "toolbarseparator" : "menuseparator";
+    var isToolbar = this._location === this.LocationToolbar;
+    var name = isToolbar ? "toolbarseparator" : "menuseparator";
     node.appendChild(node.ownerDocument.createElement(name));
   }
 

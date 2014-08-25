@@ -55,9 +55,10 @@ function fileMenu(menu) {
   cmd.setAttribute("id", "${BASE_DOM_ID}-link-cmd");
   cmd.setAttribute("label", util.getText("menu.file.label"));
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
+  cmd.setAttribute("cmd-context", "toolbar"); // TODO ProfileListMenu.LocationToolbar
   cmd.setAttribute("oncommand",
     "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
-    ".windowCommand(event,this,'cmd_new_profile')");
+    ".windowCommand(event,this,'cmd_select_profile')");
 
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");
   if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
@@ -106,14 +107,10 @@ function appendProfileMenu(menu, testId, posId, label, accesskey) {
   cmd.setAttribute("label", util.getText(label));
   cmd.setAttribute("accesskey", util.getText(accesskey));
 
-  if (PrivateBrowsingUtils.isWindowPrivate(doc.defaultView)) {
-    cmd.setAttribute("disabled", "true");
-  }
-
   var fragment = doc.createDocumentFragment();
   Components.utils.import("${PATH_MODULE}/commands.js", null).
     getProfileListMenu().
-    renderLinkMenu(fragment);
+    renderLinkMenu(fragment, testId === "placesContext_open:newwindow");
   cmd.appendChild(doc.createElement("menupopup")).appendChild(fragment);
 
   menu.insertBefore(cmd, position);
