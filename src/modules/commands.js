@@ -38,6 +38,12 @@ function windowCommand(evt, elem, cmd, param) {
     case "cmd_rename_profile_prompt":
       renameProfilePrompt(win, Profile.toInt(param));
       break;
+    case "cmd_select_tab":
+      selectTab(Number.parseInt(param, 10));
+      break;
+    case "cmd_group_tabs":
+      GroupTabs.group(win, Profile.toInt(param));
+      break;
     case "toggle-edit":
       evt.preventDefault();
       var deck = evt.target.ownerDocument.getElementById("${CHROME_NAME}-view-deck");
@@ -252,7 +258,7 @@ var SelectProfile = {
   _privateTabFromNormal: function(win, urlSource) {
     switch (urlSource) {
       case "tab":
-        var privWin = this._find1stWindow(true);
+        var privWin = TabUtils.find1stWindow(true);
         if (privWin !== null) {
           this._openTabFromUrl(win, privWin);
         } else {
@@ -272,7 +278,7 @@ var SelectProfile = {
     queueNewProfile(profileId);
     switch (urlSource) {
       case "tab":
-        var win = this._find1stWindow(false);
+        var win = TabUtils.find1stWindow(false);
         if (win !== null) {
           this._openTabFromUrl(win, win);
         } else {
@@ -286,7 +292,7 @@ var SelectProfile = {
 
 
   _selectNextTab: function(win, newProfileId) {
-    var allTabs = this._getTabs();
+    var allTabs = TabUtils.getTabs();
 
     var len = allTabs.length;
     var selectableTabs = new Array(len);
@@ -335,10 +341,89 @@ var SelectProfile = {
     }
 
     throw new Error("_selectTab");
+  }
+
+};
+
+
+function selectTab(tabId) {
+  var tab = getTabFromId(tabId);
+  var win = tab.linkedBrowser.ownerDocument.defaultView;
+  UIUtils.getContentContainer(win).selectedTab = tab;
+  win.focus();
+}
+
+
+function getTabFromId(tabId) {
+  var contentWin = Services.wm.getOuterWindowWithId(tabId);
+  var browser = UIUtils.getContainerElement(contentWin);
+  return UIUtils.getLinkedTabFromBrowser(browser);
+}
+
+
+var GroupTabs = {
+
+  group: function(sourceWin, profileId) {
+    var targetWin = sourceWin.OpenBrowserWindow();
+
+    targetWin.addEventListener("load", function onLoad(evt) {
+      targetWin.removeEventListener("load", onLoad);
+
+      var extraId = GroupTabs._getTabId(UIUtils.getTabList(targetWin)[0]);
+      var selectedTabId = GroupTabs._getTabId(UIUtils.getSelectedTab(sourceWin));
+
+      function scheduleMoveTab(tab, isLast) {
+        sourceWin.requestAnimationFrame(function() {
+          GroupTabs._moveTab(tab, targetWin);
+          if (isLast) {
+            var tb = UIUtils.getContentContainer(targetWin);
+            tb.selectedTab = getTabFromId(selectedTabId);
+            tb.removeTab(getTabFromId(extraId));
+            targetWin.focus();
+          }
+        });
+      }
+
+      var list = TabUtils.getTabsByProfile()[profileId];
+      for (var idx = 0, len = list.length; idx < len; idx++) {
+        // for some reason, without requestAnimationFrame,
+        // swapBrowsersAndCloseOther will fail for the last tab
+        // (load about:home)
+        scheduleMoveTab(list[idx], idx === (len - 1));
+      }
+    });
   },
 
 
-  _find1stWindow: function(isPrivate) {
+  _getTabId: function(tab) {
+    return util.getOuterId(tab.linkedBrowser.contentWindow);
+  },
+
+
+  // see
+  // http://hg.mozilla.org/releases/mozilla-release/file/f711b6f742ae/browser/base/content/tabbrowser.xml#l4498
+  _moveTab: function(sourceTab, targetWin) {
+    var tb = UIUtils.getContentContainer(targetWin);
+
+    var newTab = tb.addTab("about:blank", {skipAnimation: true});
+    newTab.linkedBrowser.stop();
+    newTab.linkedBrowser.docShell;
+
+    if (sourceTab.pinned) {
+      tb.pinTab(newTab);
+    }
+
+    tb.selectedTab = newTab;
+    tb.swapBrowsersAndCloseOther(newTab, sourceTab);
+    tb.updateCurrentBrowser(true);
+  }
+};
+
+
+
+var TabUtils = {
+
+  find1stWindow: function(isPrivate) {
     for (var winId of this._getSortedWindows()) {
       var win = Services.wm.getOuterWindowWithId(winId);
       if (PrivateBrowsingUtils.isWindowPrivate(win) === isPrivate) {
@@ -349,7 +434,7 @@ var SelectProfile = {
   },
 
 
-  _getTabs: function() {
+  getTabs: function() {
     var arr = [];
     for (var winId of this._getSortedWindows()) {
       var win = Services.wm.getOuterWindowWithId(winId);
@@ -358,6 +443,23 @@ var SelectProfile = {
       }
     }
     return arr;
+  },
+
+
+  getTabsByProfile: function() {
+    var rv = Object.create(null);
+    for (var winId of this._getSortedWindows()) {
+      var win = Services.wm.getOuterWindowWithId(winId);
+      for (var tab of UIUtils.getTabList(win)) {
+        var id = Profile.getIdentity(tab.linkedBrowser);
+        if (id in rv) {
+          rv[id].push(tab);
+        } else {
+          rv[id] = [tab];
+        }
+      }
+    }
+    return rv;
   },
 
 
@@ -605,6 +707,7 @@ ProfileListMenu.prototype = {
     this._location = location;
     this._currentProfile = getCurrentProfile(doc.defaultView.top);
     this._profileList = ProfileAlias.sort(Profile.getProfileList());
+    this._tabs = TabUtils.getTabsByProfile();
   },
 
 
@@ -752,21 +855,56 @@ ProfileListMenu.prototype = {
     var item;
 
     // Back
-    item = this._appendButton(fragment, String.fromCharCode(0x2190)); // ←
+    item = this._appendButton(fragment, util.getText("button.back.label"));
     item.setAttribute("onclick", formatCallCommand("toggle-edit"));
 
     // Rename
     var currentId = this._currentProfile;
     this._appendSeparator(fragment);
-    item = this._appendButton(fragment, util.getText("button.menuitem.rename.label"));
+    item = this._appendButton(fragment, util.getText("button.menuitem.rename2.label"));
     item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", currentId));
 
     // Delete
-    item = this._appendButton(fragment, util.getText("button.menuitem.delete.label"));
+    item = this._appendButton(fragment, util.getText("button.menuitem.delete2.label"));
     item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", currentId));
     if (Profile.isExtensionProfile(currentId) === false) {
       item.setAttribute("disabled", "true");
     }
+
+    if (this._currentProfile === Profile.PrivateIdentity) {
+      return;
+    }
+
+    // List tabs
+    if ((this._currentProfile in this._tabs) === false) {
+      return;
+    }
+
+    var currentTab = UIUtils.getSelectedTab(fragment.ownerDocument.defaultView);
+    this._appendSeparator(fragment);
+    var list = this._tabs[this._currentProfile];
+    for (var idx = 0; idx < list.length; idx++) {
+      var tab = list[idx];
+      item = this._appendButton(fragment, tab.label);
+
+      if (tab.image) {
+        item.setAttribute("image", "moz-anno:favicon:" + tab.image);
+      }
+
+      if (currentTab !== tab) {
+        var tabId = util.getOuterId(tab.linkedBrowser.contentWindow).toString();
+        item.setAttribute("oncommand", formatCallCommand("cmd_select_tab", tabId));
+      } else {
+        item.setAttribute("type", "checkbox");
+        item.setAttribute("checked", "true");
+        item.setAttribute("selected", "true");
+      }
+    }
+
+    // Group Tabs
+    this._appendSeparator(fragment);
+    item = this._appendButton(fragment, util.getText("button.menuitem.group.label"));
+    item.setAttribute("oncommand", formatCallCommand("cmd_group_tabs", currentId));
   },
 
 
