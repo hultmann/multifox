@@ -109,8 +109,9 @@ var SelectProfile = {
                                                          : "tab-non-pvt";
     var profile = newProfileId === Profile.PrivateIdentity ? "id-pvt"
                                                            : "id-non-pvt";
-    var isToolbar = elem.getAttribute("cmd-context") ===
-                    ProfileListMenu.prototype.LocationToolbar;
+    var isToolbar = !elem.hasAttribute("cmd-context") // <key>
+                 || (elem.getAttribute("cmd-context")
+                     === ProfileListMenu.prototype.LocationToolbar);
 
     var cmdPos = isToolbar ? "main" : "link";
     var click = middleClick ? "middle" : "left  ";
