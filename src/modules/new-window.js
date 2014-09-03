@@ -472,6 +472,12 @@ const util = {
     Services.prefs.getBranch("extensions.${EXT_ID}.").setComplexValue(name, CiS, str);
   },
 
+  emptyNode: function(node) {
+    while (node.firstChild !== null) {
+      node.removeChild(node.firstChild);
+    };
+  },
+
   getOuterId: function(win) {
     return win.QueryInterface(Ci.nsIInterfaceRequestor)
               .getInterface(Ci.nsIDOMWindowUtils)

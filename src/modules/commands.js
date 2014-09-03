@@ -46,8 +46,7 @@ function windowCommand(evt, elem, cmd, param) {
       break;
     case "toggle-edit":
       evt.preventDefault();
-      var deck = evt.target.ownerDocument.getElementById("${CHROME_NAME}-view-deck");
-      deck.selectedIndex = deck.selectedIndex === "1" ? "0" : "1";
+      getProfileListMenu().toggleEdit(evt.target.ownerDocument);
       break;
     default:
       throw new Error("${EXT_NAME} - cmd unknown: " + cmd);
@@ -707,8 +706,6 @@ ProfileListMenu.prototype = {
   _init: function(doc, location) {
     this._location = location;
     this._currentProfile = getCurrentProfile(doc.defaultView.top);
-    this._profileList = ProfileAlias.sort(Profile.getProfileList());
-    this._tabs = TabUtils.getTabsByProfile();
   },
 
 
@@ -719,14 +716,16 @@ ProfileListMenu.prototype = {
   },
 
 
+  // <panelview>
+  //   <label value="Multifox"/>
+  //   <deck>
+  //     <vbox> // menu
+  //     <vbox> // edit
   renderToolbarMenu: function(doc) {
     this._init(doc, "toolbar");
 
     var fragmentMenu = doc.createDocumentFragment();
-    var fragmentEdit = doc.createDocumentFragment();
-
     this._panelList(fragmentMenu);
-    this._panelEdit(fragmentEdit);
 
     var panelView = doc.getElementById("${CHROME_NAME}-view-panel");
 
@@ -738,6 +737,7 @@ ProfileListMenu.prototype = {
     var deck = panelView.appendChild(doc.createElement("deck"));
     deck.setAttribute("id", "${CHROME_NAME}-view-deck");
     deck.setAttribute("flex", "1"); // panel won't shrink
+    deck.setAttribute("style", "min-width:35ch");
     deck.selectedIndex = "0";
 
     var ph = deck.appendChild(doc.createElement("vbox"));
@@ -746,8 +746,25 @@ ProfileListMenu.prototype = {
     ph.appendChild(fragmentMenu);
 
     var ph = deck.appendChild(doc.createElement("vbox"));
+    ph.setAttribute("id", "${CHROME_NAME}-view-edit");
     ph.classList.add("panel-subview-body");
-    ph.appendChild(fragmentEdit);
+  },
+
+
+  toggleEdit: function(doc) {
+    this._init(doc, "toolbar");
+
+    var ph = doc.getElementById("${CHROME_NAME}-view-edit");
+    var deck = doc.getElementById("${CHROME_NAME}-view-deck");
+    if (deck.selectedIndex === "1") {
+      deck.selectedIndex =  "0";
+      util.emptyNode(ph);
+    } else {
+      deck.selectedIndex = "1";
+      var fragmentEdit = doc.createDocumentFragment();
+      this._panelEdit(fragmentEdit);
+      ph.appendChild(fragmentEdit);
+    }
   },
 
 
@@ -772,7 +789,7 @@ ProfileListMenu.prototype = {
     }
 
     // User profiles
-    var list = this._profileList;
+    var list = ProfileAlias.sort(Profile.getProfileList());
     if (list.length > 0) {
       this._appendSeparator(fragment);
       for (var idx = 0; idx < list.length; idx++) {
@@ -877,13 +894,14 @@ ProfileListMenu.prototype = {
     }
 
     // List tabs
-    if ((this._currentProfile in this._tabs) === false) {
+    var tabs = TabUtils.getTabsByProfile();
+    if ((this._currentProfile in tabs) === false) {
       return;
     }
 
     var currentTab = UIUtils.getSelectedTab(fragment.ownerDocument.defaultView);
     this._appendSeparator(fragment);
-    var list = this._tabs[this._currentProfile];
+    var list = tabs[this._currentProfile];
     for (var idx = 0; idx < list.length; idx++) {
       var tab = list[idx];
       item = this._appendButton(fragment, tab.label);

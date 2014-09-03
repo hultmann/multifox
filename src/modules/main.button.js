@@ -182,7 +182,7 @@ function registerButton(create) {
     },
 
     onViewShowing : function(evt) {
-      emptyNode(evt.target);
+      Cu.import("${PATH_MODULE}/new-window.js", null).util.emptyNode(evt.target);
 
       var doc = evt.target.ownerDocument;
       doc.defaultView.requestAnimationFrame(function() {
@@ -194,7 +194,7 @@ function registerButton(create) {
     },
 
     onViewHiding : function(evt) {
-      emptyNode(evt.target);
+      Cu.import("${PATH_MODULE}/new-window.js", null).util.emptyNode(evt.target);
     }
   });
 
@@ -212,13 +212,6 @@ var WidgetListeners = {
     }
   }
 };
-
-
-function emptyNode(node) {
-  while (node.firstChild !== null) {
-    node.removeChild(node.firstChild);
-  };
-}
 
 
 function destroyButton(doc) {
