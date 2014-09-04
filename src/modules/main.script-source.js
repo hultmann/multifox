@@ -99,24 +99,25 @@ function contentScriptSource() {
 
 
   // remove unsupported features
-
-  Object.defineProperty(window, "indexedDB", {
+  var idb = {
     configurable: true,
     enumerable: true,
     get: function() {
       sendCmd({from:"error", cmd:"indexedDB"});
-      return undefined;
+      return {
+        open: function() {
+          return {
+            onblocked: null,
+            onupgradeneeded: null,
+            onsuccess: null,
+            onerror: null,
+            source: null,
+            transaction: null,
+            readyState: "pending"
+          }
+      }};
     }
-  });
-
-
-  Object.defineProperty(window, "mozIndexedDB", {
-    configurable: true,
-    enumerable: true,
-    get: function() {
-      sendCmd({from:"error", cmd:"indexedDB"});
-      return undefined;
-    }
-  });
-
+  };
+  Object.defineProperty(window, "indexedDB", idb);
+  Object.defineProperty(window, "mozIndexedDB", idb);
 };
