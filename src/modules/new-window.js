@@ -224,9 +224,8 @@ function saveProfiles(win) {
   // update: profile id is preserved (for further enabling)
   // by tab["${PROFILE_DISABLED_ATTR}"];
   for (var tab of UIUtils.getTabList(win)) {
-    var browser = tab.linkedBrowser;
-    var id = Profile.getIdentity(browser);
-    Profile.removeIdentity(browser);
+    var id = Profile.getIdentity(tab.linkedBrowser);
+    Profile.removeIdentity(tab);
 
     // save even DefaultIdentity, so we prevent bugs when enabling
     tab.setAttribute("${PROFILE_DISABLED_ATTR}", id);
