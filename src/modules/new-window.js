@@ -31,6 +31,7 @@ var Bootstrap = {
 
     m_docObserver = new DocObserver();
 
+    ContentWindowObserver.enable();
     Services.obs.addObserver(UpdateUI, "${BASE_DOM_ID}-id-changed", false);
 
     var enumWin = Services.wm.getEnumerator(null);
@@ -59,6 +60,7 @@ var Bootstrap = {
 
   extensionShutdown: function() {
     Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
+    ContentWindowObserver.disable();
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
     var enumWin = Services.wm.getEnumerator(null);
@@ -132,8 +134,6 @@ function onDOMContentLoaded(evt) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
       BrowserOverlay.add(win);
-      // new window doesn't trigger TabOpen
-      setNewTabProfileId(UIUtils.getBrowserList(win)[0]);
       break;
     case "chrome://browser/content/history/history-panel.xul":
     case "chrome://browser/content/bookmarks/bookmarksPanel.xul":
@@ -203,7 +203,7 @@ function enableExtension(win) {
 function disableExtension(win) {
   switch (win.location.href) {
     case "chrome://browser/content/browser.xul":
-      saveProfiles(win);
+      saveProfiles(win); // TODO ignore private windows
       BrowserOverlay.remove(win);
       break;
 
@@ -226,7 +226,7 @@ function saveProfiles(win) {
   for (var tab of UIUtils.getTabList(win)) {
     var browser = tab.linkedBrowser;
     var id = Profile.getIdentity(browser);
-    Profile.defineIdentity(browser, Profile.DefaultIdentity);
+    Profile.removeIdentity(browser);
 
     // save even DefaultIdentity, so we prevent bugs when enabling
     tab.setAttribute("${PROFILE_DISABLED_ATTR}", id);
@@ -260,19 +260,53 @@ function restoreProfiles(win) {
 }
 
 
-function setNewTabProfileId(browser) {
-  if (m_pendingNewProfiles.length > 0) {
-    Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
-    return;
-  }
+var ContentWindowObserver = {
+  enable: function() {
+    Services.obs.addObserver(this, "content-document-global-created", false);
+  },
 
-  // inherit identity profile
-  if (util.networkListeners.active) {
-    Profile.defineIdentity(browser, Profile.getNextProfile());
-    // BUG when "move to a new window" in a bg tab
-    // TODO keep a list with outer IDs => profile
+
+  disable: function() {
+    Services.obs.removeObserver(this, "content-document-global-created");
+  },
+
+
+  observe: function(win, topic, data) {
+    if (win !== win.top) {
+      return;
+    }
+
+    var browser = UIUtils.findOriginBrowser(win);
+    if (browser === null) {
+      return;
+    }
+
+    if (m_pendingNewProfiles.length > 0) {
+      Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
+      this._ui(browser);
+      return;
+    }
+
+    if (Profile.isInitialized(browser)) {
+      return;
+    }
+
+    // new tab: inherit identity profile
+    if (util.networkListeners.active) {
+      Profile.defineIdentity(browser, Profile.getNextProfile());
+      this._ui(browser);
+      // BUG when "move to a new window" in a bg tab
+      // TODO keep a list with outer IDs => profile
+    }
+  },
+
+
+  _ui: function(browser) {
+    var win = browser.ownerDocument.defaultView.top;
+    var winId = util.getOuterId(win).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
   }
-}
+};
 
 
 var WinEvents = {
@@ -293,13 +327,6 @@ var WinEvents = {
       var winId = util.getOuterId(tab.ownerDocument.defaultView).toString();
       Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
     }
-  },
-
-
-  tabOpen: function(evt) {
-    var tab = evt.target;
-    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
-    setNewTabProfileId(tab.linkedBrowser);
   },
 
 
@@ -349,7 +376,6 @@ const BrowserOverlay = {
     doc.addEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
 
     var container = UIUtils.getTabStripContainer(win);
-    container.addEventListener("TabOpen",   WinEvents.tabOpen,     false);
     container.addEventListener("TabClose",  WinEvents.tabClose,    false);
     container.addEventListener("TabSelect", WinEvents.tabSelected, false);
 
@@ -381,7 +407,6 @@ const BrowserOverlay = {
     doc.removeEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
 
     var container = UIUtils.getTabStripContainer(win);
-    container.removeEventListener("TabOpen",   WinEvents.tabOpen,     false);
     container.removeEventListener("TabClose",  WinEvents.tabClose,    false);
     container.removeEventListener("TabSelect", WinEvents.tabSelected, false);
 

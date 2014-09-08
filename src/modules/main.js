@@ -61,22 +61,31 @@ const Profile = {
 
     if (current !== id) {
       var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
-
-      if (this.isNativeProfile(id)) {
-        browser.removeAttribute("${PROFILE_BROWSER_ATTR}");
-        ss.setTabValue(tab,     "${PROFILE_SESSION}", ""); // avoid exception
-        ss.deleteTabValue(tab,  "${PROFILE_SESSION}");
-      } else {
-        // save profile id in browser element
-        // (tab element may not exist when the unload event is raised)
-        var sid = id.toString();
-        browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
-        ss.setTabValue(tab,  "${PROFILE_SESSION}", sid);
-      }
+      // save profile id in browser element
+      // (tab element may not exist when the unload event is raised)
+      var sid = id.toString();
+      browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
+      ss.setTabValue(tab,  "${PROFILE_SESSION}", sid);
     }
 
     updateEngineState();
     return id;
+  },
+
+
+  isInitialized: function(browser) {
+    return browser.hasAttribute("${PROFILE_BROWSER_ATTR}");
+  },
+
+
+  removeIdentity: function(tab) {
+    if (tab.linkedBrowser.hasAttribute("${PROFILE_BROWSER_ATTR}")) {
+      tab.linkedBrowser.removeAttribute("${PROFILE_BROWSER_ATTR}");
+
+      var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
+      ss.setTabValue(tab,    "${PROFILE_SESSION}", ""); // avoid exception
+      ss.deleteTabValue(tab, "${PROFILE_SESSION}");
+    }
   },
 
 

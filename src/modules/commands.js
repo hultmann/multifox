@@ -175,11 +175,11 @@ var SelectProfile = {
 
 
   _setTabProfile: function(win, profileId) {
+    // profileId should be updated only when a new window is created.
+    // (because code in unload may use the current profile)
+    queueNewProfile(profileId);
     var browser = UIUtils.getSelectedTab(win).linkedBrowser;
-    Profile.defineIdentity(browser, profileId);
     this._reloadTab(browser);
-    var winId = util.getOuterId(win).toString();
-    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
   },
 
 
