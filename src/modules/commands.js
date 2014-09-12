@@ -41,9 +41,6 @@ function windowCommand(evt, elem, cmd, param) {
     case "cmd_select_tab":
       selectTab(Number.parseInt(param, 10));
       break;
-    case "cmd_group_tabs":
-      GroupTabs.group(win, Profile.toInt(param));
-      break;
     case "toggle-edit":
       evt.preventDefault();
       getProfileListMenu().toggleEdit(evt.target.ownerDocument);
@@ -359,80 +356,6 @@ function getTabFromId(tabId) {
   var browser = UIUtils.getContainerElement(contentWin);
   return UIUtils.getLinkedTabFromBrowser(browser);
 }
-
-
-var GroupTabs = {
-
-  group: function(sourceWin, profileId) {
-    var targetWin = sourceWin.OpenBrowserWindow();
-
-    targetWin.addEventListener("load", function onLoad(evt) {
-      targetWin.removeEventListener("load", onLoad);
-
-      var firstId = GroupTabs._getTabId(UIUtils.getTabList(targetWin)[0]);
-      var selectedTabId = GroupTabs._getTabId(UIUtils.getSelectedTab(sourceWin));
-      var list = TabUtils.getTabsByProfile()[profileId];
-
-      // firefox bug: the last moved tab will load about:home
-      // as a workaround, add a dummy tab which will be removed later
-      var dummyTab = GroupTabs._addTab(sourceWin);
-      var lastId = GroupTabs._getTabId(dummyTab);
-      list.push(dummyTab);
-
-      for (var idx = 0, len = list.length; idx < len; idx++) {
-        var tab = list[idx];
-        try{
-        GroupTabs._moveTab(tab, targetWin);
-        }catch(ex){
-          console.log(ex);
-        }
-        var isLast = idx === (len - 1);
-        if (isLast) {
-          var tb = UIUtils.getContentContainer(targetWin);
-          tb.removeTab(getTabFromId(firstId));
-          // workaround to avoid about:home bug
-          sourceWin.requestAnimationFrame(function() {
-            tb.selectedTab = getTabFromId(selectedTabId);
-            tb.removeTab(getTabFromId(lastId));
-            targetWin.focus();
-          });
-        }
-      }
-    });
-  },
-
-  _addTab: function(targetWin) {
-    var tb = UIUtils.getContentContainer(targetWin);
-    var newTab = tb.addTab("about:blank", {skipAnimation: true});
-    newTab.linkedBrowser.stop();
-    newTab.linkedBrowser.docShell;
-    tb.selectedTab = newTab;
-    return newTab;
-  },
-
-
-  _getTabId: function(tab) {
-    return util.getOuterId(tab.linkedBrowser.contentWindow);
-  },
-
-
-  // see
-  // http://hg.mozilla.org/releases/mozilla-release/file/f711b6f742ae/browser/base/content/tabbrowser.xml#l4498
-  _moveTab: function(sourceTab, targetWin) {
-    var sourceTb = UIUtils.getContentContainer(sourceTab.ownerDocument.defaultView);
-    sourceTb.selectedTab = sourceTab;
-
-    var targetTb = UIUtils.getContentContainer(targetWin);
-    var newTab = this._addTab(targetWin);
-    if (sourceTab.pinned) {
-      targetTb.pinTab(newTab);
-    }
-
-    targetTb.swapBrowsersAndCloseOther(newTab, sourceTab);
-    targetTb.updateCurrentBrowser(true);
-  }
-};
-
 
 
 var TabUtils = {
@@ -933,11 +856,6 @@ ProfileListMenu.prototype = {
         item.setAttribute("selected", "true");
       }
     }
-
-    // Group Tabs
-    this._appendSeparator(fragment);
-    item = this._appendButton(fragment, util.getText("button.menuitem.group.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_group_tabs", currentId));
   },
 
 
