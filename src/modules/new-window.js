@@ -302,8 +302,10 @@ var ContentWindowObserver = {
 
   _ui: function(browser) {
     var win = browser.ownerDocument.defaultView.top;
-    var winId = util.getOuterId(win).toString();
-    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+    win.requestAnimationFrame(function() {
+      var winId = util.getOuterId(win).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+    });
   }
 };
 

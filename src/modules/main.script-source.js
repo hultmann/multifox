@@ -114,7 +114,7 @@ function contentScriptSource() {
             source: null,
             transaction: null,
             readyState: "pending"
-          }
+          };
       }};
     }
   };

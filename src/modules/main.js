@@ -60,12 +60,13 @@ const Profile = {
 
 
     if (current !== id) {
-      var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
       // save profile id in browser element
       // (tab element may not exist when the unload event is raised)
       var sid = id.toString();
       browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
-      ss.setTabValue(tab,  "${PROFILE_SESSION}", sid);
+      Cc["@mozilla.org/browser/sessionstore;1"].
+        getService(Ci.nsISessionStore).
+        setTabValue(tab, "${PROFILE_SESSION}", sid);
     }
 
     updateEngineState();
