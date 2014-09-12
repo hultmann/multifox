@@ -252,6 +252,12 @@ var SelectProfile = {
   },
 
 
+  _removeCurrentTab: function(win) {
+    var tab = UIUtils.getSelectedTab(win);
+    UIUtils.getContentContainer(win).removeTab(tab);
+  },
+
+
   _privateTabFromNormal: function(win, urlSource) {
     switch (urlSource) {
       case "tab":
@@ -261,6 +267,7 @@ var SelectProfile = {
         } else {
           this._openWindowFromUrl(win, true);
         }
+        this._removeCurrentTab(win);
         break;
       case "link":
         // there is no easy way to add, from a link, a tab
@@ -277,10 +284,12 @@ var SelectProfile = {
       case "tab":
         var win = TabUtils.find1stWindow(false);
         if (win !== null) {
-          this._openTabFromUrl(win, win);
+          this._openTabFromUrl(privWin, win);
         } else {
           this._openWindowFromUrl(privWin, false);
         }
+        this._removeCurrentTab(privWin);
+        break;
       case "link":
         // BUG windows from a private window are always private
         throw new Error("unexpected");
