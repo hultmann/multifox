@@ -369,29 +369,45 @@ var GroupTabs = {
     targetWin.addEventListener("load", function onLoad(evt) {
       targetWin.removeEventListener("load", onLoad);
 
-      var extraId = GroupTabs._getTabId(UIUtils.getTabList(targetWin)[0]);
+      var firstId = GroupTabs._getTabId(UIUtils.getTabList(targetWin)[0]);
       var selectedTabId = GroupTabs._getTabId(UIUtils.getSelectedTab(sourceWin));
-
-      function scheduleMoveTab(tab, isLast) {
-        sourceWin.requestAnimationFrame(function() {
-          GroupTabs._moveTab(tab, targetWin);
-          if (isLast) {
-            var tb = UIUtils.getContentContainer(targetWin);
-            tb.selectedTab = getTabFromId(selectedTabId);
-            tb.removeTab(getTabFromId(extraId));
-            targetWin.focus();
-          }
-        });
-      }
-
       var list = TabUtils.getTabsByProfile()[profileId];
+
+      // firefox bug: the last moved tab will load about:home
+      // as a workaround, add a dummy tab which will be removed later
+      var dummyTab = GroupTabs._addTab(sourceWin);
+      var lastId = GroupTabs._getTabId(dummyTab);
+      list.push(dummyTab);
+
       for (var idx = 0, len = list.length; idx < len; idx++) {
-        // for some reason, without requestAnimationFrame,
-        // swapBrowsersAndCloseOther will fail for the last tab
-        // (load about:home)
-        scheduleMoveTab(list[idx], idx === (len - 1));
+        var tab = list[idx];
+        try{
+        GroupTabs._moveTab(tab, targetWin);
+        }catch(ex){
+          console.log(ex);
+        }
+        var isLast = idx === (len - 1);
+        if (isLast) {
+          var tb = UIUtils.getContentContainer(targetWin);
+          tb.removeTab(getTabFromId(firstId));
+          // workaround to avoid about:home bug
+          sourceWin.requestAnimationFrame(function() {
+            tb.selectedTab = getTabFromId(selectedTabId);
+            tb.removeTab(getTabFromId(lastId));
+            targetWin.focus();
+          });
+        }
       }
     });
+  },
+
+  _addTab: function(targetWin) {
+    var tb = UIUtils.getContentContainer(targetWin);
+    var newTab = tb.addTab("about:blank", {skipAnimation: true});
+    newTab.linkedBrowser.stop();
+    newTab.linkedBrowser.docShell;
+    tb.selectedTab = newTab;
+    return newTab;
   },
 
 
@@ -403,19 +419,17 @@ var GroupTabs = {
   // see
   // http://hg.mozilla.org/releases/mozilla-release/file/f711b6f742ae/browser/base/content/tabbrowser.xml#l4498
   _moveTab: function(sourceTab, targetWin) {
-    var tb = UIUtils.getContentContainer(targetWin);
+    var sourceTb = UIUtils.getContentContainer(sourceTab.ownerDocument.defaultView);
+    sourceTb.selectedTab = sourceTab;
 
-    var newTab = tb.addTab("about:blank", {skipAnimation: true});
-    newTab.linkedBrowser.stop();
-    newTab.linkedBrowser.docShell;
-
+    var targetTb = UIUtils.getContentContainer(targetWin);
+    var newTab = this._addTab(targetWin);
     if (sourceTab.pinned) {
-      tb.pinTab(newTab);
+      targetTb.pinTab(newTab);
     }
 
-    tb.selectedTab = newTab;
-    tb.swapBrowsersAndCloseOther(newTab, sourceTab);
-    tb.updateCurrentBrowser(true);
+    targetTb.swapBrowsersAndCloseOther(newTab, sourceTab);
+    targetTb.updateCurrentBrowser(true);
   }
 };
 
