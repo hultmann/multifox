@@ -253,6 +253,7 @@ var SelectProfile = {
 
 
   _removeCurrentTab: function(win) {
+    // TODO preserve history
     var tab = UIUtils.getSelectedTab(win);
     UIUtils.getContentContainer(win).removeTab(tab);
   },
@@ -841,17 +842,20 @@ ProfileListMenu.prototype = {
 
     // List tabs
     var tabs = TabUtils.getTabsByProfile();
-    if ((this._currentProfile in tabs) === false) {
-      return;
+    if (this._currentProfile in tabs) {
+      this._listTabs(fragment, tabs[this._currentProfile]);
     }
+  },
+
+
+  _listTabs: function(fragment, list) {
+    this._appendSeparator(fragment);
 
     var currentTab = UIUtils.getSelectedTab(fragment.ownerDocument.defaultView);
-    this._appendSeparator(fragment);
-    var list = tabs[this._currentProfile];
+
     for (var idx = 0; idx < list.length; idx++) {
       var tab = list[idx];
-      item = this._appendButton(fragment, tab.label);
-
+      var item = this._appendButton(fragment, tab.label);
       if (tab.image) {
         item.setAttribute("image", "moz-anno:favicon:" + tab.image);
       }
