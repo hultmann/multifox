@@ -174,25 +174,30 @@ var SelectProfile = {
   _setTabProfile: function(win, profileId) {
     // profileId should be updated only when a new window is created.
     // (because code in unload may use the current profile)
-    queueNewProfile(profileId);
     var browser = UIUtils.getSelectedTab(win).linkedBrowser;
-    this._reloadTab(browser);
+    switch (browser.contentWindow.location.protocol) {
+      case "http:":
+      case "https:":
+        queueNewProfile(profileId);
+        this._reloadHttpTab(browser);
+        break;
+      default:
+        // about: documents
+        Profile.defineIdentity(browser, profileId);
+        var winId = util.getOuterId(browser.ownerDocument.defaultView.top).toString();
+        Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+        break;
+    }
   },
 
 
-  _reloadTab: function(browser) {
+  _reloadHttpTab: function(browser) {
     var win = browser.contentWindow;
-    switch (win.location.protocol) {
-      case "http:":
-      case "https:":
-        break;
-      default:
-        return;
-    }
-
-    var channel = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation)
-                     .QueryInterface(Ci.nsIDocShell).currentDocumentChannel
-                     .QueryInterface(Ci.nsIHttpChannel);
+    var channel = win.QueryInterface(Ci.nsIInterfaceRequestor).
+                        getInterface(Ci.nsIWebNavigation).
+                          QueryInterface(Ci.nsIDocShell).
+                            currentDocumentChannel.
+                              QueryInterface(Ci.nsIHttpChannel);
 
     if (channel.requestMethod === "POST") {
       browser.loadURI(win.location.href); // avoid POST prompt
