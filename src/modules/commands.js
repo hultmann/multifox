@@ -860,8 +860,11 @@ ProfileListMenu.prototype = {
         item.setAttribute("image", "moz-anno:favicon:" + tab.image);
       }
 
+      var contentWin = tab.linkedBrowser.contentWindow;
+      item.setAttribute("tooltiptext", tab.label + "\n" + contentWin.location.href);
+
       if (currentTab !== tab) {
-        var tabId = util.getOuterId(tab.linkedBrowser.contentWindow).toString();
+        var tabId = util.getOuterId(contentWin).toString();
         item.setAttribute("oncommand", formatCallCommand("cmd_select_tab", tabId));
       } else {
         item.setAttribute("type", "checkbox");
