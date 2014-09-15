@@ -14,14 +14,14 @@ var DocStartScriptInjection = {
   init: function() {
     console.assert(this._src === null, "this._src is already initialized");
     this._src = "(" + contentScriptSource.toSource() + ")()";
-    Services.obs.addObserver(this, "document-element-inserted", false);
+    Services.obs.addObserver(this._onDocumentInserted, "document-element-inserted", false);
     Services.obs.addObserver(this._onInnerDestroyed, "inner-window-destroyed", false);
     this._initCurrent();
   },
 
 
   stop: function() {
-    Services.obs.removeObserver(this, "document-element-inserted");
+    Services.obs.removeObserver(this._onDocumentInserted, "document-element-inserted");
     Services.obs.removeObserver(this._onInnerDestroyed, "inner-window-destroyed");
     this._src = null;
 
@@ -71,15 +71,30 @@ var DocStartScriptInjection = {
   },
 
 
-  observe: function(subject, topic, data) {
-    var win = subject.defaultView;
-    if (win !== null) { // xsl/xbl
-      this._initWindow(win);
-    }
+  _onDocumentInserted: {
+    observe: function(subject, topic, data) {
+      var win = subject.defaultView;
+      if (win === undefined) {
+        // ??? resource://gre/modules/commonjs/sdk/system/events.js emit
+        console.trace("win=undefined", subject, topic, data);
+        return;
+      }
+      if (win !== null) { // xsl/xbl
+        DocStartScriptInjection._initWindow(win);
+      }
+    },
   },
 
 
   _initWindow: function(win) {
+    var me = DocStartScriptInjection;
+    var innerId = UIUtils.getDOMUtils(win).currentInnerWindowID.toString();
+
+    if (innerId in me._innerWindows) {
+      console.trace("window already initialized", innerId, win.location.href);
+      return;
+    }
+
     var browser = UIUtils.findOriginBrowser(win);
     if (browser === null) {
       return;
@@ -108,7 +123,6 @@ var DocStartScriptInjection = {
       return cmdContent(obj, win.document);
     };
 
-    var me = DocStartScriptInjection;
     try {
       // window.localStorage will be replaced by a Proxy object.
       // It seems it's only possible using a sandbox.
@@ -120,8 +134,6 @@ var DocStartScriptInjection = {
     }
 
     // keep a reference to Cu.nukeSandbox (Cu.getWeakReference won't work for that)
-    var innerId = UIUtils.getDOMUtils(win).currentInnerWindowID.toString();
-    console.assert((innerId in me._innerWindows) === false, "dupe sandbox @", innerId)
     me._innerWindows[innerId] = sandbox;
   }
 };
