@@ -311,6 +311,19 @@ var ContentWindowObserver = {
 
 
 var WinEvents = {
+  tabOpen: function(evt) {
+    var tab = evt.target;
+    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+
+    // new tab command? always default id (e.g. ctrl+T)
+    var browser = tab.linkedBrowser;
+    if (browser.contentWindow.location.href === "about:newtab") {
+      Profile.defineIdentity(browser, Profile.DefaultIdentity);
+      var winId = util.getOuterId(browser.ownerDocument.defaultView).toString();
+      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+    }
+  },
+
 
   tabRestoring: function(evt) {
     var tab = evt.target;
@@ -377,6 +390,7 @@ const BrowserOverlay = {
     doc.addEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
 
     var container = UIUtils.getTabStripContainer(win);
+    container.addEventListener("TabOpen",   WinEvents.tabOpen,     false);
     container.addEventListener("TabClose",  WinEvents.tabClose,    false);
     container.addEventListener("TabSelect", WinEvents.tabSelected, false);
 
@@ -408,6 +422,7 @@ const BrowserOverlay = {
     doc.removeEventListener("SSTabRestoring", WinEvents.tabRestoring, false);
 
     var container = UIUtils.getTabStripContainer(win);
+    container.removeEventListener("TabOpen",   WinEvents.tabOpen,     false);
     container.removeEventListener("TabClose",  WinEvents.tabClose,    false);
     container.removeEventListener("TabSelect", WinEvents.tabSelected, false);
 
