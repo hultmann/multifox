@@ -63,7 +63,7 @@ b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
 b.set_var("APP_MIN_VERSION", "31.0")
-b.set_var("APP_MAX_VERSION", "35.*")
+b.set_var("APP_MAX_VERSION", "34.*")
 b.set_var("CHROME_NAME",     "multifox")
 b.set_var("EXT_HOST",        "multifox-" + verEx)
 
@@ -89,7 +89,7 @@ b.copy_files()
 
 # AMO
 b.set_var("UPDATE_DATA", "")
-b.build_xpi(xpi + "-amo.xpi")
+b.build_xpi(xpi + ".xpi")
 
 # website
 b.set_var("UPDATE_DATA", (
@@ -110,5 +110,5 @@ b.set_var("UPDATE_DATA", (
 "      J6IitDvvXsp9ZTzjdwDIdvJ7oB9dyycXlHZL9tKcatOwhXbUN0jt28hv8sYGxlj2oxIt5sOQ\n"
 "      C0q/P2KHU5OAHMl/eRJIe8QINCBGI5CEr84ArnhJ7g+DYOFQfVtop3sNBYI78nEQ2wIDAQAB\n"
 "    </em:updateKey>\n"))
-b.build_xpi(xpi + ".xpi")
+b.build_xpi(xpi + "-with-update-url.xpi")
 b.create_update_rdf(xpi + ".xpi")
