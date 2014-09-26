@@ -39,7 +39,6 @@ const Profile = {
   defineIdentity: function(browser, id) {
     console.assert(browser.localName === "browser", "browser should be a browser element", browser);
     console.assert(typeof id === "number", "id is not a number.", typeof id);
-    var current = Profile.getIdentity(browser);
 
     var win = browser.ownerDocument.defaultView;
     if (PrivateBrowsingUtils.isWindowPrivate(win)) {
@@ -59,15 +58,13 @@ const Profile = {
     }
 
 
-    if (current !== id) {
-      // save profile id in browser element
-      // (tab element may not exist when the unload event is raised)
-      var sid = id.toString();
-      browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
-      Cc["@mozilla.org/browser/sessionstore;1"].
-        getService(Ci.nsISessionStore).
+    // save profile id in browser element
+    // (tab element may not exist when the unload event is raised)
+    var sid = id.toString();
+    browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
+    Cc["@mozilla.org/browser/sessionstore;1"].
+      getService(Ci.nsISessionStore).
         setTabValue(tab, "${PROFILE_SESSION}", sid);
-    }
 
     updateEngineState();
     return id;
