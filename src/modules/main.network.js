@@ -7,6 +7,10 @@ const httpListeners = {
   request: {
     // nsIObserver
     observe: function(subject, topic, data) {
+      if ((subject instanceof Ci.nsIHttpChannel) === false) {
+        return;
+      }
+
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
       if ((ctx === null) || ctx.usePrivateBrowsing) {
@@ -38,6 +42,10 @@ const httpListeners = {
   response: {
     // nsIObserver
     observe: function(subject, topic, data) {
+      if ((subject instanceof Ci.nsIHttpChannel) === false) {
+        return;
+      }
+
       var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
       if ((ctx === null) || ctx.usePrivateBrowsing) {
