@@ -6,8 +6,8 @@
 const httpListeners = {
   request: {
     // nsIObserver
-    observe: function(aSubject, aTopic, aData) {
-      var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
+    observe: function(subject, topic, data) {
+      var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
       if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
@@ -37,12 +37,13 @@ const httpListeners = {
 
   response: {
     // nsIObserver
-    observe: function(aSubject, aTopic, aData) {
-      var httpChannel = aSubject.QueryInterface(Ci.nsIHttpChannel);
+    observe: function(subject, topic, data) {
+      var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
       var ctx = getLoadContext(httpChannel)
       if ((ctx === null) || ctx.usePrivateBrowsing) {
         return;
       }
+
       var winChannel = ctx.associatedWindow;
       var profileId = Profile.getIdentityFromContent(winChannel);
       if (Profile.isNativeProfile(profileId)) {

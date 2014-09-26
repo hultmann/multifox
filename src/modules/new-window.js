@@ -553,8 +553,8 @@ const util = {
     },
 
     _cookieRejectedListener: {
-      observe: function(aSubject, aTopic, aData) {
-        console.log("cookie-rejected\n", aSubject, "\n", aTopic, "\n", aData, "\n", aSubject.QueryInterface(Ci.nsIURI).spec);
+      observe: function(subject, topic, data) {
+        console.log("cookie-rejected\n", subject, "\n", topic, "\n", data, "\n", subject.QueryInterface(Ci.nsIURI).spec);
       }
     },
 

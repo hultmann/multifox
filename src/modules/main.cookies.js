@@ -60,12 +60,12 @@ const Cookies = {
     behavior: -1,
 
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
-    // aTopic=nsPref:changed aData=network.cookie.cookieBehavior
-    observe: function(aSubject, aTopic, aData) {
-      this.behavior = aSubject
+    // topic=nsPref:changed data=network.cookie.cookieBehavior
+    observe: function(subject, topic, data) {
+      this.behavior = subject
                       .QueryInterface(Ci.nsIPrefBranch)
                       .getIntPref(PREF_COOKIE_BEHAVIOR);
-      console.log("pref! " + aSubject + aTopic + aData + this.behavior);
+      console.log("pref! " + subject + topic + data + this.behavior);
     }
 
   },
