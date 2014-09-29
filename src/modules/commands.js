@@ -508,18 +508,42 @@ function showDeletePopup(doc) {
 
 function showError(win) {
   var doc = win.document;
-  var container;
+  var container = createArrowPanel(doc, "error");
+
+  var nodeDesc = container.appendChild(doc.createElement("vbox"));
+  var nodeList = container.appendChild(doc.createElement("vbox"));
+  var nodeDesc2 = container.appendChild(doc.createElement("vbox"));
+
   var msg;
 
   switch (ErrorHandler.getCurrentError(doc)) {
     case "incompatible-extension":
       ExtCompat.findIncompatibleExtensions(function(arr) {
         for (var idx = 0; idx < arr.length; idx++) {
-          var desc = container.appendChild(doc.createElement("description"));
+          var desc = nodeList.appendChild(doc.createElement("description"));
           desc.setAttribute("style", "font-weight:bold");
           desc.appendChild(doc.createTextNode(arr[idx]));
         }
       });
+
+      var nodeBottom = nodeDesc2.
+                          appendChild(doc.createElement("hbox")).
+                            appendChild(doc.createElement("description"));
+
+      var textBottom = util.
+                        getText("icon.error-panel.extension.bottom.label", "[${EXT_ID}]").
+                          split("[${EXT_ID}]");
+
+      nodeBottom.appendChild(doc.createTextNode(textBottom[0]));
+      var nodeLink = nodeBottom.appendChild(doc.createElement("label"));
+      nodeBottom.appendChild(doc.createTextNode(textBottom[1]));
+
+      var linkText = util.getText("icon.error-panel.extension.bottom.link.label");
+      nodeLink.appendChild(doc.createTextNode(linkText));
+      nodeLink.classList.add("text-link");
+      nodeLink.setAttribute("href", "${URL_CONTACT}");
+      nodeLink.setAttribute("tooltiptext", "${URL_CONTACT}");
+
       msg = util.getText("icon.error-panel.extension.label", "${EXT_NAME}");
       break;
     case "www-authenticate":
@@ -541,9 +565,9 @@ function showError(win) {
       break;
   }
 
-  container = createArrowPanel(doc, "error");
-  var desc = container.appendChild(doc.createElement("description"));
-  desc.appendChild(doc.createTextNode(msg));
+  nodeDesc.
+    appendChild(doc.createElement("description")).
+      appendChild(doc.createTextNode(msg));
 }
 
 
