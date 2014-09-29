@@ -17,19 +17,26 @@ const httpListeners = {
         return;
       }
 
-      var profileId = Profile.getIdentityFromContent(ctx.associatedWindow);
-      if (Profile.isNativeProfile(profileId)) {
-        return; // default/private window, favicon, updates
+      var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      if (browser === null) {
+        return;
       }
 
+      var profileId;
       if (isTopWindowChannel(httpChannel, ctx.associatedWindow)) {
-        var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+        profileId = getNextTopDocumentProfile(browser);
         ErrorHandler.onNewWindowRequest(browser);
+      } else {
+        profileId = Profile.getIdentity(browser);
+      }
+
+      if (Profile.isNativeProfile(profileId)) {
+        return; // default/private window, favicon, updates
       }
       /*
       var myHeaders = HttpHeaders.fromRequest(httpChannel);
       if (myHeaders["authorization"] !== null) {
-        ErrorHandler.addNetworkError(ctx.associatedWindow, "authorization");
+        ErrorHandler.addNetworkError(browser, "authorization");
         return;
       }
       */
@@ -52,16 +59,25 @@ const httpListeners = {
         return;
       }
 
-      var winChannel = ctx.associatedWindow;
-      var profileId = Profile.getIdentityFromContent(winChannel);
+      var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      if (browser === null) {
+        return;
+      }
+
+      var profileId;
+      if (isTopWindowChannel(httpChannel, ctx.associatedWindow)) {
+        profileId = getNextTopDocumentProfile(browser);
+      } else {
+        profileId = Profile.getIdentity(browser);
+      }
+
       if (Profile.isNativeProfile(profileId)) {
         return;
       }
 
-
       var myHeaders = HttpHeaders.fromResponse(httpChannel);
       if (myHeaders["www-authenticate"] !== null) {
-        ErrorHandler.addNetworkError(winChannel, "www-authenticate");
+        ErrorHandler.addNetworkError(browser, "www-authenticate");
         return;
       }
 

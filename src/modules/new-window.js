@@ -5,7 +5,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "Bootstrap", "queueNewProfile", "updateEngineState"];
+var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "Bootstrap", "queueNewProfile", "updateEngineState", "getNextTopDocumentProfile"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -308,6 +308,17 @@ var ContentWindowObserver = {
     });
   }
 };
+
+
+// When requesting a top window, we need to know the future profile id.
+// It has not been set yet (by defineIdentity), code running in current tab
+// need to use the 'old' profile until the new top document is created.
+function getNextTopDocumentProfile(browser) {
+  var len = m_pendingNewProfiles.length;
+  return len === 0
+          ? Profile.getIdentity(browser)
+          : m_pendingNewProfiles[len - 1];
+}
 
 
 var WinEvents = {

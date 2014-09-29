@@ -18,8 +18,7 @@ var ErrorHandler = {
 
 
   // request/response
-  addNetworkError: function(contentWin, errorCode) {
-    var browser = UIUtils.getContainerElement(contentWin);
+  addNetworkError: function(browser, errorCode) {
     browser.setAttribute("multifox-tab-error-net", errorCode);
     this.updateButtonAsync(browser);
   },
