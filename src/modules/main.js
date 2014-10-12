@@ -257,7 +257,7 @@ SaveToSessionStore.prototype = {
 
     try {
       // overwrite any previous value if called twice
-      ss.setWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id", val);
+      ss.setWindowValue(doc.defaultView, "${BASE_DOM_ID}-identity-id", val.toString());
     } catch (ex) {
       // keep trying
       console.trace("SaveToSessionStore FAIL", val, doc, doc.defaultView, doc.defaultView.state, ex);

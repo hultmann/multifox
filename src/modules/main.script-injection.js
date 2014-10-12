@@ -100,7 +100,7 @@ var DocStartScriptInjection = {
         return;
     }
 
-    var sandbox = Cu.Sandbox(win, {sandboxName: "multifox-sandbox", wantComponents:false});
+    var sandbox = Cu.Sandbox(win, {wantXrays: false, wantComponents:false});
     sandbox.window = XPCNativeWrapper.unwrap(win);
     sandbox.document = XPCNativeWrapper.unwrap(win.document);
     sandbox.sendCmd = function(obj) {
