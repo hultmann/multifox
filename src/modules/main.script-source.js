@@ -1,11 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-"use strict";
-
-(function() {
+function contentScriptSource() {
+  "use strict";
 
   window.addEventListener("storage", function(evt) {
     // storageArea=>initStorageEvent(storageAreaArg)
@@ -105,24 +99,25 @@
 
 
   // remove unsupported features
-
-  Object.defineProperty(window, "indexedDB", {
+  var idb = {
     configurable: true,
     enumerable: true,
     get: function() {
       sendCmd({from:"error", cmd:"indexedDB"});
-      return undefined;
+      return {
+        open: function() {
+          return {
+            onblocked: null,
+            onupgradeneeded: null,
+            onsuccess: null,
+            onerror: null,
+            source: null,
+            transaction: null,
+            readyState: "pending"
+          };
+      }};
     }
-  });
-
-
-  Object.defineProperty(window, "mozIndexedDB", {
-    configurable: true,
-    enumerable: true,
-    get: function() {
-      sendCmd({from:"error", cmd:"indexedDB"});
-      return undefined;
-    }
-  });
-
-})();
+  };
+  Object.defineProperty(window, "indexedDB", idb);
+  Object.defineProperty(window, "mozIndexedDB", idb);
+};
