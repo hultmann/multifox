@@ -165,6 +165,7 @@ function registerButton(create) {
   var buttonId = "${CHROME_NAME}-button";
 
   if (create === false) {
+    ui.removeListener(WidgetListeners);
     ui.destroyWidget(buttonId);
     return;
   }
@@ -197,17 +198,20 @@ function registerButton(create) {
     }
   });
 
-  ui.addListener({
-    onWidgetAdded: function(widgetId, area, position) {
-      if (widgetId === "${CHROME_NAME}-button") {
-        var enumWin = Services.wm.getEnumerator("navigator:browser");
-        while (enumWin.hasMoreElements()) {
-          updateButton(enumWin.getNext());
-        }
+  ui.addListener(WidgetListeners);
+}
+
+
+var WidgetListeners = {
+  onWidgetAdded: function(widgetId, area, position) {
+    if (widgetId === "${CHROME_NAME}-button") {
+      var enumWin = Services.wm.getEnumerator("navigator:browser");
+      while (enumWin.hasMoreElements()) {
+        updateButton(enumWin.getNext());
       }
     }
-  });
-}
+  }
+};
 
 
 function emptyNode(node) {
