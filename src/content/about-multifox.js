@@ -15,31 +15,29 @@ window.addEventListener("DOMContentLoaded", function() {
 
 
 function populateDescription() {
-  var jsm = {};
-  Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
-  jsm.AddonManager.getAddonByID("${EXT_ID}", function(addon) {
+  var am = Components.utils.import("resource://gre/modules/AddonManager.jsm", null).AddonManager;
+  am.getAddonByID("${EXT_ID}", function(addon) {
     document.getElementById("desc").appendChild(document.createTextNode(addon.description));
   });
 }
 
 
 function populatePage() {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/new-window.js", ns);
+  var util = Components.utils.import("${PATH_MODULE}/new-window.js", null).util;
 
   var items = ["author", "l10n", "source", "legal"];
   for (var idx = items.length - 1; idx > -1; idx--) {
     var id = items[idx];
-    var hHtml = ns.util.getTextFrom(id + ".h", "about-multifox");
+    var hHtml = util.getTextFrom(id + ".h", "about-multifox");
     var pHtml;
     var attrs = null;
 
     switch (id) {
       case "author":
-        pHtml = ns.util.getTextFrom("author.text", "about-multifox",
-                                    "a1", "/a1",
-                                    "a2", "/a2",
-                                    "a3", "/a3");
+        pHtml = util.getTextFrom("author.text", "about-multifox",
+                                 "a1", "/a1",
+                                 "a2", "/a2",
+                                 "a3", "/a3");
         attrs = {
           "a1": "https://github.com/hultmann/multifox/issues",
           "a2": "https://twitter.com/multifox",
@@ -48,7 +46,7 @@ function populatePage() {
         break;
 
       case "source":
-        pHtml = ns.util.getTextFrom("source.text", "about-multifox", "${EXT_NAME}", "a1", "/a1");
+        pHtml = util.getTextFrom("source.text", "about-multifox", "${EXT_NAME}", "a1", "/a1");
         attrs = { "a1": "${SOURCE_URL}" };
         break;
 
@@ -58,10 +56,10 @@ function populatePage() {
         var localeApp = reg.getSelectedLocale("global");
         var localeExt = reg.getSelectedLocale("${EXT_HOST}");
 
-        hHtml = ns.util.getTextFrom(id + ".h", "about-multifox", localeExt);
+        hHtml = util.getTextFrom(id + ".h", "about-multifox", localeExt);
 
         if (hasExtensionLocale(localeApp)) {
-          pHtml = ns.util.getTextFrom("l10n.p", "about-multifox").trim();
+          pHtml = util.getTextFrom("l10n.p", "about-multifox").trim();
           if (pHtml.length === 0) {
             continue;
           }
@@ -75,7 +73,7 @@ function populatePage() {
         break;
 
       case "legal":
-        pHtml = ns.util.getTextFrom("legal.p", "about-multifox");
+        pHtml = util.getTextFrom("legal.p", "about-multifox");
         break;
 
       default:

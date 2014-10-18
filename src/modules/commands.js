@@ -447,7 +447,7 @@ function findParentPanel(elem) {
 
 function formatCallCommand(...args) {
   return [
-    "Components.utils.import('${PATH_MODULE}/commands.js',{})",
+    "Components.utils.import('${PATH_MODULE}/commands.js',null)",
     ".windowCommand(event,this,'" + args.join("','") + "')"
   ].join("");
 }
@@ -600,7 +600,7 @@ function createArrowPanel(doc, icon) {
 
 
   var button;
-  var placement = Components.utils.import("resource:///modules/CustomizableUI.jsm", {})
+  var placement = Components.utils.import("resource:///modules/CustomizableUI.jsm", null)
                  .CustomizableUI.getPlacementOfWidget("${CHROME_NAME}-button");
   if ((placement === null) || (placement.area === "PanelUI-contents")) {
     button = doc.getElementById("PanelUI-button");

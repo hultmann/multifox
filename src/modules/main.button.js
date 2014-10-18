@@ -29,17 +29,19 @@ var ProfileAlias = {
     } else {
       delete this._alias[profileId];
     }
-    var ns = {}; // BUG util is undefined???
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
-    ns.util.setUnicodePref("alias", JSON.stringify(this._alias));
+    // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", null).
+      util.
+        setUnicodePref("alias", JSON.stringify(this._alias));
   },
 
 
   remove: function(profileId) {
     delete this._alias[profileId];
-    var ns = {}; // BUG util is undefined???
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
-    ns.util.setUnicodePref("alias", JSON.stringify(this._alias));
+    // BUG util is undefined???
+    Cu.import("${PATH_MODULE}/new-window.js", null).
+      util.
+        setUnicodePref("alias", JSON.stringify(this._alias));
   },
 
   sort: function(arr) {
@@ -79,18 +81,18 @@ var ProfileAlias = {
 
 
   formatDefault: function(profileId) {
-    var ns = {}; // BUG util is undefined???
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
+    // BUG util is undefined???
+    var util = Cu.import("${PATH_MODULE}/new-window.js", null).util;
 
     switch (profileId) {
       case Profile.DefaultIdentity:
-        return ns.util.getText("button.menuitem.profile.default.label");
+        return util.getText("button.menuitem.profile.default.label");
 
       case Profile.PrivateIdentity:
-        return ns.util.getText("button.menuitem.profile.private.label");
+        return util.getText("button.menuitem.profile.private.label");
     }
 
-    return ns.util.getText("button.menuitem.profile.extension.label", profileId);
+    return util.getText("button.menuitem.profile.extension.label", profileId);
   }
 };
 
@@ -104,7 +106,7 @@ function updateButton(win) {
 
 
 function updateButtonCore(button) {
-  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", {}).CustomizableUI;
+  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", null).CustomizableUI;
   var placement = ui.getPlacementOfWidget("${CHROME_NAME}-button");
   if (placement === null) {
     return;
@@ -159,7 +161,7 @@ function onPanelUIShow(evt) {
 
 
 function registerButton(create) {
-  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", {}).CustomizableUI;
+  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", null).CustomizableUI;
   var buttonId = "${CHROME_NAME}-button";
 
   if (create === false) {

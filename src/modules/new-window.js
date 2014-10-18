@@ -81,7 +81,7 @@ var Bootstrap = {
     Services.prefs.getBranch("extensions.${EXT_ID}.").deleteBranch("");
 
     // cookies etc
-    Components.utils.import("${PATH_MODULE}/commands.js", {}).removeData();
+    Components.utils.import("${PATH_MODULE}/commands.js", null).removeData();
   }
 
 };
@@ -412,7 +412,7 @@ const BrowserOverlay = {
     key.setAttribute("key", "M");
 
     key.setAttribute("oncommand",
-      "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+      "Components.utils.import('${PATH_MODULE}/commands.js',null)" +
       ".windowCommand(event,this,'cmd_select_profile')");
 
     // menus
@@ -461,9 +461,7 @@ var PlacesOverlay = {
   },
 
   _listener: function(evt) {
-    var ns = {};
-    Components.utils.import("${PATH_MODULE}/menus.js", ns);
-    ns.menuShowing(evt);
+    Components.utils.import("${PATH_MODULE}/menus.js", null).menuShowing(evt);
   }
 };
 
@@ -510,9 +508,7 @@ function removeMenuListeners(doc) {
 
 
 function onMenuPopupShowing(evt) {
-  var ns = {};
-  Components.utils.import("${PATH_MODULE}/menus.js", ns);
-  ns.menuShowing(evt);
+  Components.utils.import("${PATH_MODULE}/menus.js", null).menuShowing(evt);
 }
 
 

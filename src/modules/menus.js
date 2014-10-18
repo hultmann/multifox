@@ -57,7 +57,7 @@ function fileMenu(menu) {
   cmd.setAttribute("accesskey", util.getText("menu.file.accesskey"));
   cmd.setAttribute("cmd-context", "toolbar"); // TODO ProfileListMenu.LocationToolbar
   cmd.setAttribute("oncommand",
-    "Components.utils.import('${PATH_MODULE}/commands.js',{})" +
+    "Components.utils.import('${PATH_MODULE}/commands.js',null)" +
     ".windowCommand(event,this,'cmd_select_profile')");
 
   cmd.setAttribute("key", "key_${BASE_DOM_ID}-new-identity");

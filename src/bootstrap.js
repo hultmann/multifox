@@ -21,9 +21,9 @@ function uninstall(data, reason) {
 
   // uninstall: remove storage, prefs
   if (reason === ADDON_UNINSTALL) { // updating=ADDON_UPGRADE
-    var ns = {};
-    Cu.import("${PATH_MODULE}/new-window.js", ns);
-    ns.Bootstrap.extensionUninstall();
+    Cu.import("${PATH_MODULE}/new-window.js", null).
+      Bootstrap.
+        extensionUninstall();
   }
 
   // update/uninstall: unload all modules
@@ -50,9 +50,9 @@ function startup(data, reason) {
     }
   }
 
-  var ns = {};
-  Cu.import("${PATH_MODULE}/new-window.js", ns);
-  ns.Bootstrap.extensionStartup(firstRun, reinstall);
+  Cu.import("${PATH_MODULE}/new-window.js", null).
+    Bootstrap.
+      extensionStartup(firstRun, reinstall);
 }
 
 
@@ -61,9 +61,9 @@ function shutdown(data, reason) {
     return;
   }
 
-  var ns = {};
-  Cu.import("${PATH_MODULE}/new-window.js", ns);
-  ns.Bootstrap.extensionShutdown();
+  Cu.import("${PATH_MODULE}/new-window.js", null).
+    Bootstrap.
+      extensionShutdown();
 
   unregisterAbout();
   unloadModules();

@@ -149,9 +149,8 @@ var ExtCompat = {
 
 
   findIncompatibleExtensions: function(onFound) {
-    var jsm = {};
-    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
-    jsm.AddonManager.getAddonsByIDs(this._incompatIds, function(arr) {
+    var am = Components.utils.import("resource://gre/modules/AddonManager.jsm", null).AddonManager;
+    am.getAddonsByIDs(this._incompatIds, function(arr) {
       var enabled = [];
       for (var idx = arr.length - 1; idx > -1; idx--) {
         var ext = arr[idx];
@@ -182,16 +181,16 @@ var ExtCompat = {
 
 
   installAddonListener: function() {
-    var jsm = {};
-    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
-    jsm.AddonManager.addAddonListener(this._addonListener);
+    Components.utils.import("resource://gre/modules/AddonManager.jsm", null).
+      AddonManager.
+        addAddonListener(this._addonListener);
   },
 
 
   uninstallAddonListener: function() {
-    var jsm = {};
-    Components.utils.import("resource://gre/modules/AddonManager.jsm", jsm);
-    jsm.AddonManager.removeAddonListener(this._addonListener);
+    Components.utils.import("resource://gre/modules/AddonManager.jsm", null).
+      AddonManager.
+        removeAddonListener(this._addonListener);
   }
 
 };
