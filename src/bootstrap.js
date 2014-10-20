@@ -10,9 +10,11 @@ var Ci = Components.interfaces;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+var m_isInstall = false;
 
 // install & uninstall are called even for disabled extensions
 function install(data, reason) {
+  m_isInstall = true;
 }
 
 
@@ -36,23 +38,9 @@ function startup(data, reason) {
   registerResourceProtocol(data.resourceURI);
   registerAbout();
 
-  var firstRun = false;
-  var reinstall = false;
-  if (reason !== APP_STARTUP) {
-    switch (reason) {
-      case ADDON_INSTALL:
-        firstRun = true;
-        break;
-      case ADDON_UPGRADE:
-      case ADDON_DOWNGRADE:
-        reinstall = true;
-        break;
-    }
-  }
-
   Cu.import("${PATH_MODULE}/new-window.js", null).
     Bootstrap.
-      extensionStartup(firstRun, reinstall);
+      extensionStartup(m_isInstall);
 }
 
 

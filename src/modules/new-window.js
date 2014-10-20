@@ -20,11 +20,11 @@ var m_docObserver = null;
 
 var Bootstrap = {
 
-  extensionStartup: function(firstRun, reinstall) {
+  extensionStartup: function(isInstall) {
     console.assert(m_docObserver === null, "m_docObserver should be null");
     console.assert(m_pendingNewProfiles.length === 0, "m_pendingNewProfiles should be empty");
 
-    if (firstRun || reinstall) {
+    if (isInstall) {
       Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.alias", true);
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
