@@ -25,6 +25,7 @@ var Bootstrap = {
     console.assert(m_pendingNewProfiles.length === 0, "m_pendingNewProfiles should be empty");
 
     if (firstRun || reinstall) {
+      Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.alias", true);
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -78,7 +79,9 @@ var Bootstrap = {
     }
 
     // prefs
-    Services.prefs.getBranch("extensions.${EXT_ID}.").deleteBranch("");
+    var branch = "extensions.${EXT_ID}.";
+    Services.prefs.getBranch(branch).deleteBranch("");
+    Services.prefs.getBranch("services.sync.prefs.sync." + branch).deleteBranch("");
 
     // cookies etc
     Components.utils.import("${PATH_MODULE}/commands.js", null).removeData();
