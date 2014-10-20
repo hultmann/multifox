@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
+var m_oldMoz = Services.vc.compare(Services.appinfo.platformVersion, "34.0a") < 0;
+
 function windowLocalStorage(obj, contentDoc) {
   var profileId = Profile.getIdentityFromContent(contentDoc.defaultView);
 
@@ -15,7 +17,9 @@ function windowLocalStorage(obj, contentDoc) {
   var originalUri = stringToUri(contentDoc.location.href);
   var uri = toInternalUri(originalUri, profileId);
   var principal = Services.scriptSecurityManager.getNoAppCodebasePrincipal(uri);
-  var storage = Services.domStorageManager.createStorage(principal, ""); // nsIDOMStorage
+  var storage = m_oldMoz ? Services.domStorageManager.createStorage(principal, "") // nsIDOMStorage
+                         : Services.domStorageManager.createStorage(null, principal, "");
+
 
   var rv = undefined;
   var oldVal;
