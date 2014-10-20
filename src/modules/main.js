@@ -160,17 +160,21 @@ const Profile = {
 
 
   getProfileList: function() {
-    var list = this._getProfileWithCookies();
-    var active = this.activeExtensionIdentities();
+    var list1 = this._mergeArrays(ProfileAlias.getRegisteredProfiles(),
+                                  this.activeExtensionIdentities());
+    return this._mergeArrays(list1,
+                             this._getProfileWithCookies());
+  },
 
-    for (var idx = active.length - 1; idx > -1; idx--) {
-      var id = active[idx];
-      if (list.indexOf(id) === -1) {
-        list.push(id);
+
+  _mergeArrays: function(arr1, arr2) {
+    var rv = arr1.slice(0); // cloneArray
+    for (var idx = 0; idx < arr2.length; idx++) {
+      if (rv.indexOf(arr2[idx]) === -1) {
+        rv.push(arr2[idx]);
       }
     }
-
-    return list;
+    return rv;
   },
 
 

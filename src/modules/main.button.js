@@ -23,12 +23,9 @@ var ProfileAlias = {
   },
 
 
-  rename: function(profileId, name) {
-    if (name.length > 0) {
-      this._alias[profileId] = name;
-    } else {
-      delete this._alias[profileId];
-    }
+  registerProfile: function(profileId, name = undefined) {
+    this._alias[profileId] = name === undefined ? "" : name;
+
     // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", null).
       util.
@@ -43,6 +40,19 @@ var ProfileAlias = {
       util.
         setUnicodePref("alias", JSON.stringify(this._alias));
   },
+
+
+  getRegisteredProfiles: function() {
+    var rv = [];
+    for (var id in this._alias) {
+      var profileId = Profile.toInt(id);
+      if (Profile.isExtensionProfile(profileId)) {
+        rv.push(profileId);
+      }
+    }
+    return rv;
+  },
+
 
   sort: function(arr) {
     if (this._alias === null) {
@@ -59,28 +69,32 @@ var ProfileAlias = {
     if (this._alias === null) {
       this._load();
     }
-    return profileId in this._alias;
+
+    if (profileId in this._alias) {
+      var name = this._alias[profileId];
+      if (name.length > 0) {
+         return true;
+      }
+    }
+
+    return false;
   },
 
   format: function(profileId) {
-    if (this._alias === null) {
-      this._load();
-    }
-
-    return profileId in this._alias
+    return ProfileAlias.hasAlias(profileId)
          ? this._alias[profileId]
-         : this.formatDefault(profileId);
+         : this._formatDefault(profileId);
   },
 
 
   formatShort: function(profileId) {
     return ProfileAlias.hasAlias(profileId)
-         ? ProfileAlias.format(profileId)
+         ? this._alias[profileId]
          : profileId.toString();
   },
 
 
-  formatDefault: function(profileId) {
+  _formatDefault: function(profileId) {
     // BUG util is undefined???
     var util = Cu.import("${PATH_MODULE}/new-window.js", null).util;
 

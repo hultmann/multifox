@@ -96,8 +96,18 @@ var SelectProfile = {
     // elem = <key> or <toolbarbutton>
     var id = elem.hasAttribute("profile-id") ? elem.getAttribute("profile-id")
                                              : "";
-    var newProfileId = id.length > 0 ? Profile.toInt(id)
-                                     : Profile.lowerAvailableId();
+    var newProfileId;
+    if (id.length > 0) {
+      newProfileId = Profile.toInt(id);
+
+      // Temporary until extensions.multifox.alias is fully populated with
+      // all profiles. It will be removed in 3.x, getProfileList will
+      // return only profiles from getRegisteredProfiles
+      ProfileAlias.registerProfile(newProfileId);
+    } else {
+      newProfileId = Profile.lowerAvailableId();
+      ProfileAlias.registerProfile(newProfileId);
+    }
 
     var win = elem.ownerDocument.defaultView.top;
 
@@ -462,7 +472,7 @@ function renameProfilePrompt(win, profileId) {
     return;
   }
 
-  ProfileAlias.rename(profileId, newName.value);
+  ProfileAlias.registerProfile(profileId, newName.value);
 
   var enumWin = Services.wm.getEnumerator("navigator:browser");
   while (enumWin.hasMoreElements()) {
