@@ -6,7 +6,11 @@
 var ProfileAlias = {
   _alias: null,
 
-  _load: function() {
+  _checkLoad: function() {
+    if (this._alias !== null) {
+      return;
+    }
+
     var prefs = Services.prefs.getBranch("extensions.${EXT_ID}.");
     if (prefs.prefHasUserValue("alias") === false) {
       this._alias = Object.create(null);
@@ -24,6 +28,7 @@ var ProfileAlias = {
 
 
   registerProfile: function(profileId, name = undefined) {
+    this._checkLoad();
     this._alias[profileId] = name === undefined ? "" : name;
 
     // BUG util is undefined???
@@ -34,6 +39,7 @@ var ProfileAlias = {
 
 
   remove: function(profileId) {
+    this._checkLoad();
     delete this._alias[profileId];
     // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", null).
@@ -43,6 +49,7 @@ var ProfileAlias = {
 
 
   getRegisteredProfiles: function() {
+    this._checkLoad();
     var rv = [];
     for (var id in this._alias) {
       var profileId = Profile.toInt(id);
@@ -55,9 +62,7 @@ var ProfileAlias = {
 
 
   sort: function(arr) {
-    if (this._alias === null) {
-      this._load();
-    }
+    this._checkLoad();
     var me = this;
     arr.sort(function(id1, id2) { // BUG Profile 10, 11, 2, ...
       return me.format(id1).localeCompare(me.format(id2));
@@ -66,9 +71,7 @@ var ProfileAlias = {
   },
 
   hasAlias: function(profileId) {
-    if (this._alias === null) {
-      this._load();
-    }
+    this._checkLoad();
 
     if (profileId in this._alias) {
       var name = this._alias[profileId];
