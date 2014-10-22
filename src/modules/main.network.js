@@ -17,7 +17,14 @@ const httpListeners = {
         return;
       }
 
-      var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      var browser = null;
+      try {
+        browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      } catch (ex) {
+        // safe browsing
+        console.log("request: associatedWindow unavailable", httpChannel.URI);
+        return;
+      }
       if (browser === null) {
         return;
       }
@@ -59,7 +66,12 @@ const httpListeners = {
         return;
       }
 
-      var browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      var browser = null;
+      try {
+        browser = UIUtils.findOriginBrowser(ctx.associatedWindow);
+      } catch (ex) {
+        return;
+      }
       if (browser === null) {
         return;
       }
