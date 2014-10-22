@@ -34,6 +34,7 @@ var Bootstrap = {
 
     ContentWindowObserver.enable();
     Services.obs.addObserver(UpdateUI, "${BASE_DOM_ID}-id-changed", false);
+    Services.obs.addObserver(UICommand, "multifox:ui-command", false);
 
     var enumWin = Services.wm.getEnumerator(null);
     while (enumWin.hasMoreElements()) {
@@ -61,6 +62,7 @@ var Bootstrap = {
 
   extensionShutdown: function() {
     Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
+    Services.obs.removeObserver(UICommand, "multifox:ui-command");
     ContentWindowObserver.disable();
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
@@ -106,6 +108,14 @@ var UpdateUI = {
     updateButton(win);
   }
 }
+
+
+var UICommand = {
+  observe: function(subject, topic, data) {
+    Components.utils.import("${PATH_MODULE}/commands.js", null).
+      windowCommand(subject, data);
+  }
+};
 
 
 function DocObserver() {
@@ -349,6 +359,7 @@ var WinEvents = {
       stringId = Profile.DefaultIdentity.toString();
     }
 
+    // TODO registerProfile
     Profile.defineIdentity(tab.linkedBrowser, Profile.toInt(stringId));
 
     if (tab.selected) {
@@ -415,8 +426,7 @@ const BrowserOverlay = {
     key.setAttribute("key", "M");
 
     key.setAttribute("oncommand",
-      "Components.utils.import('${PATH_MODULE}/commands.js',null)" +
-      ".windowCommand(event,this,'cmd_select_profile')");
+      "Services.obs.notifyObservers(event,'multifox:ui-command','cmd_select_profile')");
 
     // menus
     addMenuListeners(doc);

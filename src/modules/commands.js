@@ -13,7 +13,8 @@ Components.utils.import("${PATH_MODULE}/new-window.js");
 Components.utils.import("${PATH_MODULE}/main.js");
 
 
-function windowCommand(evt, elem, cmd, param) {
+function windowCommand(evt, cmd) {
+  var elem = evt.target;
   var win = elem.ownerDocument.defaultView.top;
 
   if (cmd === "cmd_show_error") {
@@ -36,10 +37,12 @@ function windowCommand(evt, elem, cmd, param) {
       showDeletePopup(win.document);
       break;
     case "cmd_rename_profile_prompt":
-      renameProfilePrompt(win, Profile.toInt(param));
+      var id = elem.getAttribute("profile-id");
+      renameProfilePrompt(win, Profile.toInt(id));
       break;
     case "cmd_select_tab":
-      selectTab(Number.parseInt(param, 10));
+      var tabId = elem.getAttribute("tab-id");
+      selectTab(Number.parseInt(tabId, 10));
       break;
     case "toggle-edit":
       evt.preventDefault();
@@ -93,7 +96,7 @@ function handleMiddleClick(evt) {
 var SelectProfile = {
 
   parseProfileCmd: function(elem, middleClick = false) {
-    // elem = <key> or <toolbarbutton>
+    // elem = <key> <menuitem> <toolbarbutton>
     var id = elem.hasAttribute("profile-id") ? elem.getAttribute("profile-id")
                                              : "";
     var newProfileId;
@@ -455,11 +458,8 @@ function findParentPanel(elem) {
 }
 
 
-function formatCallCommand(...args) {
-  return [
-    "Components.utils.import('${PATH_MODULE}/commands.js',null)",
-    ".windowCommand(event,this,'" + args.join("','") + "')"
-  ].join("");
+function formatCallCommand(cmd) {
+  return "Services.obs.notifyObservers(event,'multifox:ui-command','" + cmd + "')";
 }
 
 
@@ -866,11 +866,12 @@ ProfileListMenu.prototype = {
     var currentId = this._currentProfile;
     this._appendSeparator(fragment);
     item = this._appendButton(fragment, util.getText("button.menuitem.rename2.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt", currentId));
+    item.setAttribute("oncommand", formatCallCommand("cmd_rename_profile_prompt"));
+    item.setAttribute("profile-id", currentId);
 
     // Delete
     item = this._appendButton(fragment, util.getText("button.menuitem.delete2.label"));
-    item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt", currentId));
+    item.setAttribute("oncommand", formatCallCommand("cmd_delete_profile_prompt"));
     if (Profile.isExtensionProfile(currentId) === false) {
       item.setAttribute("disabled", "true");
     }
@@ -903,8 +904,8 @@ ProfileListMenu.prototype = {
       item.setAttribute("tooltiptext", tab.label + "\n" + contentWin.location.href);
 
       if (currentTab !== tab) {
-        var tabId = util.getOuterId(contentWin).toString();
-        item.setAttribute("oncommand", formatCallCommand("cmd_select_tab", tabId));
+        item.setAttribute("oncommand", formatCallCommand("cmd_select_tab"));
+        item.setAttribute("tab-id", util.getOuterId(contentWin).toString());
       } else {
         item.setAttribute("type", "checkbox");
         item.setAttribute("checked", "true");
