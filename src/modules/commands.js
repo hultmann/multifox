@@ -568,6 +568,7 @@ function showError(win) {
       break;
     default:
       if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
+        // BUG Multifox hardcoded
         msg = util.getText("icon.error-panel.permanent-private.label", "${EXT_NAME}");
       } else {
         msg = ErrorHandler.getCurrentError(doc);
