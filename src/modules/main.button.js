@@ -29,7 +29,16 @@ var ProfileAlias = {
 
   registerProfile: function(profileId, name = undefined) {
     this._checkLoad();
-    this._alias[profileId] = name === undefined ? "" : name;
+
+    if (name !== undefined) {
+      this._alias[profileId] = name;
+    } else {
+      if (profileId in this._alias) {
+        return;
+      }
+      // new profile / populate _alias
+      this._alias[profileId] = "";
+    }
 
     // BUG util is undefined???
     Cu.import("${PATH_MODULE}/new-window.js", null).
