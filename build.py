@@ -59,8 +59,8 @@ else:
 
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
-b.set_var("EXT_SITE",        "http://br.mozdev.org/multifox/")
-b.set_var("URL_CONTACT",     "http://br.mozdev.org/multifox/bugs.html")
+b.set_var("EXT_SITE",        "https://getmultifox.com/")
+b.set_var("URL_CONTACT",     "https://getmultifox.com/bugs/")
 b.set_var("APP_MIN_VERSION", "31.0")
 b.set_var("APP_MAX_VERSION", "35.*")
 b.set_var("CHROME_NAME",     "multifox")
@@ -92,7 +92,7 @@ b.build_xpi(xpi + ".xpi")
 
 # website
 b.set_var("UPDATE_DATA", (
-"    <em:updateURL><![CDATA[http://br.mozdev.org/multifox/update.html"
+"    <em:updateURL><![CDATA[https://getmultifox.com/update/"
        "?reqVersion=%REQ_VERSION%"
        "&extId=%ITEM_ID%"
        "&extVersion=%ITEM_VERSION%"

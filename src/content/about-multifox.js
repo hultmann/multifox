@@ -68,7 +68,7 @@ function populatePage() {
         }
 
         attrs = {
-          "a1": "http://br.mozdev.org/multifox/l10n.html"
+          "a1": "https://getmultifox.com/bugs/"
         };
         break;
 
