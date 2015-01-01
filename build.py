@@ -24,6 +24,7 @@ b.add_binary("content/logo-about.png")
 b.add_text("install.rdf")
 b.add_text("chrome.manifest")
 b.add_text("bootstrap.js")
+b.add_text("options.xul")
 
 b.add_text("content/about-multifox.html")
 b.add_text("content/about-multifox.js")
