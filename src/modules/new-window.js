@@ -26,6 +26,7 @@ var Bootstrap = {
 
     if (isInstall) {
       Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.alias", true);
+      Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.windowMode", true);
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -44,6 +45,15 @@ var Bootstrap = {
     registerButton(true); // call it only after inserting <panelview>
 
     this._incompatibilityCheck();
+  },
+
+
+  get isWindowMode() {
+    try {
+      return Services.prefs.getBoolPref("extensions.${EXT_ID}.windowMode");
+    } catch(ex) {
+    }
+    return false;
   },
 
 
@@ -338,6 +348,10 @@ var WinEvents = {
   tabOpen: function(evt) {
     var tab = evt.target;
     console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+
+    if (Bootstrap.isWindowMode) {
+      return;
+    }
 
     // new tab command? always default id (e.g. ctrl+T)
     var browser = tab.linkedBrowser;

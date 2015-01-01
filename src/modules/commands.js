@@ -96,6 +96,10 @@ function handleMiddleClick(evt) {
 var SelectProfile = {
 
   parseProfileCmd: function(elem, middleClick = false) {
+    if (middleClick && Bootstrap.isWindowMode) {
+      return;
+    }
+
     // elem = <key> <menuitem> <toolbarbutton>
     var id = elem.hasAttribute("profile-id") ? elem.getAttribute("profile-id")
                                              : "";
@@ -188,6 +192,13 @@ var SelectProfile = {
     // profileId should be updated only when a new window is created.
     // (because code in unload may use the current profile)
     var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+
+    if (Bootstrap.isWindowMode) {
+      queueNewProfile(profileId);
+      this._openWindowFromUrl(browser.ownerDocument.defaultView.top, false);
+      return;
+    }
+
     switch (browser.contentWindow.location.protocol) {
       case "http:":
       case "https:":
@@ -262,10 +273,18 @@ var SelectProfile = {
   _openTabFromLink: function(win) {
     if (win.gContextMenu) {
       // page
-      win.gContextMenu.openLinkInTab();
+      if (Bootstrap.isWindowMode) {
+        win.gContextMenu.openLink();
+      } else {
+        win.gContextMenu.openLinkInTab();
+      }
     } else {
       // bookmark/history
-      win.goDoPlacesCommand("placesCmd_open:tab");
+      if (Bootstrap.isWindowMode) {
+        win.goDoPlacesCommand("placesCmd_open:window");
+      } else {
+        win.goDoPlacesCommand("placesCmd_open:tab");
+      }
     }
   },
 
@@ -301,17 +320,24 @@ var SelectProfile = {
     queueNewProfile(profileId);
     switch (urlSource) {
       case "tab":
+        if (Bootstrap.isWindowMode) {
+          // BUG windows from a private window are always private
+          // this._openWindowFromUrl(privWin, false);
+          // return;
+        }
+
         var win = TabUtils.find1stWindow(false);
         if (win !== null) {
           this._openTabFromUrl(privWin, win);
         } else {
+          //throw new Error("It doesn't work, windows from a private window are always private.");
           this._openWindowFromUrl(privWin, false);
         }
         this._removeCurrentTab(privWin);
         break;
       case "link":
         // BUG windows from a private window are always private
-        throw new Error("unexpected");
+        throw new Error("It doesn't work, windows from a private window are always private.");
     }
   },
 
