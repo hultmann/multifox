@@ -189,15 +189,15 @@ var SelectProfile = {
 
 
   _setTabProfile: function(win, profileId) {
+    if (Bootstrap.isWindowMode) {
+      queueNewProfile(profileId);
+      win.OpenBrowserWindow();
+      return;
+    }
+
     // profileId should be updated only when a new window is created.
     // (because code in unload may use the current profile)
     var browser = UIUtils.getSelectedTab(win).linkedBrowser;
-
-    if (Bootstrap.isWindowMode) {
-      queueNewProfile(profileId);
-      this._openWindowFromUrl(browser.ownerDocument.defaultView.top, false);
-      return;
-    }
 
     switch (browser.contentWindow.location.protocol) {
       case "http:":
@@ -299,6 +299,11 @@ var SelectProfile = {
   _privateTabFromNormal: function(win, urlSource) {
     switch (urlSource) {
       case "tab":
+        if (Bootstrap.isWindowMode) {
+          win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+          return;
+        }
+
         var privWin = TabUtils.find1stWindow(true);
         if (privWin !== null) {
           this._openTabFromUrl(win, privWin);
