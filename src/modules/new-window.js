@@ -33,6 +33,7 @@ var Bootstrap = {
 
     m_docObserver = new DocObserver();
 
+    WindowMode.start();
     ContentWindowObserver.enable();
     Services.obs.addObserver(UpdateUI, "${BASE_DOM_ID}-id-changed", false);
     Services.obs.addObserver(UICommand, "multifox:ui-command", false);
@@ -49,11 +50,7 @@ var Bootstrap = {
 
 
   get isWindowMode() {
-    try {
-      return Services.prefs.getBoolPref("extensions.${EXT_ID}.windowMode");
-    } catch(ex) {
-    }
-    return false;
+    return WindowMode.isEnabled;
   },
 
 
@@ -73,6 +70,7 @@ var Bootstrap = {
   extensionShutdown: function() {
     Services.obs.removeObserver(UpdateUI, "${BASE_DOM_ID}-id-changed");
     Services.obs.removeObserver(UICommand, "multifox:ui-command");
+    WindowMode.stop();
     ContentWindowObserver.disable();
     m_docObserver.shutdown();
     ExtCompat.uninstallAddonListener();
@@ -99,6 +97,39 @@ var Bootstrap = {
     Components.utils.import("${PATH_MODULE}/commands.js", null).removeData();
   }
 
+};
+
+
+var WindowMode = {
+  _prefName: "extensions.${EXT_ID}.windowMode",
+  _windowMode: false,
+
+  start: function() {
+    this._updateFromPref();
+    Services.prefs.addObserver(this._prefName, this, false);
+  },
+
+
+  stop: function() {
+    Services.prefs.removeObserver(this._prefName, this);
+  },
+
+
+  get isEnabled() {
+    return this._windowMode;
+  },
+
+
+  _updateFromPref: function() {
+    var p = Services.prefs;
+    this._windowMode = p.getPrefType(this._prefName) === p.PREF_BOOL
+                     ? p.getBoolPref(this._prefName) : false;
+  },
+
+
+  observe: function(subject, topic, data) {
+    this._updateFromPref();
+  }
 };
 
 
