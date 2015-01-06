@@ -326,9 +326,8 @@ var SelectProfile = {
     switch (urlSource) {
       case "tab":
         if (Bootstrap.isWindowMode) {
-          // BUG windows from a private window are always private
-          // this._openWindowFromUrl(privWin, false);
-          // return;
+          privWin.OpenBrowserWindow(); // non-private window
+          return;
         }
 
         var win = TabUtils.find1stWindow(false);
