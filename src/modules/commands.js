@@ -131,11 +131,7 @@ var SelectProfile = {
 
     switch ([cmdPos, click, priv, profile].join(" ")) {
       case "main left   tab-non-pvt id-non-pvt":
-        if (getCurrentProfile(win) !== newProfileId) {
-          this._setTabProfile(win, newProfileId);
-        } else {
-          this._selectNextTab(win, newProfileId);
-        }
+        this._setTabProfile(win, newProfileId);
         break;
 
       case "main middle tab-non-pvt id-non-pvt":
@@ -190,8 +186,12 @@ var SelectProfile = {
 
   _setTabProfile: function(win, profileId) {
     if (Bootstrap.isWindowMode) {
-      queueNewProfile(profileId);
-      win.OpenBrowserWindow();
+      WindowModeCmd.selectOrOpenWindow(win, profileId);
+      return;
+    }
+
+    if (getCurrentProfile(win) === profileId) {
+      this._selectNextTab(win, profileId);
       return;
     }
 
@@ -300,7 +300,7 @@ var SelectProfile = {
     switch (urlSource) {
       case "tab":
         if (Bootstrap.isWindowMode) {
-          win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+          WindowModeCmd.selectOrOpenWindow(win, Profile.PrivateIdentity);
           return;
         }
 
@@ -398,6 +398,47 @@ var SelectProfile = {
     throw new Error("_selectTab");
   }
 
+};
+
+
+var WindowModeCmd = {
+
+  selectOrOpenWindow: function(win, profileId) {
+    var arr = this._getProfileWindows(profileId);
+    if (arr.length === 0) {
+      // New window
+      if (profileId === Profile.PrivateIdentity) {
+        win.document.getElementById("Tools:PrivateBrowsing").doCommand();
+      } else {
+        queueNewProfile(profileId);
+        win.OpenBrowserWindow();
+      }
+      return;
+    }
+    // focus next window
+    var idx = arr.indexOf(util.getOuterId(win)) + 1;
+    if (idx > (arr.length - 1)) {
+      idx = 0;
+    }
+    Services.wm.getOuterWindowWithId(arr[idx]).focus();
+  },
+
+
+  _getProfileWindows: function(profileId) {
+    var arr = [];
+    var enumWin = Services.wm.getEnumerator("navigator:browser");
+    while (enumWin.hasMoreElements()) {
+      var win = enumWin.getNext();
+      var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+      if (Profile.getIdentity(browser) === profileId) {
+        arr.push(util.getOuterId(win));
+      }
+    }
+    arr.sort(function(a, b) {
+      return a - b;
+    });
+    return arr;
+  }
 };
 
 
