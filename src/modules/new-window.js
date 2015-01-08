@@ -31,6 +31,10 @@ var Bootstrap = {
       util.setUnicodePref("description", desc);
     }
 
+    if (this.shouldSanitize) {
+      ProfileAlias.clear();
+    }
+
     m_docObserver = new DocObserver();
 
     WindowMode.start();
@@ -51,6 +55,17 @@ var Bootstrap = {
 
   get isWindowMode() {
     return WindowMode.isEnabled;
+  },
+
+
+  get shouldSanitize() {
+    var sanitize = "privacy.sanitize.sanitizeOnShutdown";
+    var cookies  = "privacy.clearOnShutdown.cookies";
+    var p = Services.prefs;
+    if ((p.getPrefType(sanitize) === p.PREF_BOOL) && p.getBoolPref(sanitize)) {
+      return (p.getPrefType(cookies) === p.PREF_BOOL) && p.getBoolPref(cookies);
+    }
+    return false;
   },
 
 
@@ -404,8 +419,14 @@ var WinEvents = {
       stringId = Profile.DefaultIdentity.toString();
     }
 
+    var intId = Profile.toInt(stringId);
+    if (Profile.getProfileList().indexOf(intId) === -1) {
+      // e.g. removed by sanitizeOnShutdown
+      intId = Profile.DefaultIdentity;
+    }
+
     // TODO registerProfile
-    Profile.defineIdentity(tab.linkedBrowser, Profile.toInt(stringId));
+    Profile.defineIdentity(tab.linkedBrowser, intId);
 
     if (tab.selected) {
       var winId = util.getOuterId(tab.ownerDocument.defaultView).toString();

@@ -57,6 +57,12 @@ var ProfileAlias = {
   },
 
 
+  clear: function() {
+    Services.prefs.getBranch("extensions.${EXT_ID}.").clearUserPref("alias");
+    this._alias = null;
+  },
+
+
   getRegisteredProfiles: function() {
     this._checkLoad();
     var rv = [];
