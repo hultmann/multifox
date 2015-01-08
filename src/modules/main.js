@@ -51,12 +51,11 @@ const Profile = {
       id = Profile.DefaultIdentity; // private?
     }
 
-
     var tab = UIUtils.getLinkedTabFromBrowser(browser);
+    console.assert(tab !== null, "getLinkedTabFromBrowser null", browser.contentWindow);
     if (tab.selected) {
       Profile.setNextTabProfileId(id);
     }
-
 
     // save profile id in browser element
     // (tab element may not exist when the unload event is raised)
@@ -67,7 +66,6 @@ const Profile = {
         setTabValue(tab, "${PROFILE_SESSION}", sid);
 
     updateEngineState();
-    return id;
   },
 
 

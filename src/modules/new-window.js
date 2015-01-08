@@ -349,6 +349,12 @@ var ContentWindowObserver = {
       return;
     }
 
+    if (UIUtils.getLinkedTabFromBrowser(browser) === null) {
+      // It may happen for new windows (browser.contentWindow.location="")
+      // or chrome win unload => getBrowserList => ContentWindowObserver.observe
+      return;
+    }
+
     if (m_pendingNewProfiles.length > 0) {
       Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
       this._ui(browser);
@@ -457,7 +463,7 @@ var WinEvents = {
     var win = evt.currentTarget;
     console.assert(win instanceof Ci.nsIDOMChromeWindow, "win should be a xul window", win);
     BrowserOverlay.remove(win);
-    updateEngineState();
+    updateEngineState(); // TODO not necessary, BrowserOverlay.remove call it anyway
   },
 
 

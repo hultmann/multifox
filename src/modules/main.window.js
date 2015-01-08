@@ -59,9 +59,7 @@ var UIUtils = {
         }
       }
     }
-    console.assert(false, "getLinkedTabFromBrowser: tab not found",
-                   browser, browser.contentWindow, browser.contentDocument);
-    throw new Error("tab not found", browser);
+    return null;
   },
 
 
