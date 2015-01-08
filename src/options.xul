@@ -3,5 +3,5 @@
   <setting type="bool"
            pref="extensions.${EXT_ID}.windowMode"
            title="Window mode"
-           desc="Multifox will emulate per-window profiles, like previous versions of Multifox."/>
+           desc="Identity profiles will open in windows, like previous versions of Multifox."/>
 </vbox>
