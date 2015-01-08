@@ -59,7 +59,7 @@ const Cookies = {
   _prefListener: {
     behavior: -1,
 
-    QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver]),
+    // nsIObserver
     // topic=nsPref:changed data=network.cookie.cookieBehavior
     observe: function(subject, topic, data) {
       this.behavior = subject
