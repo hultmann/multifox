@@ -239,6 +239,25 @@ var SelectProfile = {
   },
 
 
+  // openLinkIn doesn't open regular windows from private windows
+  // (_openWindowFromUrl2 is a buggy workaround)
+  _openWindowFromUrl2: function(win) {
+    var browser = UIUtils.getSelectedTab(win).linkedBrowser;
+    var url = browser.contentWindow.location.href;
+    var newWin = browser.ownerDocument.defaultView.OpenBrowserWindow();
+    newWin.addEventListener("load", function listener(evt) {
+      newWin.requestAnimationFrame(function() {
+        newWin.removeEventListener("load", listener);
+        //var selTab = UIUtils.getSelectedTab(newWin);
+        var tb = UIUtils.getContentContainer(newWin);
+        tb.selectedTab = tb.addTab(url);
+        //tb.removeTab(selTab);
+        // doesn't work sometimes; need a reliable way to detect selTab loading
+      });
+    });
+  },
+
+
   _openWindowFromLink: function(win, isPrivate) {
     // page context menu
     if (win.gContextMenu) {
@@ -334,8 +353,8 @@ var SelectProfile = {
         if (win !== null) {
           this._openTabFromUrl(privWin, win);
         } else {
-          //throw new Error("It doesn't work, windows from a private window are always private.");
-          this._openWindowFromUrl(privWin, false);
+          // this._openWindowFromUrl(privWin, false);
+          this._openWindowFromUrl2(privWin);
         }
         this._removeCurrentTab(privWin);
         break;
