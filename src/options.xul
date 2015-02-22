@@ -4,4 +4,8 @@
            pref="extensions.${EXT_ID}.windowMode"
            title="Window mode"
            desc="Identity profiles will open in windows, like previous versions of Multifox."/>
+  <setting type="bool"
+           pref="extensions.${EXT_ID}.clearAliases"
+           title="Clear profile aliases"
+           desc="Clear profile aliases when Firefox is set to clear cookies on shutdown."/>
 </vbox>

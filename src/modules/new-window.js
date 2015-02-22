@@ -31,7 +31,8 @@ var Bootstrap = {
       util.setUnicodePref("description", desc);
     }
 
-    if (this.shouldSanitize) {
+    var clearAliases = Services.prefs.getBoolPref("extensions.${EXT_ID}.clearAliases");
+    if (this.shouldSanitize && clearAliases) {
       ProfileAlias.clear();
     }
 
