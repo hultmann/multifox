@@ -67,17 +67,6 @@ var Bootstrap = {
   },
 
 
-  get shouldSanitize() {
-    var sanitize = "privacy.sanitize.sanitizeOnShutdown";
-    var cookies  = "privacy.clearOnShutdown.cookies";
-    var p = Services.prefs;
-    if ((p.getPrefType(sanitize) === p.PREF_BOOL) && p.getBoolPref(sanitize)) {
-      return (p.getPrefType(cookies) === p.PREF_BOOL) && p.getBoolPref(cookies);
-    }
-    return false;
-  },
-
-
   _timer: null,
 
   _incompatibilityCheck: function() {
