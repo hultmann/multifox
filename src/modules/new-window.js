@@ -31,8 +31,7 @@ var Bootstrap = {
       util.setUnicodePref("description", desc);
     }
 
-    var clearAliases = Services.prefs.getBoolPref("extensions.${EXT_ID}.clearAliases");
-    if (this.shouldSanitize && clearAliases) {
+    if (this._isClearProfiles()) {
       ProfileAlias.clear();
     }
 
@@ -51,6 +50,15 @@ var Bootstrap = {
     registerButton(true); // call it only after inserting <panelview>
 
     this._incompatibilityCheck();
+  },
+
+
+  _isClearProfiles: function() {
+    var p = Services.prefs;
+    var _prefName = "extensions.multifox@hultmann.clearProfiles";
+    var value = p.getPrefType(_prefName) === p.PREF_BOOL
+                     ? p.getBoolPref(_prefName) : false;
+    return value;
   },
 
 
