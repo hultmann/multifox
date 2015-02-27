@@ -61,6 +61,7 @@ const Profile = {
     // (tab element may not exist when the unload event is raised)
     var sid = id.toString();
     browser.setAttribute("${PROFILE_BROWSER_ATTR}", sid);
+    tab.setAttribute("${PROFILE_TAB_ATTR}", sid);
     Cc["@mozilla.org/browser/sessionstore;1"].
       getService(Ci.nsISessionStore).
         setTabValue(tab, "${PROFILE_SESSION}", sid);
@@ -77,6 +78,7 @@ const Profile = {
   removeIdentity: function(tab) {
     if (tab.linkedBrowser.hasAttribute("${PROFILE_BROWSER_ATTR}")) {
       tab.linkedBrowser.removeAttribute("${PROFILE_BROWSER_ATTR}");
+      tab.linkedBrowser.removeAttribute("${PROFILE_TAB_ATTR}");
 
       var ss = Cc["@mozilla.org/browser/sessionstore;1"].getService(Ci.nsISessionStore);
       ss.setTabValue(tab,    "${PROFILE_SESSION}", ""); // avoid exception

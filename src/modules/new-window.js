@@ -253,6 +253,7 @@ function removeState(win) { // uninstalling
   for (var tab of UIUtils.getTabList(win)) {
     // extension is disabled before uninstalling
     tab.linkedBrowser.removeAttribute("${PROFILE_BROWSER_ATTR}");
+    tab.removeAttribute("${PROFILE_TAB_ATTR}");
     ss.setTabValue(tab,    "${PROFILE_SESSION}", ""); // avoid exception
     ss.deleteTabValue(tab, "${PROFILE_SESSION}");
   }

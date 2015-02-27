@@ -75,6 +75,7 @@ b.set_var("BASE_DOM_ID",            "multifox-dom")
 
 b.set_var("PROFILE_SESSION",       "multifox-dom-identity-id-session")
 b.set_var("PROFILE_BROWSER_ATTR",  "multifox-dom-identity-id-browser")
+b.set_var("PROFILE_TAB_ATTR",      "multifox-dom-identity-id-tab")
 b.set_var("PROFILE_DISABLED_ATTR", "multifox-dom-identity-id-disabled")
 
 b.set_var("PROFILE_DEPRECATED_DISABLED", "multifox-dom-identity-id-tmp")
