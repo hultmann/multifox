@@ -27,6 +27,7 @@ var Bootstrap = {
     if (isInstall) {
       Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.alias", true);
       Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.windowMode", true);
+      Services.prefs.setBoolPref("services.sync.prefs.sync.extensions.${EXT_ID}.clearProfiles", true);
       var desc = util.getTextFrom("extensions.${EXT_ID}.description", "about-multifox");
       util.setUnicodePref("description", desc);
     }
@@ -55,7 +56,7 @@ var Bootstrap = {
 
   _isClearProfiles: function() {
     var p = Services.prefs;
-    var _prefName = "extensions.multifox@hultmann.clearProfiles";
+    var _prefName = "extensions.${EXT_ID}.clearProfiles";
     var value = p.getPrefType(_prefName) === p.PREF_BOOL
                      ? p.getBoolPref(_prefName) : false;
     return value;
