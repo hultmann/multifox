@@ -233,8 +233,7 @@ function updateEngineState(closedBrowser = null) {
 
 
 function queueNewProfile(profileId) {
-  // TODO Fx32: Number.isSafeInteger
-  console.assert(Number.isInteger(profileId), "profileId not defined", profileId);
+  console.assert(Number.isSafeInteger(profileId), "profileId not defined", profileId);
   m_pendingNewProfiles.push(profileId);
 }
 
