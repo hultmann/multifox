@@ -52,7 +52,7 @@ const Profile = {
     }
 
     var tab = UIUtils.getLinkedTabFromBrowser(browser);
-    console.assert(tab !== null, "getLinkedTabFromBrowser null", browser.contentWindow);
+    console.assert(tab !== undefined, "getLinkedTabFromBrowser undefined", browser.contentWindow);
     if (tab.selected) {
       Profile.setNextTabProfileId(id);
     }

@@ -50,16 +50,9 @@ var UIUtils = {
   },
 
 
-  getLinkedTabFromBrowser: function(browser) { // TODO tabList[getDOMUtils(browser.contentWindow).outerWindowID]
+  getLinkedTabFromBrowser: function(browser) {
     var win = this.getTopLevelWindow(browser.ownerDocument.defaultView);
-    if (UIUtils.isMainWindow(win)) {
-      for (var tab of this.getTabList(win)) {
-        if (tab.linkedBrowser === browser) {
-          return tab; // <tab>
-        }
-      }
-    }
-    return null;
+    return this.getContentContainer(win).getTabForBrowser(browser);
   },
 
 

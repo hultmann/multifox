@@ -348,7 +348,7 @@ var ContentWindowObserver = {
       return;
     }
 
-    if (UIUtils.getLinkedTabFromBrowser(browser) === null) {
+    if (UIUtils.getLinkedTabFromBrowser(browser) === undefined) {
       // It may happen for new windows (browser.contentWindow.location="")
       // or chrome win unload => getBrowserList => ContentWindowObserver.observe
       return;
