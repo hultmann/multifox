@@ -48,7 +48,7 @@ b.add_locale("zh-TW")
 b.add_text("locale/${locale}/extension.properties")
 b.add_text("locale/${locale}/about-multifox.properties")
 
-b.set_var("EXT_VERSION", "3.1.0")
+b.set_var("EXT_VERSION", "3.2.0b1")
 verEx = build_tools.getVersionedString(changeset, b.get_var("EXT_VERSION"))
 
 if changeset == None:
@@ -62,8 +62,8 @@ b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
 b.set_var("EXT_SITE",        "https://getmultifox.com/")
 b.set_var("URL_CONTACT",     "https://getmultifox.com/bugs/")
-b.set_var("APP_MIN_VERSION", "31.0")
-b.set_var("APP_MAX_VERSION", "36.*")
+b.set_var("APP_MIN_VERSION", "37.0")
+b.set_var("APP_MAX_VERSION", "39.*")
 b.set_var("CHROME_NAME",     "multifox")
 b.set_var("EXT_HOST",        "multifox-" + verEx)
 
