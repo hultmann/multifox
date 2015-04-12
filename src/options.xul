@@ -1,11 +1,21 @@
 <?xml version="1.0"?>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!DOCTYPE overlay [
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+<!ENTITY % optionsDTD SYSTEM "${PATH_LOCALE}/options.dtd">
+%optionsDTD;
+]>
+
 <vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <setting type="bool"
            pref="extensions.${EXT_ID}.windowMode"
-           title="Window mode"
-           desc="Identity profiles will open in windows, like previous versions of Multifox."/>
+           title="&windowMode.label;">&windowMode.description;</setting>
+
   <setting type="bool"
            pref="extensions.${EXT_ID}.clearProfiles"
-           title="Clear profiles"
-           desc="Remove all Multifox profiles when Firefox is restarted."/>
+           title="&clearProfiles.label;"></setting>
 </vbox>

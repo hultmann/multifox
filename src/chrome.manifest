@@ -2,10 +2,10 @@ content   ${EXT_HOST} content/
 
 locale  ${EXT_HOST}  en-US  locale/en-US/
 
-locale  ${EXT_HOST}  pl     locale/pl/
-locale  ${EXT_HOST}  pt-BR  locale/pt-BR/
-locale  ${EXT_HOST}  ru     locale/ru/
-locale  ${EXT_HOST}  sr     locale/sr/
-locale  ${EXT_HOST}  sv-SE  locale/sv-SE/
-locale  ${EXT_HOST}  zh-CN  locale/zh-CN/
-locale  ${EXT_HOST}  zh-TW  locale/zh-TW/
+#locale  ${EXT_HOST}  pl     locale/pl/
+#locale  ${EXT_HOST}  pt-BR  locale/pt-BR/
+#locale  ${EXT_HOST}  ru     locale/ru/
+#locale  ${EXT_HOST}  sr     locale/sr/
+#locale  ${EXT_HOST}  sv-SE  locale/sv-SE/
+#locale  ${EXT_HOST}  zh-CN  locale/zh-CN/
+#locale  ${EXT_HOST}  zh-TW  locale/zh-TW/
