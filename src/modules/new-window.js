@@ -15,6 +15,7 @@ Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("${PATH_MODULE}/main.js");
 
 
+var m_tabReloadOnly = false;
 var m_pendingNewProfiles = [];
 var m_docObserver = null;
 
@@ -232,8 +233,9 @@ function updateEngineState(closedBrowser = null) {
 }
 
 
-function queueNewProfile(profileId) {
+function queueNewProfile(profileId, reloadOnly = false) {
   console.assert(Number.isSafeInteger(profileId), "profileId not defined", profileId);
+  m_tabReloadOnly = reloadOnly;
   m_pendingNewProfiles.push(profileId);
 }
 
@@ -328,6 +330,7 @@ function restoreProfiles(win) {
 
 var ContentWindowObserver = {
   enable: function() {
+    // handle Multifox menu => reload tab (different profile)
     Services.obs.addObserver(this, "content-document-global-created", false);
   },
 
@@ -338,47 +341,20 @@ var ContentWindowObserver = {
 
 
   observe: function(win, topic, data) {
-    if (win !== win.top) {
+    if (!m_tabReloadOnly) {
       return;
     }
+    if (win !== win.top) {
+      return; // iframe
+    }
+    m_tabReloadOnly = false;
+    console.assert(m_pendingNewProfiles.length > 0, "m_pendingNewProfiles should be > 0");
 
     var browser = UIUtils.findOriginBrowser(win);
-    if (browser === null) {
-      return;
-    }
-
-    if (UIUtils.getLinkedTabFromBrowser(browser) === undefined) {
-      // It may happen for new windows (browser.contentWindow.location="")
-      // or chrome win unload => getBrowserList => ContentWindowObserver.observe
-      return;
-    }
-
-    if (m_pendingNewProfiles.length > 0) {
+    if ((browser !== null) && UIUtils.isContentBrowser(browser)) {
       Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
-      this._ui(browser);
-      return;
+      notifyNewProfile(browser);
     }
-
-    if (Profile.isInitialized(browser)) {
-      return;
-    }
-
-    // new tab: inherit identity profile
-    if (util.networkListeners.active) {
-      Profile.defineIdentity(browser, Profile.getNextProfile());
-      this._ui(browser);
-      // BUG when "move to a new window" in a bg tab
-      // TODO keep a list with outer IDs => profile
-    }
-  },
-
-
-  _ui: function(browser) {
-    var win = browser.ownerDocument.defaultView.top;
-    win.requestAnimationFrame(function() {
-      var winId = util.getOuterId(win).toString();
-      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
-    });
   }
 };
 
@@ -394,22 +370,58 @@ function getNextTopDocumentProfile(browser) {
 }
 
 
+function notifyNewProfile(browser) {
+  var win = browser.ownerDocument.defaultView.top;
+  win.requestAnimationFrame(function() {
+    var winId = util.getOuterId(win).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+  });
+}
+
+
+function handlePendingProfile(browser) {
+  if (m_pendingNewProfiles.length > 0) {
+    Profile.defineIdentity(browser, m_pendingNewProfiles.pop());
+    notifyNewProfile(browser);
+    return;
+  }
+
+  if (Profile.isInitialized(browser)) {
+    return;
+  }
+
+  // new tab: inherit identity profile
+  if (util.networkListeners.active) {
+    Profile.defineIdentity(browser, Profile.getNextProfile());
+    notifyNewProfile(browser);
+    // BUG when "move to a new window" in a bg tab
+  }
+}
+
+
+function onTabOpen(tab) {
+  console.assert(tab.localName === "tab", "tab should be a tab element", tab);
+  var browser = tab.linkedBrowser;
+  handlePendingProfile(browser);
+
+  if (Bootstrap.isWindowMode) {
+    return;
+  }
+
+  // tabbrowser.addTab didn't load the tab yet
+  // about:newtab => preloaded tab
+  // tab mode + new tab command? always default profile (e.g. ctrl+T)
+  if (tab.label.length > 0) { // ugly hack to detect New Tab page
+    Profile.defineIdentity(browser, Profile.DefaultIdentity);
+    var winId = util.getOuterId(browser.ownerDocument.defaultView).toString();
+    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+  }
+}
+
+
 var WinEvents = {
   tabOpen: function(evt) {
-    var tab = evt.target;
-    console.assert(tab.localName === "tab", "tab should be a tab element", tab);
-
-    if (Bootstrap.isWindowMode) {
-      return;
-    }
-
-    // new tab command? always default id (e.g. ctrl+T)
-    var browser = tab.linkedBrowser;
-    if (browser.contentWindow.location.href === "about:newtab") {
-      Profile.defineIdentity(browser, Profile.DefaultIdentity);
-      var winId = util.getOuterId(browser.ownerDocument.defaultView).toString();
-      Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
-    }
+    onTabOpen(evt.target);
   },
 
 
@@ -488,6 +500,9 @@ const BrowserOverlay = {
     container.addEventListener("TabOpen",   WinEvents.tabOpen,     false);
     container.addEventListener("TabClose",  WinEvents.tabClose,    false);
     container.addEventListener("TabSelect", WinEvents.tabSelected, false);
+
+    // "TabOpen" observers are not called for the first tab
+    onTabOpen(UIUtils.getSelectedTab(win));
 
     // key
     var key = doc.getElementById("mainKeyset").appendChild(doc.createElement("key"));

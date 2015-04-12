@@ -50,6 +50,19 @@ var UIUtils = {
   },
 
 
+  isContentBrowser: function(browser) {
+    console.assert(browser !== null, "browser should not be null");
+    // edge case: browser (and tab) already removed from DOM
+    //            (browser.parentNode === null)
+    var tb = browser.ownerDocument.getBindingParent(browser);
+    if (tb === null) {
+      return false;
+    }
+    // it works with the new about:newtab preloading (Fx37)
+    return tb.localName === "tabbrowser";
+  },
+
+
   getLinkedTabFromBrowser: function(browser) {
     var win = this.getTopLevelWindow(browser.ownerDocument.defaultView);
     return this.getContentContainer(win).getTabForBrowser(browser);

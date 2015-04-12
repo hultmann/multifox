@@ -196,13 +196,13 @@ var SelectProfile = {
     }
 
     // profileId should be updated only when a new window is created.
-    // (because code in unload may use the current profile)
+    // (because code in unload needs the current profile)
     var browser = UIUtils.getSelectedTab(win).linkedBrowser;
 
     switch (browser.contentWindow.location.protocol) {
       case "http:":
       case "https:":
-        queueNewProfile(profileId);
+        queueNewProfile(profileId, true);
         this._reloadHttpTab(browser);
         break;
       default:
