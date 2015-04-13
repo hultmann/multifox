@@ -132,33 +132,53 @@ var ProfileAlias = {
 function updateButton(win) {
   var button = getButtonElem(win.document);
   if (button !== null) { // null during onWidgetAdded? onCreated will update it
-    updateButtonCore(button);
+    updateButtonLabel(button);
   }
 }
 
 
-function updateButtonCore(button) {
-  var ui = Cu.import("resource:///modules/CustomizableUI.jsm", null).CustomizableUI;
-  var placement = ui.getPlacementOfWidget("${CHROME_NAME}-button");
+function updateButtonLabel(button) {
+  var placement = Cu.import("resource:///modules/CustomizableUI.jsm", null).
+                    CustomizableUI.
+                      getPlacementOfWidget("${CHROME_NAME}-button");
   if (placement === null) {
     return;
   }
 
-  // update label
   var tab = UIUtils.getSelectedTab(button.ownerDocument.defaultView);
   var profileId = Profile.getIdentity(tab.linkedBrowser);
-  var txt = placement.area === "PanelUI-contents"
-          ? ProfileAlias.format(profileId)       // panel
-          : ProfileAlias.formatShort(profileId); // toolbar
 
-  // show/hide label
-  if (Profile.isExtensionProfile(profileId)) {
-    button.setAttribute("show-label", "true");
-  } else {
+  // default profile
+  if (Profile.isNativeProfile(profileId)) {
+    button.removeAttribute("badge");
+    button.classList.remove("badged-button");
     button.removeAttribute("show-label");
+    button.setAttribute("label", ProfileAlias.format(profileId));
+    return;
   }
 
-  button.setAttribute("label", txt);
+  // popup
+  if (placement.area === "PanelUI-contents") {
+    button.removeAttribute("badge");
+    button.classList.remove("badged-button");
+    button.setAttribute("show-label", "true");
+    button.setAttribute("label", ProfileAlias.format(profileId));
+    return;
+  }
+
+  // toolbar
+  var name = ProfileAlias.formatShort(profileId);
+  button.setAttribute("label", name);
+
+  if (name.length > 5) {
+    button.removeAttribute("badge");
+    button.classList.remove("badged-button");
+    button.setAttribute("show-label", "true");
+  } else {
+    button.setAttribute("badge", name);
+    button.classList.add("badged-button");
+    button.removeAttribute("show-label");
+  }
 }
 
 
@@ -212,7 +232,7 @@ function registerButton(create) {
     tooltiptext: "${EXT_NAME}",
 
     onCreated: function(button) {
-      updateButtonCore(button);
+      updateButtonLabel(button);
     },
 
     onViewShowing : function(evt) {
