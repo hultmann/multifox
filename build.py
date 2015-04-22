@@ -37,7 +37,7 @@ b.add_text("modules/commands.js")
 
 
 b.add_locale("en-US")
-"""
+b.add_locale("de")
 b.add_locale("pl")
 b.add_locale("pt-BR")
 b.add_locale("ru")
@@ -45,7 +45,7 @@ b.add_locale("sr")
 b.add_locale("sv-SE")
 b.add_locale("zh-CN")
 b.add_locale("zh-TW")
-"""
+
 
 b.add_text("locale/${locale}/options.dtd")
 b.add_text("locale/${locale}/extension.properties")

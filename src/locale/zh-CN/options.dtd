@@ -1,0 +1,7 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+-->
+<!ENTITY windowMode.label "窗口模式">
+<!ENTITY windowMode.description "身份配置将在窗口中打开，就像 Multifox 的旧版本。">
+<!ENTITY clearProfiles.label "在 &brandShortName; 启动时清除配置文件列表">
