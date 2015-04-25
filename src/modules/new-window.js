@@ -408,14 +408,34 @@ function onTabOpen(tab) {
     return;
   }
 
+  // tab mode: detect ctrl+t, new tab button etc and reset profile id
+
   // tabbrowser.addTab didn't load the tab yet
-  // about:newtab => preloaded tab
-  // tab mode + new tab command? always default profile (e.g. ctrl+T)
-  if (tab.label.length > 0) { // ugly hack to detect New Tab page
-    Profile.defineIdentity(browser, Profile.DefaultIdentity);
-    var winId = util.getOuterId(browser.ownerDocument.defaultView).toString();
-    Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+  // but for preloaded about:newtab location is already known
+  if (setAboutNewTabAsDefault(browser)) {
+    return;
   }
+
+  // location = about:blank: wait loading, reset when about:newtab
+  // if tab != about:newtab, inherit profile was used
+  browser.addEventListener("DOMContentLoaded", function onDomLoad(evt) {
+    var b = evt.currentTarget;
+    console.assert(b.localName === "browser", "b is not a browser.", b.localName);
+    b.removeEventListener("DOMContentLoaded", onDomLoad);
+    setAboutNewTabAsDefault(b);
+  });
+}
+
+
+function setAboutNewTabAsDefault(browser) {
+  if (browser.contentWindow.location.href !== "about:newtab") {
+    return false;
+  }
+
+  Profile.defineIdentity(browser, Profile.DefaultIdentity);
+  var winId = util.getOuterId(browser.ownerDocument.defaultView).toString();
+  Services.obs.notifyObservers(null, "${BASE_DOM_ID}-id-changed", winId);
+  return true;
 }
 
 
