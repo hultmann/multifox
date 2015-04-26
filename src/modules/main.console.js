@@ -47,6 +47,7 @@ var console = {
 
 
   log: function console_log() {
+    return;
     this._print("", this._format(arguments));
   },
 

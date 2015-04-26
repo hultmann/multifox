@@ -709,7 +709,8 @@ function createArrowPanel(doc, icon) {
     button = doc.getElementById("${CHROME_NAME}-button");
   }
 
-  panel.addEventListener("popuphidden", function(evt) {
+  panel.addEventListener("popuphidden", function onHide(evt) {
+    panel.removeEventListener("popuphidden", onHide, false);
     var myPanel = evt.target;
     console.assert(myPanel.localName === "panel", "myPanel should be a panel element", myPanel);
     myPanel.parentNode.removeChild(myPanel);
@@ -1025,20 +1026,24 @@ ProfileListMenu.prototype = {
 
   _appendButton: function(node, label) {
     var isToolbar = this._location === this.LocationToolbar;
-    var name = isToolbar ? "toolbarbutton" : "menuitem";
-    var elem = node.appendChild(node.ownerDocument.createElement(name));
-    elem.setAttribute("label", label);
+    var elem;
     if (isToolbar) {
+      elem = node.ownerDocument.createElement("toolbarbutton");
       elem.classList.add("subviewbutton");
+    } else {
+      elem = node.ownerDocument.createElement("menuitem");
     }
-    return elem;
+    elem.setAttribute("label", label);
+    return node.appendChild(elem);
   },
 
 
   _appendSeparator: function(node) {
     var isToolbar = this._location === this.LocationToolbar;
-    var name = isToolbar ? "toolbarseparator" : "menuseparator";
-    node.appendChild(node.ownerDocument.createElement(name));
+    var elem = isToolbar
+             ? node.ownerDocument.createElement("toolbarseparator")
+             : node.ownerDocument.createElement("menuseparator");
+    node.appendChild(elem);
   }
 
 };

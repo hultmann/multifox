@@ -8,7 +8,8 @@
 var Cc = Components.classes;
 var Ci = Components.interfaces;
 
-window.addEventListener("DOMContentLoaded", function() {
+window.addEventListener("DOMContentLoaded", function onDomLoad() {
+  window.removeEventListener("DOMContentLoaded", onDomLoad, false);
   populateDescription();
   populatePage();
 }, false);
