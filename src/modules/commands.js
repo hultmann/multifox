@@ -617,6 +617,27 @@ function showError(win) {
   var msg;
 
   switch (ErrorHandler.getCurrentError(doc)) {
+    case "incompatible-e10s":
+      msg      = util.getText("icon.error-panel.deprecated.line0.label");
+      var msg1 = util.getText("icon.error-panel.deprecated.line1.label");
+      var msg2 = util.getText("icon.error-panel.deprecated.line2.label");
+      var msg3 = util.getText("icon.error-panel.deprecated.line3.label");
+
+      var n = nodeDesc.appendChild(doc.createElement("label"));
+      n.appendChild(doc.createTextNode(msg));
+      n.style.fontWeight = "bold";
+
+      nodeDesc.
+        appendChild(doc.createElement("description")).
+          appendChild(doc.createTextNode(msg1));
+      nodeDesc.
+        appendChild(doc.createElement("description")).
+          appendChild(doc.createTextNode(msg2));
+      nodeDesc.
+        appendChild(doc.createElement("description")).
+          appendChild(doc.createTextNode(msg3));
+      return;
+
     case "incompatible-extension":
       ExtCompat.findIncompatibleExtensions(function(arr) {
         for (var idx = 0; idx < arr.length; idx++) {

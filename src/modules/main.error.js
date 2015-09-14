@@ -5,11 +5,30 @@
 
 var ErrorHandler = {
   _incompatibility: false,
+  _e10s: false,
 
   // incompatible extension installed
   addIncompatibilityError: function() {
     // this=undefined
     ErrorHandler._incompatibility = true;
+    var enumWin = Services.wm.getEnumerator("navigator:browser");
+    while (enumWin.hasMoreElements()) {
+      ErrorHandler.updateButtonAsync(UIUtils.getSelectedTab(enumWin.getNext()).linkedBrowser);
+    }
+  },
+
+
+  checkE10s: function(button) {
+    var isE10s = button.ownerDocument.defaultView.
+                    QueryInterface(Ci.nsIInterfaceRequestor).
+                      getInterface(Ci.nsIWebNavigation).
+                        QueryInterface(Ci.nsILoadContext).
+                          useRemoteTabs;
+    if (!isE10s) {
+      return;
+    }
+
+    ErrorHandler._e10s = true;
     var enumWin = Services.wm.getEnumerator("navigator:browser");
     while (enumWin.hasMoreElements()) {
       ErrorHandler.updateButtonAsync(UIUtils.getSelectedTab(enumWin.getNext()).linkedBrowser);
@@ -92,6 +111,12 @@ var ErrorHandler = {
 
     var button = getButtonElem(doc);
     if (button === null) { // view-source?
+      return;
+    }
+
+
+    if (this._e10s) {
+      this._update("incompatible-e10s", button);
       return;
     }
 

@@ -232,6 +232,7 @@ function registerButton(create) {
     tooltiptext: "${EXT_NAME}",
 
     onCreated: function(button) {
+      ErrorHandler.checkE10s(button);
       updateButtonLabel(button);
     },
 
