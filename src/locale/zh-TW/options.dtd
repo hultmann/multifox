@@ -1,6 +1,7 @@
 <!-- This Source Code Form is subject to the terms of the Mozilla Public
    - License, v. 2.0. If a copy of the MPL was not distributed with this
-   - file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 -->
 <!ENTITY windowMode.label "視窗模式">
 <!ENTITY windowMode.description "身分設定檔會和舊版的 Multifox 一樣分別開啟視窗">
