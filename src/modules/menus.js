@@ -5,7 +5,7 @@
 
 "use strict";
 
-const EXPORTED_SYMBOLS = ["menuShowing"];
+var EXPORTED_SYMBOLS = ["menuShowing"];
 
 Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Components.utils.import("${PATH_MODULE}/new-window.js");

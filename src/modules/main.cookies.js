@@ -36,9 +36,9 @@ function documentCookieSetter(obj, contentDoc) {
 }
 
 
-const PREF_COOKIE_BEHAVIOR = "network.cookie.cookieBehavior";
+var PREF_COOKIE_BEHAVIOR = "network.cookie.cookieBehavior";
 
-const Cookies = {
+var Cookies = {
   _service: null,
   _prefs: null,
 

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-const httpListeners = {
+var httpListeners = {
   request: {
     // nsIObserver
     observe: function(subject, topic, data) {
@@ -108,7 +108,7 @@ const httpListeners = {
 };
 
 
-const HttpHeaders = {
+var HttpHeaders = {
   visitLoop: {
     values: null,
     visitHeader: function(name, value) {

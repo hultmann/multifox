@@ -30,7 +30,7 @@ Cu.import("${PATH_MODULE}/new-window.js");
 #include "main.console.js"
 
 
-const Profile = {
+var Profile = {
   PrivateIdentity:   0,
   DefaultIdentity:   1,
   MaxIdentity:       Number.MAX_SAFE_INTEGER,

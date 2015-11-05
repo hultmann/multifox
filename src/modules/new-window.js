@@ -7,8 +7,8 @@
 
 var EXPORTED_SYMBOLS = ["Cc", "Ci", "util", "Bootstrap", "queueNewProfile", "updateEngineState", "getNextTopDocumentProfile"];
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
+var Cc = Components.classes;
+var Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/Services.jsm");
@@ -505,7 +505,7 @@ var WinEvents = {
 };
 
 
-const BrowserOverlay = {
+var BrowserOverlay = {
   add: function(win) {
     var doc = win.document;
     insertButtonView(doc);
@@ -630,7 +630,7 @@ function onMenuPopupShowing(evt) {
 }
 
 
-const util = {
+var util = {
   setUnicodePref: function(name, val) {
     var CiS = Ci.nsISupportsString;
     var str = Cc["@mozilla.org/supports-string;1"].createInstance(CiS);
