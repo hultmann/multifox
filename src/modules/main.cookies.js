@@ -165,8 +165,13 @@ function toInternalUri(uri, sessionId) {
 function cookieInternalDomain(domain, id) {
   // this scheme makes Multifox profiles to obey the
   // cookie limits per TLD (network.cookie.maxPerHost)
-  var tld = getTldFromHost(domain).replace(".", "-", "g");
+  var tld = replaceDots(getTldFromHost(domain));
   return domain + "." + tld + "-" + id + ".multifox";
+}
+
+
+function replaceDots(s) {
+  return s.replace(new RegExp("\\.", "g"), "-"); // or s.replace(/\./g, "-");
 }
 
 

@@ -104,7 +104,7 @@ function markupProcessor(str, callback) {
   var lastTag = null;
   var frags = str.split("<");
   for (var idx = 0, len = frags.length; idx < len; idx++) {
-    if (!frags[idx].contains(">")) {
+    if (!frags[idx].includes(">")) {
       callback("", frags[idx]);
       continue;
     }
