@@ -141,8 +141,10 @@ function convertCookieDomain(cookieHeader, profileId) {
   for (var idx = 0; idx < len; idx++) {
     var myCookie = objCookies.getCookieByIndex(idx);
     if (myCookie.hasMeta("domain")) {
-      var newDomain = cookieInternalDomain(myCookie.getMeta("domain"), profileId);
-      myCookie.defineMeta("domain", newDomain);
+      var oldDomain = myCookie.getMeta("domain");
+      if ((oldDomain !== null) && (oldDomain.length > 0)) { // ignore "domain="
+        myCookie.defineMeta("domain", cookieInternalDomain(oldDomain, profileId));
+      }
     }
     newCookies[idx] = myCookie.toString();
   }
