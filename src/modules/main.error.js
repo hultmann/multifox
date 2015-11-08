@@ -167,6 +167,7 @@ var ExtCompat = {
   // Extensions with known compatibility issues.
   // To update it please file a bug: https://github.com/hultmann/multifox/issues
   _incompatIds: [
+    "@new-xkit",                              // #226
     "{37fa1426-b82d-11db-8314-0800200c9a66}", // X-notifier
     "{42f25d10-4944-11e2-96c0-0b6a95a8daf0}"  // former Multifox 2
   ],
