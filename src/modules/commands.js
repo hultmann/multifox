@@ -28,7 +28,7 @@ function windowCommand(evt, cmd) {
   switch (cmd) {
     case "cmd_select_profile":
       var middleClick = evt.ctrlKey && (elem.localName !== "key");
-      SelectProfile.parseProfileCmd(elem, middleClick);
+      SelectProfile.parseProfileCmd(evt, elem, middleClick);
       break;
     case "cmd_delete_profile":
       deleteCurrentPopup(win);
@@ -62,7 +62,7 @@ function handleMiddleClick(evt) {
 
   var button = evt.target;
   findParentPanel(button).hidePopup();
-  SelectProfile.parseProfileCmd(button, true);
+  SelectProfile.parseProfileCmd(evt, button, true);
 }
 
 
@@ -95,7 +95,7 @@ function handleMiddleClick(evt) {
 
 var SelectProfile = {
 
-  parseProfileCmd: function(elem, middleClick = false) {
+  parseProfileCmd: function(event, elem, middleClick = false) {
     if (middleClick && Bootstrap.isWindowMode) {
       return;
     }
@@ -159,11 +159,11 @@ var SelectProfile = {
 
       case "link left   tab-non-pvt id-non-pvt":
         queueNewProfile(newProfileId);
-        this._openTabFromLink(win);
+        this._openTabFromLink(win, event);
         break;
 
       case "link left   tab-pvt     id-pvt":
-        this._openTabFromLink(win);
+        this._openTabFromLink(win, event);
         break;
 
       case "link left   tab-non-pvt id-pvt":
@@ -289,13 +289,13 @@ var SelectProfile = {
   },
 
 
-  _openTabFromLink: function(win) {
+  _openTabFromLink: function(win, evt) {
     if (win.gContextMenu) {
       // page
       if (Bootstrap.isWindowMode) {
         win.gContextMenu.openLink();
       } else {
-        win.gContextMenu.openLinkInTab();
+        win.gContextMenu.openLinkInTab(evt);
       }
     } else {
       // bookmark/history
