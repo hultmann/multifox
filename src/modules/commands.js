@@ -782,7 +782,7 @@ function removeProfile(profileId) {
 
   for (var idx = myCookies.length - 1; idx > -1; idx--) {
     cookie = myCookies[idx];
-    mgr.remove(cookie.host, cookie.name, cookie.path, false);
+    mgr.remove(cookie.host, cookie.name, cookie.path, false, cookie.originAttributes);
   }
 }
 
