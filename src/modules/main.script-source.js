@@ -27,7 +27,8 @@ function contentScriptSource() {
     enumerable: true,
     get: function() {
 
-      var Storage = {
+      var proxy = new Proxy({
+        // target
         setItem: function(k, v) {sendCmd({from:"localStorage", cmd:"setItem", key:k, val:v});},
         removeItem: function(k) {sendCmd({from:"localStorage", cmd:"removeItem", key:k});},
         clear: function() {      sendCmd({from:"localStorage", cmd:"clear"});},
@@ -36,16 +37,13 @@ function contentScriptSource() {
         get length() {        return sendCmd({from:"localStorage", cmd:"length"});},
 
         toString: function() { return "[object Storage]"; }
-      };
 
-      var proxy = Proxy.create({
+      }, {
+        // handler
 
-        enumerate: function() { // for (var k in localStorage) {}
-          return this.keys();
-        },
-
-        getPropertyDescriptor: function(key) { // "foo" in localStorage
-          var val = this.get(null, key);
+        // Object.keys(localStorage)
+        getOwnPropertyDescriptor: function(target, key) {
+          var val = target.getItem(key);
           return val === null ? undefined : {
             value:        val,
             writable:     true,
@@ -54,33 +52,39 @@ function contentScriptSource() {
           };
         },
 
-        getOwnPropertyDescriptor: function(key) { // "unknownkey" in localStorage
-          return undefined;
+        // for (var k in localStorage) console.log(k)
+        getPrototypeOf: function(target) {
+          return target;
         },
 
-        getOwnPropertyNames: function() { // Object.getOwnPropertyNames(localStorage);
-          return this.keys();
-        },
-
-        keys: function() { // Object.keys(localStorage);
-          var rv = new Array(Storage.length);
+        // Object.getOwnPropertyNames(localStorage)
+        ownKeys: function(target) {
+          var rv = new Array(target.length);
           for (var idx = rv.length - 1; idx > -1; idx--) {
-            rv[idx] = Storage.key(idx);
+            rv[idx] = target.key(idx);
           }
           return rv;
         },
 
-        get: function(receiver, key) { // var a = localStorage.foo
-          return Storage.hasOwnProperty(key) ? Storage[key] : Storage.getItem(key);
+        has: function(target, key) {
+          return target.getItem(key) !== null;
         },
 
-        set: function(receiver, key, val) { // localStorage.foo = 1
-          Storage.setItem(key, val);
+        // var a = localStorage.foo
+        get: function(target, key, receiver) {
+          return target.hasOwnProperty(key) ? target[key]
+                                            : target.getItem(key);
+        },
+
+        // localStorage.foo = 1
+        set: function(target, key, val, receiver) {
+          target.setItem(key, val);
           return true;
         },
 
-        delete: function(key) { // delete localStorage.foo
-          Storage.removeItem(key);
+        // delete localStorage.foo
+        deleteProperty: function(target, key) {
+          target.removeItem(key);
           return true;
         }
       });
