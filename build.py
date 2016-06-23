@@ -63,8 +63,8 @@ else:
 
 b.set_var("EXT_ID",          "multifox@hultmann")
 b.set_var("EXT_NAME",        "Multifox")
-b.set_var("EXT_SITE",        "https://getmultifox.com/")
-b.set_var("URL_CONTACT",     "https://getmultifox.com/bugs/")
+b.set_var("EXT_SITE",        "https://addons.mozilla.org/firefox/addon/multifox/")
+b.set_var("URL_CONTACT",     "https://github.com/hultmann/multifox/issues")
 b.set_var("APP_MIN_VERSION", "47.0")
 b.set_var("APP_MAX_VERSION", "49.*")
 b.set_var("CHROME_NAME",     "multifox")

@@ -69,7 +69,7 @@ function populatePage() {
         }
 
         attrs = {
-          "a1": "https://getmultifox.com/bugs/"
+          "a1": "${URL_CONTACT}"
         };
         break;
 
