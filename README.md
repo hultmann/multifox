@@ -1,5 +1,9 @@
 # Multifox
 
+[Download](https://github.com/hultmann/multifox/releases/tag/3.2.3)
+
+<hr>
+
 Development has stopped due to
 [deprecation of XPCOM extensions](https://blog.mozilla.org/addons/2015/08/21/the-future-of-developing-firefox-add-ons/).
 
