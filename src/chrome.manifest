@@ -10,3 +10,4 @@ locale  ${EXT_HOST}  sr     locale/sr/
 locale  ${EXT_HOST}  sv-SE  locale/sv-SE/
 locale  ${EXT_HOST}  zh-CN  locale/zh-CN/
 locale  ${EXT_HOST}  zh-TW  locale/zh-TW/
+locale  ${EXT_HOST}  tr-TR  locale/tr-TR/

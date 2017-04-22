@@ -45,6 +45,7 @@ b.add_locale("sr")
 b.add_locale("sv-SE")
 b.add_locale("zh-CN")
 b.add_locale("zh-TW")
+b.add_locale("tr-TR")
 
 
 b.add_text("locale/${locale}/options.dtd")
